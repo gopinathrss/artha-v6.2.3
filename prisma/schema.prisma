@@ -1,0 +1,405 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Holding {
+  id                String      @id @default(cuid())
+  isin              String
+  name              String
+  type              String      @default("MUTUAL_FUND")
+  category          String      // EQUITY | BONDS | CASH | COMMODITY | MIXED
+  units             Float       @default(0)
+  nav               Float       @default(0)
+  currency          String      @default("CZK")
+  currentValueCzk   Float       @default(0)
+  monthlySipCzk     Float       @default(0)
+  status            String      @default("ACTIVE") // ACTIVE | INACTIVE | EXITED
+  purchaseStartDate DateTime
+  taxFreeDate       DateTime
+  country           String      @default("CZ")
+  institution       String?
+  interestRatePct   Float?
+  maturityDate      DateTime?
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  cashflows         Cashflow[]
+}
+
+model Cashflow {
+  id          String   @id @default(cuid())
+  holdingId   String
+  holding     Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  date        DateTime
+  amountCzk   Float
+  type        String   @default("SIP") // SIP | LUMP_SUM | WITHDRAWAL | DIVIDEND
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Account {
+  id              String   @id @default(cuid())
+  type            String   // SAVINGS | PENSION | NRE | NRO | FIXED_DEPOSIT
+  name            String
+  institution     String?
+  balanceLocal    Float    @default(0)
+  currency        String   @default("CZK")
+  balanceCzk      Float    @default(0)
+  interestRatePct Float?
+  maturityDate    DateTime?
+  country         String   @default("CZ")
+  isActive        Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Instrument {
+  id                String   @id @default(cuid())
+  isin              String   @unique
+  name              String
+  ticker            String?
+  type              String   // ETF | MUTUAL_FUND | BOND | CASH_FUND
+  category          String
+  terPct            Float?
+  currency          String   @default("EUR")
+  availableInGeorge Boolean  @default(false)
+  lastPrice         Float?
+  lastPriceDate     DateTime?
+  return1yr         Float?
+  return3yr         Float?
+  return5yr         Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model PriceHistory {
+  id        String   @id @default(cuid())
+  isin      String
+  date      DateTime
+  price     Float
+  currency  String
+  source    String
+  createdAt DateTime @default(now())
+  @@unique([isin, date])
+}
+
+model Snapshot {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  netWorthCzk     Float
+  netWorthEur     Float
+  investedCzk     Float
+  gainCzk         Float
+  gainPct         Float
+  xirr            Float?
+  xirrIsEstimate  Boolean  @default(true)
+  equityPct       Float    @default(0)
+  bondsPct        Float    @default(0)
+  cashPct         Float    @default(0)
+  healthScore     Int      @default(0)
+  confidenceScore Int      @default(0)
+  createdAt       DateTime @default(now())
+}
+
+model AlertLog {
+  id              String    @id @default(cuid())
+  triggerType     String
+  title           String
+  message         String
+  urgency         String    @default("MEDIUM") // CRITICAL|HIGH|MEDIUM|INFO
+  dataSnapshot    Json?
+  wasSent         Boolean   @default(false)
+  sentViaEmail    Boolean   @default(false)
+  sentViaTelegram Boolean   @default(false)
+  firedAt         DateTime  @default(now())
+  sentAt          DateTime?
+}
+
+model MonthlyLetter {
+  id                String   @id @default(cuid())
+  monthYear         String   @unique
+  generatedAt       DateTime
+  contentHtml       String
+  contentText       String
+  portfolioSnapshot Json
+  aiConfidenceScore Int      @default(0)
+  wasSent           Boolean  @default(false)
+  sentAt            DateTime?
+}
+
+model Settings {
+  id                    String   @id @default(cuid())
+  // Allocation targets
+  targetEquityPct       Float    @default(65)
+  targetBondsPct        Float    @default(25)
+  targetCashPct         Float    @default(10)
+  // Goals
+  targetWealthCzk       Float?
+  targetDate            DateTime?
+  riskProfile           String?
+  // Delivery
+  alertEmail            String?
+  telegramChatId        String?
+  smtpHost              String   @default("smtp.gmail.com")
+  smtpPort              Int      @default(587)
+  smtpUser              String?
+  smtpPass              String?
+  telegramBotToken      String?
+  // AI
+  openaiApiKey          String?
+  aiProvider            String   @default("openai")
+  // Features
+  monthlyLetterEnabled  Boolean  @default(true)
+  confidenceEnabled     Boolean  @default(true)
+  alertsEnabled         Boolean  @default(true)
+  // Demo mode
+  demoModeEnabled       Boolean  @default(false)
+  demoPersona           String   @default("engineer")
+  // Timezone
+  timezone              String   @default("Europe/Prague")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model InstrumentLibrary {
+  id                String   @id @default(cuid())
+  isin              String   @unique
+  name              String
+  ticker            String?
+  type              String   // ETF | MUTUAL_FUND | BOND | CASH_FUND
+  category          String   // EQUITY | BONDS | CASH | COMMODITY | MIXED
+  subcategory       String?
+  terPct            Float?
+  currency          String   @default("EUR")
+  domicile          String?
+  fundSizeM         Float?
+  trackingError     Float?
+  benchmark         String?
+  availableInGeorge Boolean  @default(false)
+  lastPrice         Float?
+  lastPriceDate     DateTime?
+  return1yr         Float?
+  return3yr         Float?
+  return5yr         Float?
+  return10yr        Float?
+  score             Float?
+  scoreUpdatedAt    DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model AIMemory {
+  id                String   @id @default(cuid())
+  sessionDate       DateTime @default(now())
+  questionAsked     String
+  questionType      String
+  portfolioSnapshot Json
+  aiResponse        String
+  keyNumbers        Json?
+  recommendations   Json?
+  confidenceScore   Int      @default(0)
+  userFeedback      String?
+  wasActioned       Boolean  @default(false)
+  outcome           String?
+  createdAt         DateTime @default(now())
+}
+
+model IndiaIntelligence {
+  id              String   @id @default(cuid())
+  dataType        String
+  bankName        String?
+  tenor           String?
+  value           Float
+  previousValue   Float?
+  changeDirection String?
+  notes           String?
+  validFrom       DateTime @default(now())
+  validUntil      DateTime?
+  source          String
+  createdAt       DateTime @default(now())
+}
+
+model RecommendationOutcome {
+  id                 String   @id @default(cuid())
+  date               DateTime
+  type               String
+  recommendedAction  String
+  estimatedImpactCzk Float?
+  confidenceScore    Int
+  relatedIsin        String?
+  userDecision       String   @default("UNKNOWN")
+  result30d          String?
+  result90d          String?
+  actualImpactCzk    Float?
+  notes              String?
+  createdAt          DateTime @default(now())
+}
+
+// ——— ARTHA V4 — personal CFO (Session A foundation) ———
+
+model UserProfile {
+  id                        String   @id @default("default")
+  fullName                  String
+  dateOfBirth               DateTime
+  homeCurrency              String   @default("CZK")
+  taxResidency              String   @default("CZ")
+  riskProfile               String   @default("MODERATE")
+  monthlyNetIncomeCzk       Float
+  salaryDayOfMonth          Int      @default(15)
+  emergencyFundTarget       Float
+  retirementAge             Int      @default(50)
+  retirementMonthlyExpense  Float
+  notes                     String?
+  updatedAt                 DateTime @updatedAt
+}
+
+model IncomeEvent {
+  id          String   @id @default(cuid())
+  date        DateTime
+  source      String
+  amountLocal Float
+  currency    String
+  amountCzk   Float
+  recurring   Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model ExpenseCommitment {
+  id            String    @id @default(cuid())
+  category      String
+  description   String
+  amountCzk     Float
+  frequency     String
+  dueDayOfMonth Int?
+  startDate     DateTime
+  endDate       DateTime?
+  active        Boolean   @default(true)
+  notes         String?
+  createdAt     DateTime  @default(now())
+}
+
+model UpcomingEvent {
+  id          String   @id @default(cuid())
+  eventDate   DateTime
+  title       String
+  category    String
+  budgetCzk   Float
+  reservedCzk Float    @default(0)
+  status      String   @default("UPCOMING")
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model AllocationPlan {
+  id                String    @id @default(cuid())
+  monthYear         String
+  generatedAt       DateTime  @default(now())
+  totalAvailableCzk Float
+  fixedExpensesCzk  Float
+  reservedEventsCzk Float
+  investableCzk     Float
+  emergencyTopupCzk Float     @default(0)
+  allocations       Json
+  status            String    @default("PROPOSED")
+  userOverride      Json?
+  executedAt        DateTime?
+  planSource        String?   // MANUAL|AUTO_CRON
+  createdAt         DateTime  @default(now())
+  @@index([monthYear, status])
+}
+
+model SipExecution {
+  id              String   @id @default(cuid())
+  planId          String?
+  scheduledDate   DateTime
+  executedDate    DateTime?
+  isin            String
+  fundName        String
+  amountCzk       Float
+  amountLocal     Float?
+  currency        String
+  navAtExecution  Float?
+  unitsAcquired   Float?
+  status          String
+  confirmationMethod String?
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+/// Stores CZK per 1 unit of `quote` currency (EUR, USD, INR)
+model FXRate {
+  id        String   @id @default(cuid())
+  base      String
+  quote     String
+  rate      Float
+  source    String
+  stale     Boolean  @default(false)
+  fetchedAt DateTime @default(now())
+  @@index([base, quote, fetchedAt])
+}
+
+model NavHistory {
+  id        String   @id @default(cuid())
+  isin      String
+  date      DateTime
+  nav       Float
+  currency  String
+  source    String
+  @@unique([isin, date])
+  @@index([isin])
+}
+
+model HistoricalReturn {
+  id          String   @id @default(cuid())
+  isin        String
+  asOfDate    DateTime
+  return1m    Float?
+  return3m    Float?
+  return6m    Float?
+  return1y    Float?
+  return3y    Float?
+  return5y    Float?
+  return10y   Float?
+  volatility  Float?
+  sharpe      Float?
+  maxDrawdown Float?
+  refreshedAt DateTime @default(now())
+  @@unique([isin, asOfDate])
+}
+
+model SystemHealth {
+  id             String    @id @default(cuid())
+  checkName      String
+  status         String
+  message        String?
+  lastSuccessful DateTime?
+  checkedAt      DateTime  @default(now())
+  @@index([checkName, checkedAt])
+}
+
+model AdvisorJournal {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  category    String
+  content     String
+  relatedIsin String?
+  impactCzk   Float?
+  metadata    Json?
+}
+
+model GeneratedReport {
+  id           String   @id @default(cuid())
+  type         String
+  periodLabel  String
+  monthYear    String?
+  dataSnapshot Json
+  token        String   @unique
+  createdAt    DateTime @default(now())
+}

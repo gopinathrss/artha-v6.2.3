@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Reports</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE — Simulated Portfolio</div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
+        </div>
+        <nav class="nav">
+          <a href="/this-month">This month</a>
+          <a href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a href="/india">India</a>
+          <a href="/tax-calendar">Tax calendar</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a class="active" href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display preference">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn" id="btnTheme" type="button">Theme</button>
+            <button class="btn btn-gold" id="btnGen" type="button">Generate report now</button>
+          </div>
+        </header>
+        <main class="content">
+          <div class="card">
+            <div class="h2">Reports</div>
+            <div class="muted" id="empty">No reports yet. Click Generate to create a snapshot and open a printable view.</div>
+            <table class="table" style="margin-top: 12px; display: none" id="tbl">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Period</th>
+                </tr>
+              </thead>
+              <tbody id="body"></tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
+      function renderList(items) {
+        const tb = document.getElementById('body')
+        tb.innerHTML = ''
+        if (items && items.length) {
+          document.getElementById('empty').style.display = 'none'
+          document.getElementById('tbl').style.display = 'table'
+        } else {
+          document.getElementById('empty').style.display = 'block'
+          document.getElementById('tbl').style.display = 'none'
+        }
+        for (const rep of items || []) {
+          const tr = document.createElement('tr')
+          const d = new Date(rep.createdAt)
+          tr.innerHTML = `<td>${d.toLocaleString()}</td><td>${(rep.type || '').replace(
+            /</g,
+            ''
+          )}</td><td>${(rep.periodLabel || '').replace(/</g, '')}</td>`
+          tb.appendChild(tr)
+        }
+      }
+      ;(async () => {
+        const s = await fetch('/api/system/status')
+        const sj = await s.json()
+        ArthaUI.applyDemoChrome(!!(sj.data && sj.data.demoMode))
+        const r = await fetch('/api/reports')
+        const j = await r.json()
+        const items = (j.data && j.data.reports) || []
+        renderList(items)
+      })().catch(() => {})
+      document.getElementById('btnGen').addEventListener('click', async () => {
+        const b = document.getElementById('btnGen')
+        b.disabled = true
+        b.textContent = 'Generating…'
+        try {
+          const r = await fetch('/api/reports/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'SNAPSHOT' }) })
+          const j = await r.json()
+          if (j.demo) {
+            ArthaUI.showToast('Demo: report not persisted', 'error')
+            return
+          }
+          const u = j.data && j.data.viewUrl
+          if (u) {
+            const w = window.open(u, '_blank')
+            if (w) {
+              const r2 = await fetch('/api/reports')
+              const j2 = await r2.json()
+              renderList((j2.data && j2.data.reports) || [])
+            } else ArthaUI.showToast('Popup blocked', 'error')
+          } else throw new Error('no url')
+        } catch (e) {
+          ArthaUI.showToast('Generate failed', 'error')
+        } finally {
+          b.disabled = false
+          b.textContent = 'Generate report now'
+        }
+      })
+    </script>
+  </body>
+</html>

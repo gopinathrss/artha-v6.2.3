@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Tax calendar</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE — Simulated Portfolio</div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
+        </div>
+        <nav class="nav">
+          <a href="/this-month">This month</a>
+          <a href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a href="/india">India</a>
+          <a class="active" href="/tax-calendar">Tax calendar</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions"><button class="btn" id="btnTheme" type="button">Theme</button></div>
+        </header>
+        <main class="content">
+          <div class="card">
+            <div class="h2">Czech mutual fund tax window</div>
+            <div class="muted">Rows are sorted by urgency (closest tax-free date first).</div>
+            <table class="table" style="margin-top: 12px" id="tbl">
+              <thead>
+                <tr>
+                  <th>Fund</th>
+                  <th>Value</th>
+                  <th>Gain</th>
+                  <th>Purchase</th>
+                  <th>Tax-free date</th>
+                  <th>Days</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="body"></tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
+
+      function calcTax(h, today) {
+        const purchase = new Date(h.purchaseStartDate)
+        const taxFree = new Date(purchase)
+        taxFree.setFullYear(taxFree.getFullYear() + 3)
+        const days = Math.round((taxFree.getTime() - today.getTime()) / 86400000)
+        const isTaxFree = days <= 0
+        const urgency = isTaxFree ? 'FREE' : days <= 30 ? 'CRITICAL' : days <= 90 ? 'HIGH' : 'FUTURE'
+        return { taxFree, days, isTaxFree, urgency }
+      }
+
+      ;(async () => {
+        const r = await fetch('/api/holdings')
+        const j = await r.json()
+        ArthaUI.applyDemoChrome(!!j.demo)
+        const rows = ((j.data && j.data.holdings) || []).filter((h) => h.status !== 'EXITED')
+        const today = new Date()
+        const enriched = rows
+          .map((h) => ({ h, t: calcTax(h, today) }))
+          .sort((a, b) => a.t.days - b.t.days)
+
+        const b = document.getElementById('body')
+        if (!enriched.length) {
+          b.innerHTML = '<tr><td colspan="7">No active holdings.</td></tr>'
+          return
+        }
+
+        b.innerHTML = enriched
+          .map(({ h, t }) => {
+            const cls =
+              t.isTaxFree ? 'tr-taxfree' : t.days > 0 && t.days <= 30 ? 'tr-urg-30' : t.days <= 90 ? 'tr-urg-90' : ''
+            const status = t.isTaxFree ? 'TAX FREE' : t.days + 'd'
+            return `<tr class="${cls}">
+              <td>${(h.name || '').replace(/</g, '')}</td>
+              <td class="mono">${(h.currentValueCzk || 0).toLocaleString('cs-CZ')} Kč</td>
+              <td class="mono">${(h.gainCzk != null ? h.gainCzk : '—')}</td>
+              <td class="mono">${new Date(h.purchaseStartDate).toLocaleDateString('en-GB')}</td>
+              <td class="mono">${t.taxFree.toLocaleDateString('en-GB')}</td>
+              <td class="mono">${t.days}</td>
+              <td><span class="badge">${status}</span></td>
+            </tr>`
+          })
+          .join('')
+      })().catch(() => ArthaUI.showToast('Load failed', 'error'))
+    </script>
+  </body>
+</html>

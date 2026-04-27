@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — This month</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE</div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
+        </div>
+        <nav class="nav">
+          <a class="active" href="/this-month">This month</a>
+          <a href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a href="/india">India</a>
+          <a href="/tax-calendar">Tax calendar</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn" type="button" id="btnTheme">Theme</button>
+            <a class="btn" href="/finances">Finances</a>
+            <button class="btn btn-gold" type="button" id="btnGen">Generate plan</button>
+          </div>
+        </header>
+        <main class="content">
+          <div class="v4-hero card col-12 card--soft" style="padding: 16px 18px; margin-bottom: 8px">
+            <div class="h1" style="font-size: 1.2rem">This month’s plan</div>
+            <p class="lede" style="max-width: 64ch; margin: 0 0 8px 0">
+              Cashflow, adherence, and row-level follow-through. Set up
+              <a href="/finances" style="color: var(--gold)">Finances</a> first, then generate once per month.
+            </p>
+            <div class="sub" id="adhereBox" style="margin: 0; min-height: 1.2em" title=""></div>
+          </div>
+
+          <div id="skel" class="v4-skel" style="display: none" aria-hidden="true"></div>
+
+          <div class="grid" id="mainGrid" style="gap: 16px">
+            <section class="card col-12" id="cardHead">
+              <div class="kicker">Active month</div>
+              <div class="h2 mono" id="monthLabel" style="margin: 0">—</div>
+              <p class="muted" id="planMeta" style="margin: 6px 0 0 0">—</p>
+              <p class="sub" id="lineDelete" style="display: none; margin: 8px 0 0 0">
+                <a href="#" id="linkDeletePlan" class="btn btn-ghost" style="font-size: 12px">Delete this plan</a>
+                <span class="muted" style="margin-left: 8px">(PROPOSED only; lets you regenerate.)</span>
+              </p>
+            </section>
+            <section class="card col-6" id="cardFlow">
+              <div class="h2">Cashflow</div>
+              <div class="row">
+                <span class="muted">Available (income)</span
+                ><span class="mono flow-amt" id="totInc" data-czk="0">—</span>
+              </div>
+              <div class="row">
+                <span class="muted">Fixed</span
+                ><span class="mono flow-amt" id="totFix" data-czk="0">—</span>
+              </div>
+              <div class="row">
+                <span class="muted">Events (90d reserve)</span
+                ><span class="mono flow-amt" id="totEv" data-czk="0">—</span>
+              </div>
+              <div class="row">
+                <span class="muted">Emergency build (this month)</span
+                ><span class="mono flow-amt" id="totEm" data-czk="0">—</span>
+              </div>
+              <div class="row" style="border-top: 1px solid var(--border-subtle); font-weight: 800">
+                <span class="muted">Investable</span
+                ><span class="mono flow-amt" id="totInv" data-czk="0">—</span>
+              </div>
+            </section>
+            <section class="card col-6" id="cardFollow">
+              <div class="h2">Follow-through</div>
+              <p class="muted" style="font-size: 13px; line-height: 1.4">
+                Log executions per allocation row. Recent SIPs and journal below.
+              </p>
+              <div class="h2" style="font-size: 14px; margin-top: 12px">Executions (recent)</div>
+              <div class="table-wrap" style="margin-top: 6px">
+                <table class="table" id="tblSip" style="font-size: 12px">
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Fund</th>
+                      <th class="right">CZK</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="bodySip"></tbody>
+                </table>
+              </div>
+              <div class="h2" style="font-size: 14px; margin-top: 12px">Journal</div>
+              <div id="journal" class="muted" style="font-size: 12px; line-height: 1.5">—</div>
+            </section>
+            <section class="card col-12" id="alloc">
+              <div class="h2">Suggested moves</div>
+              <div class="muted" id="allocEmpty">Load your month to see the allocation.</div>
+              <div class="table-wrap" style="margin-top: 10px">
+                <table class="table" id="allocTbl" style="display: none; width: 100%">
+                  <tbody id="allocBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div id="modalDone" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px" aria-modal="true" role="dialog">
+      <div class="card" style="max-width: 400px; width: 100%; padding: 16px" onclick="event.stopPropagation()">
+        <div class="h2" style="margin-top: 0">Confirm execution</div>
+        <p class="muted" style="font-size: 13px">Amount executed and date. Creates a SIP (if ISIN) and journal (FOLLOWED).</p>
+        <label class="sub" style="display: block; margin-top: 10px">Amount (CZK)</label>
+        <input class="inp" id="inDoneAmt" type="number" min="0" style="width: 100%; box-sizing: border-box" />
+        <label class="sub" style="display: block; margin-top: 10px">Date</label>
+        <input class="inp" id="inDoneDate" type="date" style="width: 100%; box-sizing: border-box" />
+        <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end">
+          <button type="button" class="btn" id="btnDoneCancel">Cancel</button>
+          <button type="button" class="btn btn-gold" id="btnDoneOk">Confirm</button>
+        </div>
+      </div>
+    </div>
+    <div id="modalSkip" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px" aria-modal="true" role="dialog">
+      <div class="card" style="max-width: 400px; width: 100%; padding: 16px" onclick="event.stopPropagation()">
+        <div class="h2" style="margin-top: 0">Why skip?</div>
+        <p class="muted" style="font-size: 13px">A short reason is required (MISSED journal entry).</p>
+        <textarea class="inp" id="taSkip" rows="3" style="width: 100%; box-sizing: border-box; min-height: 80px"></textarea>
+        <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end">
+          <button type="button" class="btn" id="btnSkipCancel">Cancel</button>
+          <button type="button" class="btn btn-gold" id="btnSkipOk">Skip</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      var __planId = null
+      var __isDemo = false
+      var __rowIdx = 0
+      var __my = ''
+
+      function flowFmt() {
+        document.querySelectorAll('.flow-amt').forEach(function (el) {
+          var c = el.getAttribute('data-czk')
+          if (c == null || c === '') {
+            el.textContent = '—'
+            return
+          }
+          el.textContent = ArthaUI.formatMoneyFromCzk(Number(c))
+        })
+      }
+
+      function rowStatusLabel(st) {
+        st = (st || 'PENDING').toUpperCase()
+        if (st === 'DONE') return { text: 'Done', cls: 'pill-ok' }
+        if (st === 'SKIPPED') return { text: 'Skipped', cls: 'badge badge-x' }
+        return { text: 'Pending', cls: 'badge badge-n' }
+      }
+
+      function renderAllocBody(rows) {
+        var tb = document.getElementById('allocBody')
+        tb.innerHTML = ''
+        if (!__planId || __isDemo) {
+          for (var i = 0; i < rows.length; i++) {
+            var a = rows[i]
+            var tr = document.createElement('tr')
+            tr.innerHTML =
+              '<td colspan="1" style="border-bottom:1px solid var(--border-subtle); padding: 12px 0">' +
+              '<div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:flex-start">' +
+              '<div><div class="h2" style="font-size:15px; margin:0 0 4px 0">' +
+              (a.destination || '—').replace(/</g, '&lt;') +
+              '</div><div class="mono" style="font-size:17px; font-weight:800">' +
+              ArthaUI.formatMoneyFromCzk(a.amountCzk || 0) +
+              '</div><div class="muted" style="font-size:12px; font-style:italic; max-width:42ch; margin-top:4px">' +
+              (a.reason || '').replace(/</g, '&lt;') +
+              '</div>' +
+              (a.executionStatus && a.executionStatus !== 'PENDING'
+                ? '<div class="sub" style="margin-top:6px">' + escSub(a) + '</div>'
+                : '') +
+              '</div><div class="sub">' +
+              (function () {
+                var s = rowStatusLabel(a.executionStatus)
+                return '<span class="' + s.cls + '">' + s.text + '</span>'
+              })() +
+              ' <span class="muted" style="font-size:11px">(edit in live mode)</span></div></div></td>'
+            tb.appendChild(tr)
+          }
+          return
+        }
+        for (var j = 0; j < rows.length; j++) {
+          (function (idx) {
+            var a = rows[idx]
+            var st = (a.executionStatus || 'PENDING').toUpperCase()
+            var tr = document.createElement('tr')
+            tr.innerHTML =
+              '<td style="border-bottom:1px solid var(--border-subtle); padding: 12px 0; vertical-align:top"><div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:flex-start">' +
+              '<div><div class="h2" style="font-size:15px; margin:0 0 4px 0">' +
+              (a.destination || '—').replace(/</g, '&lt;') +
+              ' <span class="mono" style="font-size:12px; font-weight:600"> ' +
+              (a.isin || '—') +
+              '</span></div>' +
+              '<div class="mono" style="font-size:17px; font-weight:800">' +
+              ArthaUI.formatMoneyFromCzk(a.amountCzk || 0) +
+              '</div>' +
+              '<div class="muted" style="font-size:12px; font-style:italic; max-width:50ch; margin-top:4px">' +
+              (a.reason || '').replace(/</g, '&lt;') +
+              '</div>' +
+              (st === 'DONE'
+                ? '<div class="sub" style="color: var(--green); margin-top:6px">✓ Executed ' +
+                  (a.executedAt ? new Date(a.executedAt).toLocaleDateString('en-GB') : '—') +
+                  ', ' +
+                  Math.round(a.executedAmountCzk != null ? a.executedAmountCzk : 0) +
+                  ' CZK</div>'
+                : '') +
+              (st === 'SKIPPED'
+                ? '<div class="sub" style="color: var(--amber); margin-top:6px">✕ Skipped: ' +
+                  String(a.skipReason || '—').replace(/</g, '&lt;') +
+                  '</div>'
+                : '') +
+              '</div><div style="text-align:right">' +
+              (function () {
+                var s = rowStatusLabel(a.executionStatus)
+                return '<div style="margin-bottom:6px"><span class="' + s.cls + '">' + s.text + '</span></div>'
+              })() +
+              (st === 'PENDING'
+                ? '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">' +
+                  '<button type="button" class="btn btn-gold" data-d="' +
+                  idx +
+                  '">Done</button>' +
+                  '<button type="button" class="btn" data-s="' +
+                  idx +
+                  '">Skip</button></div>'
+                : '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end"><button type="button" class="btn btn-ghost" data-r="' +
+                  idx +
+                  '">Reset</button></div>') +
+              '</div></div></td>'
+            tr.querySelector('[data-d]') &&
+              tr.querySelector('[data-d]').addEventListener('click', function () {
+                openDone(idx, a)
+              })
+            if (tr.querySelector('[data-s]'))
+              tr.querySelector('[data-s]').addEventListener('click', function () {
+                openSkip(idx)
+              })
+            if (tr.querySelector('[data-r]'))
+              tr.querySelector('[data-r]').addEventListener('click', function () {
+                doReset(idx)
+              })
+            tb.appendChild(tr)
+          })(j)
+        }
+      }
+
+      function escSub(a) {
+        if ((a.executionStatus || '').toUpperCase() === 'DONE' && a.executedAt) {
+          return 'Executed ' + new Date(a.executedAt).toLocaleDateString('en-GB')
+        }
+        if ((a.executionStatus || '').toUpperCase() === 'SKIPPED') {
+          return 'Skipped: ' + (a.skipReason || '—')
+        }
+        return ''
+      }
+
+      function openDone(idx, a) {
+        __rowIdx = idx
+        document.getElementById('inDoneAmt').value = Math.round(a.amountCzk || 0)
+        document.getElementById('inDoneDate').value = new Date().toISOString().slice(0, 10)
+        document.getElementById('modalDone').style.display = 'flex'
+      }
+
+      function openSkip(idx) {
+        __rowIdx = idx
+        document.getElementById('taSkip').value = ''
+        document.getElementById('modalSkip').style.display = 'flex'
+      }
+
+      function closeModals() {
+        document.getElementById('modalDone').style.display = 'none'
+        document.getElementById('modalSkip').style.display = 'none'
+      }
+
+      async function patchRow(action, extra) {
+        var r = await fetch('/api/this-month/plan/' + encodeURIComponent(__planId) + '/row/' + __rowIdx, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({ action: action }, extra || {}))
+        })
+        var j = await r.json()
+        if (!j.success) throw new Error(j.error || 'Failed')
+        return j
+      }
+
+      async function doReset(idx) {
+        if (!__planId) return
+        if (!confirm('Reset this row to PENDING?')) return
+        __rowIdx = idx
+        try {
+          await patchRow('PENDING')
+          ArthaUI.showToast('Row reset', 'ok')
+          await load()
+        } catch (e) {
+          ArthaUI.showToast('Reset failed', 'error')
+        }
+      }
+
+      function renderSip(execs) {
+        var tb = document.getElementById('bodySip')
+        tb.innerHTML = ''
+        if (!execs || !execs.length) {
+          tb.innerHTML =
+            '<tr><td colspan="4" class="muted">No logged SIPs yet. Mark a row Done to create one (when an ISIN is set).</td></tr>'
+          return
+        }
+        for (var i = 0; i < Math.min(execs.length, 8); i++) {
+          var e = execs[i]
+          var d = e.scheduledDate || e.executedDate
+          var ds = d ? new Date(d).toLocaleDateString('en-GB') : '—'
+          var tr = document.createElement('tr')
+          tr.innerHTML =
+            '<td class="mono">' +
+            ds +
+            '</td><td>' +
+            String(e.fundName || '').replace(/</g, '&lt;') +
+            '</td><td class="right mono">' +
+            ArthaUI.formatMoneyFromCzk(e.amountCzk || 0) +
+            '</td><td>' +
+            String(e.status || '—').replace(/</g, '&lt;') +
+            '</td>'
+          tb.appendChild(tr)
+        }
+      }
+
+      function renderJournal(entries) {
+        var el = document.getElementById('journal')
+        if (!entries || !entries.length) {
+          el.textContent = 'No journal lines yet.'
+          return
+        }
+        el.innerHTML = entries
+          .slice(0, 8)
+          .map(function (e) {
+            return (
+              '<div class="row" style="border: 0; padding: 6px 0; display: block; border-top: 1px solid rgba(13,20,33,0.06)"><span class="pill-ok" style="font-size: 9px; text-transform: uppercase">' +
+              (e.category || 'NOTE') +
+              '</span> ' +
+              new Date(e.date).toLocaleDateString('en-GB') +
+              ' — ' +
+              String(e.content || '').replace(/</g, '&lt;') +
+              '</div>'
+            )
+          })
+          .join('')
+      }
+
+      async function loadAdherence() {
+        try {
+          var r = await fetch('/api/this-month/adherence?months=6')
+          var j = await r.json()
+          var d = (j && j.data) || {}
+          var p = d.adherencePct
+          if (p == null) return
+          var el = document.getElementById('adhereBox')
+          el.textContent =
+            'Adherence: ' +
+            p +
+            '% over last 6 months — Done: ' +
+            (d.doneRows != null ? d.doneRows : 0) +
+            ', Skipped: ' +
+            (d.skippedRows != null ? d.skippedRows : 0) +
+            ', Pending: ' +
+            (d.pendingRows != null ? d.pendingRows : 0)
+          el.title = 'Total rows (last 6 months, all plans with rows): ' + (d.totalRows != null ? d.totalRows : 0)
+          el.style.color = p > 85 ? 'var(--green)' : p >= 60 ? 'var(--amber)' : 'var(--red)'
+        } catch (e) {}
+      }
+
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', function () {
+        ArthaUI.toggleTheme()
+      })
+      document.getElementById('modalDone').addEventListener('click', function (ev) {
+        if (ev.target && ev.target.id === 'modalDone') closeModals()
+      })
+      document.getElementById('modalSkip').addEventListener('click', function (ev) {
+        if (ev.target && ev.target.id === 'modalSkip') closeModals()
+      })
+      document.getElementById('btnDoneCancel').addEventListener('click', function (e) {
+        e.stopPropagation()
+        closeModals()
+      })
+      document.getElementById('btnSkipCancel').addEventListener('click', function (e) {
+        e.stopPropagation()
+        closeModals()
+      })
+      document.getElementById('btnDoneOk').addEventListener('click', async function (e) {
+        e.stopPropagation()
+        try {
+          var amt = Number(document.getElementById('inDoneAmt').value || 0)
+          var dt = document.getElementById('inDoneDate').value
+          if (!isFinite(amt) || amt < 0) {
+            ArthaUI.showToast('Invalid amount', 'error')
+            return
+          }
+          await patchRow('DONE', { executedAmountCzk: amt, executedAt: dt ? new Date(dt + 'T12:00:00').toISOString() : undefined })
+          closeModals()
+          ArthaUI.showToast('Saved', 'ok')
+          await load()
+        } catch (err) {
+          ArthaUI.showToast('Update failed', 'error')
+        }
+      })
+      document.getElementById('btnSkipOk').addEventListener('click', async function (e) {
+        e.stopPropagation()
+        try {
+          var reason = document.getElementById('taSkip').value.trim()
+          if (!reason) {
+            ArthaUI.showToast('Reason required', 'error')
+            return
+          }
+          await patchRow('SKIPPED', { skipReason: reason })
+          closeModals()
+          ArthaUI.showToast('Skipped', 'ok')
+          await load()
+        } catch (err) {
+          ArthaUI.showToast('Update failed', 'error')
+        }
+      })
+
+      document.getElementById('linkDeletePlan').addEventListener('click', async function (e) {
+        e.preventDefault()
+        if (!__planId) return
+        if (!confirm('Delete this plan for ' + __my + '? You can generate again after.')) return
+        try {
+          var r = await fetch('/api/this-month/plan/' + encodeURIComponent(__planId), { method: 'DELETE' })
+          var j = await r.json()
+          if (!j.success) throw new Error('fail')
+          ArthaUI.showToast('Plan deleted', 'ok')
+          document.getElementById('lineDelete').style.display = 'none'
+          await load()
+        } catch (err) {
+          ArthaUI.showToast('Delete failed', 'error')
+        }
+      })
+
+      document.addEventListener('artha:fx-updated', function () {
+        flowFmt()
+        var p = window.__arthaLastPlan
+        if (p && p.allocations) renderAllocBody(Array.isArray(p.allocations) ? p.allocations : [])
+      })
+
+      async function load() {
+        document.getElementById('skel').style.display = 'block'
+        document.getElementById('mainGrid').style.display = 'none'
+        void loadAdherence()
+        try {
+          await ArthaUI.prefetchFx()
+          const r = await fetch('/api/this-month')
+          const j = await r.json()
+          __isDemo = !!j.demo
+          ArthaUI.applyDemoChrome(__isDemo)
+          const d = j.data || {}
+          __my = d.monthYear || '—'
+          document.getElementById('monthLabel').textContent = __my
+          const p = d.plan
+          document.getElementById('lineDelete').style.display = 'none'
+          if (!p) {
+            __planId = null
+            document.getElementById('planMeta').textContent =
+              'No saved plan for this month. Add profile & cashflow, then generate, or open Finances.'
+            for (const id of ['totInc', 'totFix', 'totEv', 'totEm', 'totInv']) {
+              const el = document.getElementById(id)
+              el.textContent = '—'
+              el.setAttribute('data-czk', '')
+            }
+            document.getElementById('allocEmpty').textContent = 'No plan yet — generate after Finances is set up.'
+            document.getElementById('allocTbl').style.display = 'none'
+            window.__arthaLastPlan = null
+          } else {
+            __planId = p.id || null
+            window.__arthaLastPlan = p
+            document.getElementById('planMeta').textContent =
+              (p.status || 'PROPOSED') +
+              (p.planSource ? ' · ' + p.planSource : '') +
+              (p.generatedAt || p.createdAt
+                ? ' · ' + new Date(p.generatedAt || p.createdAt).toLocaleString()
+                : '')
+            document.getElementById('lineDelete').style.display =
+              __planId && p.status === 'PROPOSED' && !__isDemo ? 'block' : 'none'
+            const setFlow = function (id, v) {
+              const el = document.getElementById(id)
+              el.setAttribute('data-czk', String(v))
+            }
+            setFlow('totInc', p.totalAvailableCzk || 0)
+            setFlow('totFix', p.fixedExpensesCzk || 0)
+            setFlow('totEv', p.reservedEventsCzk || 0)
+            setFlow('totEm', p.emergencyTopupCzk != null ? p.emergencyTopupCzk : 0)
+            setFlow('totInv', p.investableCzk || 0)
+            flowFmt()
+            const rows = Array.isArray(p.allocations) ? p.allocations : []
+            if (rows.length) {
+              document.getElementById('allocEmpty').style.display = 'none'
+              document.getElementById('allocTbl').style.display = 'table'
+              renderAllocBody(rows)
+            } else {
+              document.getElementById('allocBody').innerHTML = ''
+              document.getElementById('allocEmpty').style.display = 'block'
+              document.getElementById('allocEmpty').textContent = 'Plan exists but has no lines.'
+              document.getElementById('allocTbl').style.display = 'none'
+            }
+          }
+
+          const [sj, jj] = await Promise.all([
+            fetch('/api/sip-executions').then(function (x) {
+              return x.json()
+            }),
+            fetch('/api/advisor-journal').then(function (x) {
+              return x.json()
+            })
+          ])
+          renderSip(sj.data && sj.data.executions)
+          renderJournal((jj.data && jj.data.entries) || [])
+        } finally {
+          document.getElementById('skel').style.display = 'none'
+          document.getElementById('mainGrid').style.display = 'grid'
+        }
+      }
+
+      document.getElementById('btnGen').addEventListener('click', async function () {
+        const b = document.getElementById('btnGen')
+        b.disabled = true
+        b.textContent = 'Working…'
+        try {
+          const r = await fetch('/api/this-month/generate-now', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+          if (r.status === 409) {
+            const err = await r.json()
+            ArthaUI.showToast('Plan already exists for ' + (err.monthYear || __my) + '. Delete it first to regenerate.', 'error')
+            return
+          }
+          const j = await r.json()
+          if (!j.success) throw new Error(j.error || 'failed')
+          ArthaUI.showToast('Plan ready', 'ok')
+          await load()
+        } catch (e) {
+          ArthaUI.showToast('Could not generate — set profile + cashflow in Finances', 'error')
+        } finally {
+          b.disabled = false
+          b.textContent = 'Generate plan'
+        }
+      })
+      load().catch(function () {
+        ArthaUI.showToast('Load failed', 'error')
+      })
+    </script>
+  </body>
+</html>

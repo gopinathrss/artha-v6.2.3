@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Settings</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">
+      DEMO MODE ACTIVE — Settings still edit the real database
+    </div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
+        </div>
+        <nav class="nav">
+          <a href="/this-month">This month</a>
+          <a href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a href="/india">India</a>
+          <a href="/tax-calendar">Tax calendar</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a class="active" href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn" id="btnTheme" type="button">Theme</button>
+            <button class="btn btn-gold" id="btnLock" type="button" aria-pressed="true">LOCKED</button>
+          </div>
+        </header>
+        <main class="content">
+          <div class="grid" style="gap: 16px">
+            <div class="card col-12">
+              <div class="h2">A — Demo mode</div>
+              <div class="row" style="align-items: center; border: 0">
+                <div>
+                  <div class="kicker">Simulated portfolio</div>
+                  <div class="sub">Turns on the demo overlay. Settings remain persisted to Postgres.</div>
+                </div>
+                <div class="sub">
+                  <label><input type="checkbox" id="demoOn" disabled /> <span>Enable</span></label>
+                </div>
+              </div>
+              <div class="row" style="align-items: center; border: 0">
+                <div class="sub">Persona</div>
+                <div>
+                  <select id="persona" class="btn" style="min-width: 200px" disabled>
+                    <option>engineer</option>
+                    <option>executive</option>
+                    <option>fire</option>
+                    <option>family</option>
+                    <option>starter</option>
+                  </select>
+                </div>
+              </div>
+              <div class="goldbox" id="demoWarn" style="display: none; margin-top: 12px">Demo mode may be active.</div>
+              <div style="margin-top: 10px">
+                <button class="btn btn-gold" id="btnDemoApply" type="button" disabled>Apply</button>
+              </div>
+            </div>
+
+            <div class="card col-12" id="cardTargets">
+              <div class="h2">B — Portfolio targets</div>
+              <div class="sub" id="sumLine">Equity + Bonds + Cash = 100%</div>
+              <div class="row" style="border: 0; display: grid; grid-template-columns: 1fr; gap: 8px">
+                <label class="sub">Equity <span id="vE" class="mono">65</span>%<input data-k="E" class="rng" type="range" min="0" max="100" value="65" disabled /></label>
+                <label class="sub">Bonds <span id="vB" class="mono">25</span>%<input data-k="B" class="rng" type="range" min="0" max="100" value="25" disabled /></label>
+                <label class="sub">Cash <span id="vC" class="mono">10</span>%<input data-k="C" class="rng" type="range" min="0" max="100" value="10" disabled /></label>
+              </div>
+              <div class="row" style="border: 0; margin-top: 8px; display: grid; grid-template-columns: 1fr; gap: 8px">
+                <label class="sub">Target wealth (CZK)<input id="tW" type="number" class="btn" style="width: 100%" disabled /></label>
+                <label class="sub">Target date (year) <input id="tY" type="number" class="btn" style="width: 100%" disabled placeholder="2040" /></label>
+                <label class="sub"
+                  >Risk
+                  <select id="risk" class="btn" style="width: 100%" disabled>
+                    <option>balanced</option>
+                    <option>conservative</option>
+                    <option>growth</option>
+                  </select></label
+                >
+              </div>
+              <div style="margin-top: 10px"><button class="btn btn-gold" id="btnSaveTargets" type="button" disabled>Save targets</button></div>
+            </div>
+
+            <div class="card col-12">
+              <div class="h2">C — Czech holdings</div>
+              <div class="row" style="border: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
+                <div class="muted">CRUD is disabled in demo mode.</div>
+                <div style="display: flex; gap: 8px">
+                  <input id="csv" type="file" accept=".csv" disabled style="display: none" />
+                  <button class="btn" id="btnImport" type="button" disabled>Import CSV</button>
+                </div>
+              </div>
+              <form id="add" style="display: none; margin-top: 8px" class="card" onsubmit="return false">
+                <div class="kicker">Add fund</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px">
+                  <input class="btn" id="a_isin" placeholder="ISIN" required />
+                  <input class="btn" id="a_name" placeholder="Name" required />
+                  <select class="btn" id="a_cat">
+                    <option value="EQUITY">EQUITY</option>
+                    <option value="BONDS">BONDS</option>
+                    <option value="CASH">CASH</option>
+                    <option value="MIXED">MIXED</option>
+                  </select>
+                  <input class="btn" id="a_units" placeholder="Units" type="number" step="0.0001" />
+                  <input class="btn" id="a_nav" placeholder="NAV" type="number" step="0.0001" />
+                  <input class="btn" id="a_sip" placeholder="Monthly SIP (CZK)" type="number" step="1" value="0" />
+                  <input class="btn" id="a_start" placeholder="Start date (YYYY-MM-DD)" value="2023-01-15" />
+                </div>
+                <div style="margin-top: 10px"><button class="btn btn-gold" type="button" id="btnAddHolding">Create</button></div>
+              </form>
+              <div style="overflow: auto; margin-top: 12px">
+                <table class="table" id="tblH">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>ISIN</th>
+                      <th>Val</th>
+                      <th>SIP</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                    <tbody id="holdBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card col-12">
+              <div class="h2">D — India accounts (via Accounts)</div>
+              <div class="muted" style="margin-bottom: 8px">Uses <span class="mono">/api/accounts</span>. Currency INR for NRE/NRO/FD.</div>
+              <div id="acctRoot"></div>
+            </div>
+
+            <div class="card col-6">
+              <div class="h2">E — Communication</div>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >Alert email<input id="alertEmail" class="btn" disabled type="email" />
+                <button class="btn" type="button" id="btnTestEmail" disabled>Test email</button></label
+              >
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >Telegram chat id<input id="tgId" class="btn" disabled />
+                <button class="btn" type="button" id="btnTestTg" disabled>Test Telegram</button></label
+              >
+            </div>
+
+            <div class="card col-6" id="cardInt">
+              <div class="h2">F — Integrations (masked on load)</div>
+              <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 8px 0">
+                Best Q&amp;A: set <span class="mono">ANTHROPIC_API_KEY</span> (Claude Sonnet) on the server. OpenAI key
+                below powers <span class="mono">GPT-4o</span> as fallback.
+              </p>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >SMTP host<input id="smtpHost" class="btn" disabled
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >SMTP port<input id="smtpPort" class="btn" type="number" disabled
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >SMTP user<input id="smtpUser" class="btn" disabled
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >SMTP pass<input id="smtpPass" class="btn" disabled
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >Telegram token<input id="tgTok" class="btn" disabled
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >OpenAI key<input id="openai" class="btn" disabled
+              /></label>
+              <div style="margin-top: 10px"><button class="btn btn-gold" type="button" id="btnSaveInt" disabled>Save integrations</button></div>
+            </div>
+
+            <div class="card col-12" id="sys">
+              <div class="h2">G — System</div>
+              <div class="mono" id="sysOut">Loading…</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
+
+      const btnLock = document.getElementById('btnLock')
+      let locked = true
+      function reapplyLock() {
+        const isLocked = locked
+        const ids = [
+          'demoOn',
+          'persona',
+          'btnDemoApply',
+          'tW',
+          'tY',
+          'risk',
+          'btnSaveTargets',
+          'alertEmail',
+          'tgId',
+          'btnTestEmail',
+          'btnTestTg',
+          'smtpHost',
+          'smtpPort',
+          'smtpUser',
+          'smtpPass',
+          'tgTok',
+          'openai',
+          'btnSaveInt',
+          'a_isin',
+          'a_name',
+          'a_cat',
+          'a_units',
+          'a_nav',
+          'a_sip',
+          'a_start',
+          'btnAddHolding',
+          'btnImport'
+        ]
+        for (const id of ids) {
+          const e = document.getElementById(id)
+          if (!e) continue
+          if (isLocked) e.setAttribute('disabled', 'true')
+          else e.removeAttribute('disabled')
+        }
+        for (const rr of document.querySelectorAll('.rng')) {
+          isLocked ? rr.setAttribute('disabled', 'true') : rr.removeAttribute('disabled')
+        }
+        for (const ex of document.querySelectorAll('.exit-b')) {
+          isLocked ? ex.setAttribute('disabled', 'true') : ex.removeAttribute('disabled')
+        }
+        if (isLocked) document.getElementById('add').style.display = 'none'
+        else document.getElementById('add').style.display = 'block'
+        document.getElementById('btnTheme').removeAttribute('disabled')
+        btnLock.textContent = isLocked ? 'LOCKED' : 'UNLOCKED'
+        btnLock.setAttribute('aria-pressed', String(!isLocked))
+      }
+      reapplyLock()
+      btnLock.addEventListener('click', () => {
+        locked = !locked
+        reapplyLock()
+      })
+      for (const r of document.querySelectorAll('.rng')) {
+        r.addEventListener('input', () => {
+          const e = r.getAttribute('data-k')
+          if (e === 'E') document.getElementById('vE').textContent = r.value
+          if (e === 'B') document.getElementById('vB').textContent = r.value
+          if (e === 'C') document.getElementById('vC').textContent = r.value
+        })
+      }
+
+      async function load() {
+        const sRes = await fetch('/api/settings')
+        const sJ = await sRes.json()
+        if (!sJ.success) throw new Error('settings')
+        const s = sJ.data.settings
+        if (s.demoModeEnabled) document.getElementById('demoWarn').style.display = 'block'
+        else document.getElementById('demoWarn').style.display = 'none'
+        document.getElementById('demoOn').checked = !!s.demoModeEnabled
+        document.getElementById('persona').value = s.demoPersona || 'engineer'
+        const e = document.querySelector('[data-k="E"]')
+        const b = document.querySelector('[data-k="B"]')
+        const c = document.querySelector('[data-k="C"]')
+        e.value = s.targetEquityPct ?? 65
+        b.value = s.targetBondsPct ?? 25
+        c.value = s.targetCashPct ?? 10
+        document.getElementById('vE').textContent = e.value
+        document.getElementById('vB').textContent = b.value
+        document.getElementById('vC').textContent = c.value
+        document.getElementById('tW').value = s.targetWealthCzk != null ? s.targetWealthCzk : ''
+        if (s.targetDate) {
+          const y = new Date(s.targetDate).getFullYear()
+          document.getElementById('tY').value = y
+        }
+        document.getElementById('risk').value = s.riskProfile || 'balanced'
+        document.getElementById('alertEmail').value = s.alertEmail || ''
+        document.getElementById('tgId').value = s.telegramChatId || ''
+        document.getElementById('smtpHost').value = s.smtpHost || ''
+        document.getElementById('smtpPort').value = s.smtpPort || 587
+        document.getElementById('smtpUser').value = s.smtpUser || ''
+        document.getElementById('smtpPass').value = s.smtpPass || ''
+        document.getElementById('tgTok').value = s.telegramBotToken || ''
+        document.getElementById('openai').value = s.openaiApiKey || ''
+
+        const hRes = await fetch('/api/holdings')
+        const hJ = await hRes.json()
+        ArthaUI.applyDemoChrome(!!hJ.demo)
+        const hRows = (hJ.data && hJ.data.holdings) || []
+        document.getElementById('holdBody').innerHTML = hRows
+          .map(
+            (h) => `
+          <tr>
+            <td>${(h.name || '').replace(/</g, '')}</td>
+            <td class="mono">${(h.isin || '').replace(/</g, '')}</td>
+            <td class="mono">${(h.currentValueCzk || 0).toLocaleString('cs-CZ')}</td>
+            <td class="mono">${(h.monthlySipCzk || 0).toLocaleString('cs-CZ')}</td>
+            <td><button class="btn exit-b" data-id="${h.id}" type="button">Exit</button></td>
+          </tr>
+        `
+          )
+          .join('')
+        reapplyLock()
+
+        const aRes = await fetch('/api/accounts')
+        const aJ = await aRes.json()
+        const accs = (aJ.data && aJ.data.accounts) || []
+        const root = document.getElementById('acctRoot')
+        root.innerHTML = accs
+          .map(
+            (a) => `
+        <div class="row" style="border: 0; display: grid; grid-template-columns: 1fr; gap: 6px; margin: 10px 0; padding: 8px; border: 1px solid rgba(13,20,33,0.08)">
+          <div class="kicker">${(a.type || '').replace(/</g, '')}</div>
+          <div class="sub">${(a.name || '').replace(/</g, '')}</div>
+          <div class="mono">Local: ${(a.balanceLocal || 0).toLocaleString('en-IN')} ${a.currency} — CZK: ${(a.balanceCzk || 0).toLocaleString('cs-CZ')}</div>
+        </div>
+      `
+          )
+          .join('') || '<div class="muted">No accounts in the database yet.</div>'
+
+        const st = await (await fetch('/api/system/status')).json()
+        const d = (st && st.data) || { dbConnected: false }
+        document.getElementById('sysOut').textContent = JSON.stringify(d, null, 2)
+      }
+      load().catch(() => ArthaUI.showToast('Settings load failed', 'error'))
+
+      document.getElementById('btnDemoApply').addEventListener('click', async () => {
+        const r = document.getElementById('risk').value
+        const body = {
+          demoModeEnabled: document.getElementById('demoOn').checked,
+          demoPersona: document.getElementById('persona').value,
+          targetEquityPct: Number(document.querySelector('[data-k="E"]').value),
+          targetBondsPct: Number(document.querySelector('[data-k="B"]').value),
+          targetCashPct: Number(document.querySelector('[data-k="C"]').value),
+          targetWealthCzk: document.getElementById('tW').value ? Number(document.getElementById('tW').value) : null,
+          targetDate: document.getElementById('tY').value
+            ? new Date(Number(document.getElementById('tY').value), 0, 1).toISOString()
+            : null,
+          riskProfile: r
+        }
+        const s = document.getElementById('tY').value
+        if (s) body.targetDate = new Date(Number(s), 0, 1).toISOString()
+        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
+        ArthaUI.showToast('Saved', 'ok')
+      })
+
+      document.getElementById('btnSaveTargets').addEventListener('click', async () => {
+        const E = Number(document.querySelector('[data-k="E"]').value)
+        const B = Number(document.querySelector('[data-k="B"]').value)
+        const C = Number(document.querySelector('[data-k="C"]').value)
+        if (Math.abs(E + B + C - 100) > 0.25) {
+          return ArthaUI.showToast('Targets must sum to 100%', 'error')
+        }
+        const body = {
+          targetEquityPct: E,
+          targetBondsPct: B,
+          targetCashPct: C,
+          targetWealthCzk: document.getElementById('tW').value ? Number(document.getElementById('tW').value) : null,
+          riskProfile: document.getElementById('risk').value
+        }
+        const sY = document.getElementById('tY').value
+        if (sY) body.targetDate = new Date(Number(sY), 0, 1).toISOString()
+        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
+        ArthaUI.showToast('Targets saved', 'ok')
+      })
+
+      document.getElementById('btnSaveInt').addEventListener('click', async () => {
+        const body = {
+          smtpHost: document.getElementById('smtpHost').value,
+          smtpPort: Number(document.getElementById('smtpPort').value),
+          smtpUser: document.getElementById('smtpUser').value,
+          smtpPass: document.getElementById('smtpPass').value,
+          telegramBotToken: document.getElementById('tgTok').value,
+          openaiApiKey: document.getElementById('openai').value,
+          alertEmail: document.getElementById('alertEmail').value,
+          telegramChatId: document.getElementById('tgId').value
+        }
+        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
+        ArthaUI.showToast('Integrations saved', 'ok')
+      })
+
+      document.getElementById('btnAddHolding').addEventListener('click', async () => {
+        const body = {
+          isin: document.getElementById('a_isin').value.trim(),
+          name: document.getElementById('a_name').value.trim(),
+          type: 'MUTUAL_FUND',
+          category: document.getElementById('a_cat').value,
+          units: Number(document.getElementById('a_units').value || 0),
+          nav: Number(document.getElementById('a_nav').value || 0),
+          monthlySipCzk: Number(document.getElementById('a_sip').value || 0),
+          purchaseStartDate: document.getElementById('a_start').value
+        }
+        const res = await fetch('/api/holdings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
+        if (!res.ok) return ArthaUI.showToast('Create failed', 'error')
+        ArthaUI.showToast('Holding created', 'ok')
+        load()
+      })
+
+      document.getElementById('holdBody').addEventListener('click', async (ev) => {
+        const t = ev.target
+        if (!(t instanceof HTMLButtonElement)) return
+        const id = t.getAttribute('data-id')
+        if (!id) return
+        const res = await fetch('/api/holdings/' + encodeURIComponent(id), { method: 'DELETE' })
+        if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
+        if (!res.ok) return ArthaUI.showToast('Exit failed', 'error')
+        ArthaUI.showToast('Marked exited', 'ok')
+        load()
+      })
+      document.getElementById('btnTestEmail').addEventListener('click', () => ArthaUI.showToast('Email not wired in this build', 'error'))
+      document.getElementById('btnTestTg').addEventListener('click', () => ArthaUI.showToast('Telegram not wired in this build', 'error'))
+
+      document.getElementById('btnImport').addEventListener('click', () => {
+        if (document.getElementById('btnImport').disabled) return
+        ArthaUI.showToast('Import not implemented', 'error')
+      })
+    </script>
+  </body>
+</html>

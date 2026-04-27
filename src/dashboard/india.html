@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — India</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE</div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
+        </div>
+        <nav class="nav">
+          <a href="/this-month">This month</a>
+          <a href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a class="active" href="/india">India</a>
+          <a href="/tax-calendar">Tax calendar</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn" type="button" id="btnTheme">Theme</button>
+            <a class="btn btn-gold" href="/intelligence">Ask about DTAA / FCNR</a>
+          </div>
+        </header>
+        <main class="content">
+          <div class="v4-hero card col-12 card--soft" style="padding: 16px 18px; margin-bottom: 6px">
+            <div class="h1" style="font-size: 1.2rem">India lane</div>
+            <p class="lede" style="max-width: 64ch; margin: 0">
+              Policy rates, NRE/FCNR trade-offs, and NRI fund ideas. Amounts in Intelligence use the same context as
+              the rest of ARTHA; FX comes from the currency service.
+            </p>
+          </div>
+          <div class="grid" style="gap: 16px">
+            <section class="card col-6" id="cardRbi">
+              <div class="h2">Policy & best NRE (1yr sample)</div>
+              <p class="muted" id="rbiLine" style="min-height: 3.5em">Loading…</p>
+              <div class="kicker" id="bestBank" style="margin-top: 8px">—</div>
+            </section>
+            <section class="card col-6" id="cardDtaa">
+              <div class="h2">FCNR vs NRE (toy model)</div>
+              <p class="muted" id="fcnrLine" style="min-height: 4.5em">—</p>
+            </section>
+            <section class="card col-12">
+              <div class="h2">Banks with published NRE FDs (ingested sample)</div>
+              <p class="muted" style="margin-top: 0">Rates refresh with the data job; for decisions, also confirm with your bank’s live quote.</p>
+              <div class="table-wrap">
+                <table class="table" id="rateTbl" style="font-size: 13px">
+                  <thead>
+                    <tr>
+                      <th>Bank</th>
+                      <th>Tenor</th>
+                      <th class="right">Rate %</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rateBody"></tbody>
+                </table>
+              </div>
+            </section>
+            <section class="card col-12">
+              <div class="h2">NRI-dedicated funds (reference list)</div>
+              <p class="muted" id="fundHint">—</p>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', function () {
+        ArthaUI.toggleTheme()
+      })
+      function esc(s) {
+        return (s || '').replace(/</g, '&lt;')
+      }
+      ;(async function () {
+        try {
+          const s = await fetch('/api/system/status')
+          const sj = await s.json()
+          ArthaUI.applyDemoChrome(!!(sj.data && sj.data.demoMode))
+        } catch (e) {}
+        try {
+          const r = await fetch('/api/india/analysis')
+          const j = await r.json()
+          if (!j.success) throw new Error('x')
+          const d = j.data || {}
+          const rb = d.rbi
+          document.getElementById('rbiLine').textContent = rb
+            ? 'Repo / policy (sample): ' + (rb.value != null ? rb.value + '%' : 'n/a') + (rb.changeDirection ? ' · ' + rb.changeDirection : '') + (rb.asOf ? ' · as of ' + new Date(rb.asOf).toLocaleDateString('en-GB') : '') + '.'
+            : 'No RBI row — defaults used in engine.'
+          const b = d.bestNre1yr
+          document.getElementById('bestBank').textContent = b && b.bank ? 'Best 1yr sample: ' + b.bank + ' · ' + (b.value != null ? b.value : '—') + '%' : '—'
+          const f = d.fcnrVsNre
+          document.getElementById('fcnrLine').textContent = f
+            ? String(f.recommendation || f.summary || '')
+            : 'No comparison data.'
+        } catch (e) {
+          document.getElementById('rbiLine').textContent = 'Could not load India analysis.'
+        }
+        try {
+          const rr = await fetch('/api/india/rates')
+          const rj = await rr.json()
+          const rows = (rj.data && rj.data.rates) || []
+          const tb = document.getElementById('rateBody')
+          tb.innerHTML = ''
+          const list = rows.filter(function (x) { return (x.dataType || '') === 'NRE_FD_RATE' }).slice(0, 24)
+          if (!list.length) {
+            tb.innerHTML = '<tr><td colspan="3" class="muted">No NRE rate rows. Run seed / refresh on the server.</td></tr>'
+            return
+          }
+          for (const row of list) {
+            const tr = document.createElement('tr')
+            tr.innerHTML =
+              '<td>' +
+              esc(row.bankName) +
+              '</td><td>' +
+              esc(row.tenor || '—') +
+              '</td><td class="right mono">' +
+              (row.value != null ? String(row.value) : '—') +
+              '</td>'
+            tb.appendChild(tr)
+          }
+        } catch (e) {
+          document.getElementById('rateBody').innerHTML = '<tr><td colspan="3" class="muted">Rates unavailable</td></tr>'
+        }
+        try {
+          const r = await fetch('/api/india/analysis')
+          const j = await r.json()
+          const funds = (j.data && j.data.nriFunds) || []
+          document.getElementById('fundHint').textContent =
+            Array.isArray(funds) && funds.length
+              ? funds
+                  .slice(0, 8)
+                  .map(function (x) {
+                    return typeof x === 'string' ? x : (x && x.name) || JSON.stringify(x)
+                  })
+                  .join(' · ')
+              : 'Reference NRI list loads from server intelligence; ask ARTHA for suitability.'
+        } catch (e) {
+          document.getElementById('fundHint').textContent = '—'
+        }
+      })()
+    </script>
+  </body>
+</html>

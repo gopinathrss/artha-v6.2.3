@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Overview</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">
+      DEMO MODE ACTIVE — Simulated Portfolio
+    </div>
+    <div class="app">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div>
+            <h1>ARTHA</h1>
+            <small>Personal CFO</small>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="/this-month">This month</a>
+          <a class="active" href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a href="/india">India</a>
+          <a href="/tax-calendar">Tax calendar</a>
+          <a href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display preference">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions">
+            <button class="btn" type="button" id="btnTheme" aria-label="Toggle theme">Theme</button>
+          </div>
+        </header>
+        <main class="content">
+          <div class="grid" id="grid">
+            <section class="card col-6 card--accent" id="cardNw">
+              <div class="kicker">Net worth</div>
+              <div class="h1 mono" id="nwCzk">—</div>
+              <div class="sub mono" id="nwEur">—</div>
+              <div class="sub" style="margin-top: 10px">
+                MoM:
+                <span id="mom" class="mono">—</span>
+              </div>
+              <div class="split">
+                <div class="pane">
+                  <div class="kicker">Czech total</div>
+                  <div class="mono" id="czTot">—</div>
+                </div>
+                <div class="pane">
+                  <div class="kicker">India total</div>
+                  <div class="mono teal" id="inTot">—</div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card col-6" id="cardChart">
+              <div class="h2">Wealth trajectory</div>
+              <div class="chart-ctrl" role="tablist" aria-label="Range">
+                <button class="seg" type="button" data-range="6m">6M</button>
+                <button class="seg active" type="button" data-range="1y">1Y</button>
+                <button class="seg" type="button" data-range="all">ALL</button>
+              </div>
+              <svg class="chart" id="chartSvg" viewBox="0 0 900 240" preserveAspectRatio="none"></svg>
+              <div class="muted" id="chartHint" style="margin-top: 8px; font-size: 12px"></div>
+            </section>
+
+            <section class="card col-4" id="cardCz">
+              <div class="h2">Czech portfolio</div>
+              <div class="row"><span class="muted">Funds</span><span class="mono" id="czFunds">—</span></div>
+              <div class="row"><span class="muted">Invested (cashflows)</span><span class="mono" id="inv">—</span></div>
+              <div class="row"><span class="muted">Gain</span><span class="mono" id="gain">—</span></div>
+              <div style="margin-top: 10px">
+                <div class="kicker">Allocation</div>
+                <div class="row"><span class="muted">Equity</span><span class="mono" id="eqMix">—</span></div>
+                <div class="meter" aria-hidden="true"><i id="barEq" style="width: 0%"></i></div>
+                <div class="row"><span class="muted">Bonds</span><span class="mono" id="bdMix">—</span></div>
+                <div class="meter" aria-hidden="true"><i id="barBd" style="width: 0%"></i></div>
+                <div class="row"><span class="muted">Cash</span><span class="mono" id="caMix">—</span></div>
+                <div class="meter" aria-hidden="true"><i id="barCa" style="width: 0%"></i></div>
+              </div>
+              <div class="goldbox mono" style="margin-top: 12px" id="xirrBox">XIRR —</div>
+            </section>
+
+            <section class="card col-4" id="cardIn">
+              <div class="h2">India accounts</div>
+              <div class="row"><span class="muted">NRE</span><span class="mono teal" id="nre">—</span></div>
+              <div class="row"><span class="muted">NRO</span><span class="mono teal" id="nro">—</span></div>
+              <div class="row"><span class="muted">FDs (est.)</span><span class="mono teal" id="fds">—</span></div>
+              <div class="goldbox mono" style="margin-top: 12px" id="fxBox">FX —</div>
+            </section>
+
+            <section class="card col-4" id="cardAlloc">
+              <div class="h2">Allocation vs target</div>
+              <div id="allocRows"></div>
+            </section>
+
+            <section class="card col-6" id="cardGoals">
+              <div class="h2">Life goals</div>
+              <div class="row"><span class="muted">Financial freedom</span><span class="mono" id="gFF">—</span></div>
+              <div class="meter" aria-hidden="true"><i id="gFFbar" style="width: 0%"></i></div>
+              <div class="row"><span class="muted">Retirement by 50</span><span class="mono" id="gR">—</span></div>
+              <div class="row"><span class="muted">Property</span><span class="mono" id="gP">—</span></div>
+            </section>
+
+            <section class="card col-6" id="cardTax">
+              <div class="h2">Tax calendar (next)</div>
+              <div id="taxMini"></div>
+            </section>
+
+            <section class="card col-12" id="cardIntel">
+              <div class="grid" style="gap: 16px">
+                <div class="col-6" style="grid-column: span 6">
+                  <div class="h2">Alert feed</div>
+                  <div id="alertsMini"></div>
+                </div>
+                <div class="col-6" style="grid-column: span 6">
+                  <div class="h2">This month’s action</div>
+                  <div class="goldbox" id="intelBox">—</div>
+                  <div style="margin-top: 10px">
+                    <a class="btn btn-gold" href="/this-month">This month’s plan</a>
+                    <a class="btn" href="/reports" style="margin-left: 8px">Reports</a>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
+
+      function unwrapOverview(j) {
+        if (!j || j.success === false) return null
+        if (j.data) return j.data
+        const o = { ...j }
+        delete o.success
+        return o
+      }
+
+      function fmtPct(x) {
+        return (Number(x) || 0).toFixed(2) + '%'
+      }
+
+      function setAllocRows(root, a, tE, tB, tC) {
+        const rows = [
+          { k: 'EQUITY', cur: a.equityPct, tgt: tE, czk: a.equityCzk, gap: a.equityGap },
+          { k: 'BONDS', cur: a.bondsPct, tgt: tB, czk: a.bondsCzk, gap: a.bondsGap },
+          { k: 'CASH', cur: a.cashPct, tgt: tC, czk: a.cashCzk, gap: a.cashGap }
+        ]
+        root.innerHTML = rows
+          .map(
+            (r) => `
+          <div class="row" style="border:0; padding: 10px 0 6px 0">
+            <div>
+              <div class="kicker">${r.k}</div>
+              <div class="h1 mono" style="font-size: 28px; margin-top: 6px">${(Number(r.cur) || 0).toFixed(
+                1
+              )}%</div>
+            </div>
+            <div style="text-align: right">
+              <div class="badge">${(r.gap || 0) >= 0 ? 'under' : 'over'} by ${Math.abs(
+              r.gap || 0
+            ).toFixed(1)}pp</div>
+            </div>
+          </div>
+          <div class="meter" aria-label="${r.k} current percent">
+            <i style="width: ${Math.max(0, Math.min(100, r.cur))}%"></i>
+            <div class="marker" style="left: ${Math.max(0, Math.min(100, r.tgt))}%"></div>
+          </div>
+          <div class="sub mono" style="margin-top: 6px">Target: ${(Number(r.tgt) || 0).toFixed(
+            0
+          )}% · Notional: ${ArthaUI.formatCZK(r.czk)}</div>
+        `
+          )
+          .join('')
+      }
+
+      function drawChart(pts) {
+        const svg = document.getElementById('chartSvg')
+        if (!pts || pts.length < 2) {
+          svg.innerHTML = ''
+          return
+        }
+        const vals = pts.map((p) => p.y)
+        const min = Math.min(...vals)
+        const max = Math.max(...vals)
+        const pad = 16
+        const w = 900
+        const h = 240
+        const n = vals.length
+        const x = (i) => pad + (i * (w - pad * 2)) / (n - 1)
+        const yv = (v) => h - pad - ((v - min) / (max - min + 1e-9)) * (h - pad * 2)
+        const d = pts
+          .map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + x(i).toFixed(1) + ' ' + yv(p.y).toFixed(1))
+          .join(' ')
+        svg.innerHTML = `<path d="${d}" fill="none" stroke="#B8922A" stroke-width="2" />
+          ${pts
+            .map(
+              (p, i) =>
+                '<circle data-i="' + i + '" cx="' + x(i) + '" cy="' + yv(p.y) + '" r="2.2" fill="#0D1421" />'
+            )
+            .join('')}`
+
+        let tip = svg.querySelector('#tip')
+        if (!tip) {
+          tip = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+          tip.setAttribute('id', 'tip')
+          tip.setAttribute('visibility', 'hidden')
+          tip.innerHTML = `<line id="tipLine" x1="0" y1="16" x2="0" y2="224" stroke="rgba(13,20,33,0.25)"/>
+            <g id="tipText"></g>`
+          svg.appendChild(tip)
+        }
+
+        const hint = document.getElementById('chartHint')
+        svg.addEventListener('mousemove', (ev) => {
+          const r = svg.getBoundingClientRect()
+          const mx = ev.clientX - r.left
+          const i = Math.round(((mx - pad) / (r.width - pad * 2)) * (n - 1))
+          const ii = Math.max(0, Math.min(n - 1, i))
+          const p = pts[ii]
+          if (!p) return
+          tip.setAttribute('visibility', 'visible')
+          const xr = (mx / r.width) * 900
+          const line = tip.querySelector('#tipLine')
+          if (line) {
+            line.setAttribute('x1', String(xr))
+            line.setAttribute('x2', String(xr))
+          }
+          if (hint) {
+            const dt = new Date(p.t)
+            hint.textContent = `${dt.toLocaleDateString('en-GB')} — ${ArthaUI.formatCZK(p.y)}`
+          }
+        })
+        svg.addEventListener('mouseleave', () => {
+          tip.setAttribute('visibility', 'hidden')
+        })
+      }
+
+      let allPts = []
+      function filterPts(range) {
+        if (range === '6m') return allPts.slice(-6)
+        if (range === '1y') return allPts.slice(-12)
+        return allPts
+      }
+      function refreshChart(range) {
+        const pts = filterPts(range).map((p) => p)
+        drawChart(pts)
+      }
+
+      function wireChartControls() {
+        const btns = document.querySelectorAll('.seg')
+        btns.forEach((b) => {
+          b.addEventListener('click', () => {
+            btns.forEach((x) => x.classList.remove('active'))
+            b.classList.add('active')
+            refreshChart(b.getAttribute('data-range'))
+          })
+        })
+      }
+
+      async function load() {
+        const r = await fetch('/api/overview')
+        const j = await r.json()
+        const d = unwrapOverview(j)
+        const demo = !!(j && j.demo === true)
+        ArthaUI.applyDemoChrome(demo)
+
+        if (!d) {
+          ArthaUI.showToast('Unable to load overview', 'error')
+          return
+        }
+        const nw = d.netWorth || {}
+        document.getElementById('nwCzk').textContent = ArthaUI.formatCZK(nw.totalCzk || 0)
+        document.getElementById('nwEur').textContent = '≈ ' + ArthaUI.formatEUR(nw.totalEur || 0)
+        const mom = d.momChange || { czk: 0, pct: 0 }
+        const mEl = document.getElementById('mom')
+        mEl.textContent = `${ArthaUI.formatCZK(mom.czk || 0)} (${fmtPct(mom.pct || 0)})`
+        mEl.className = (mom.czk || 0) >= 0 ? 'mono' : 'mono'
+        document.getElementById('czTot').textContent = ArthaUI.formatCZK(
+          (nw.czechTotal != null ? nw.czechTotal : 0) || 0
+        )
+        document.getElementById('inTot').textContent = ArthaUI.formatCZK(
+          (nw.indiaTotal != null ? nw.indiaTotal : 0) || 0
+        )
+
+        const s = d.settings || {}
+        const tE = s.targetEquityPct != null ? s.targetEquityPct : 65
+        const tB = s.targetBondsPct != null ? s.targetBondsPct : 25
+        const tC = s.targetCashPct != null ? s.targetCashPct : 10
+
+        const a = d.allocation || { equityPct: 0, bondsPct: 0, cashPct: 0, equityCzk: 0, bondsCzk: 0, cashCzk: 0 }
+        document.getElementById('barEq').style.width = (Number(a.equityPct) || 0) + '%'
+        document.getElementById('barBd').style.width = (Number(a.bondsPct) || 0) + '%'
+        document.getElementById('barCa').style.width = (Number(a.cashPct) || 0) + '%'
+        document.getElementById('eqMix').textContent = (Number(a.equityPct) || 0).toFixed(1) + '%'
+        document.getElementById('bdMix').textContent = (Number(a.bondsPct) || 0).toFixed(1) + '%'
+        document.getElementById('caMix').textContent = (Number(a.cashPct) || 0).toFixed(1) + '%'
+
+        document.getElementById('czFunds').textContent = ArthaUI.formatCZK(nw.czechFundsCzk || 0)
+        document.getElementById('inv').textContent = ArthaUI.formatCZK(d.totalInvested || 0)
+        document.getElementById('gain').textContent = ArthaUI.formatCZK(nw.gainCzk || 0)
+
+        const x = d.xirr || { value: null, isEstimate: true, note: '' }
+        const xv = x.value
+        document.getElementById('xirrBox').textContent =
+          (xv == null ? 'XIRR — n/a' : 'XIRR ' + (xv || 0).toFixed(2) + '%') + (x.isEstimate ? ' (est.)' : '')
+
+        setAllocRows(document.getElementById('allocRows'), a, tE, tB, tC)
+
+        if (demo) {
+          const nre = d.indiaAccounts && d.indiaAccounts.nre
+          const nro = d.indiaAccounts && d.indiaAccounts.nro
+          const fds = d.indiaAccounts && d.indiaAccounts.fds
+          const fdSum = (fds || []).reduce((s, f) => s + (f.amountInr || 0), 0)
+          document.getElementById('nre').textContent =
+            nre
+              ? ArthaUI.formatINR(nre.balanceInr) + ' · ' + ArthaUI.formatCZK(nre.balanceCzk || 0)
+              : '—'
+          document.getElementById('nro').textContent =
+            nro
+              ? ArthaUI.formatINR(nro.balanceInr) + ' · ' + ArthaUI.formatCZK(nro.balanceCzk || 0)
+              : '—'
+          document.getElementById('fds').textContent = '₹ ' + (fdSum || 0).toLocaleString('en-IN') + ' (gross FDs)'
+
+          const fx = d.fxRates || nw.fxRatesUsed || d.netWorth?.fxRatesUsed
+          if (fx) {
+            document.getElementById('fxBox').textContent =
+              `EURCZK ${(Number(fx.EURCZK) || 0).toFixed(2)} · EURINR ${(Number(fx.EURINR) || 0).toFixed(2)}`
+          } else {
+            document.getElementById('fxBox').textContent = 'FX —'
+          }
+
+          const g = d.goals || {}
+          if (g.financialFreedom) {
+            const p = Number(String(g.financialFreedom.pct).replace(/[^\d.]/g, '')) || 0
+            document.getElementById('gFF').textContent = `${String(g.financialFreedom.pct)} of ${ArthaUI.formatCZK(
+              g.financialFreedom.targetCzk || 0
+            )}`
+            document.getElementById('gFFbar').style.width = Math.min(100, p) + '%'
+          }
+          if (g.retirement) {
+            document.getElementById('gR').textContent = g.retirement.onTrack
+              ? `On track — ${g.retirement.yearsLeft} yrs left (est.)`
+              : 'Review'
+          }
+          if (g.property) {
+            document.getElementById('gP').textContent = `${(g.property.pct || 0) + ''}% of ${ArthaUI.formatCZK(
+              g.property.targetCzk || 0
+            )}`
+          }
+
+          const tcal = d.taxCalendar || []
+          document.getElementById('taxMini').innerHTML = tcal
+            .slice(0, 5)
+            .map(
+              (t) => `
+            <div class="row" style="border:0; padding: 6px 0 6px 0">
+              <div>
+                <div class="sub">${(t.name || '').replace(/</g, '')}</div>
+                <div class="mono">${(t.valueCzk || 0).toLocaleString('cs-CZ')} Kč</div>
+              </div>
+              <div style="text-align: right" class="mono">${
+                t.daysLeft <= 0 ? 'FREE' : t.daysLeft + 'd'
+              }</div>
+            </div>`
+            )
+            .join('')
+
+          const als = d.alerts || []
+          document.getElementById('alertsMini').innerHTML = als
+            .slice(0, 3)
+            .map(
+              (a) => `
+            <div class="row" style="border:0; display:block; padding: 8px 0; border-top:1px solid rgba(13,20,33,0.08)">
+              <div class="u-bar"></div>
+              <div class="kicker">${
+                String(a.urgency || 'INFO') + ' · ' + String(a.triggerType || '')
+              }</div>
+              <div class="h2" style="margin: 6px 0 0 0">${(a.title || '').replace(/</g, '')}</div>
+              <div class="sub">${(a.message || '').replace(/</g, '')}</div>
+            </div>
+          `
+            )
+            .join('')
+
+          const intl = d.intelligence || {}
+          document.getElementById('intelBox').textContent = intl.oneThingRecommendation || '—'
+        } else {
+          document.getElementById('nre').textContent = ArthaUI.formatCZK(nw.indiaNRECzk || 0)
+          document.getElementById('nro').textContent = ArthaUI.formatCZK(nw.indiaNROCzk || 0)
+          document.getElementById('fds').textContent = ArthaUI.formatCZK(nw.indiaFDCzk || 0)
+          const fx2 = d.fxRates || nw.fxRatesUsed
+          if (fx2) {
+            document.getElementById('fxBox').textContent = `EURCZK ${(Number(fx2.EURCZK) || 0).toFixed(
+              2
+            )} · EURINR ${(Number(fx2.EURINR) || 0).toFixed(2)}`
+          }
+          const tcal2 = d.taxCalendar || []
+          document.getElementById('taxMini').innerHTML = tcal2
+            .slice(0, 5)
+            .map(
+              (h) => `
+            <div class="row" style="border:0; padding:6px 0; display:grid; grid-template-columns: 1fr auto; gap: 8px; align-items:center">
+              <div>
+                <div class="sub">${(h.name || h.isin || 'Holding').replace(/</g, '')}</div>
+                <div class="mono small">${(h.currentValueCzk || 0).toLocaleString('cs-CZ')} Kč</div>
+              </div>
+              <div class="mono">${h.tax && h.tax.daysUntilTaxFree != null ? h.tax.daysUntilTaxFree + 'd' : '—'}</div>
+            </div>
+          `
+            )
+            .join('') || '<div class="muted">Add holdings to see tax events.</div>'
+
+          const alerts = (await (await fetch('/api/alerts')).json()).data?.alerts || []
+          document.getElementById('alertsMini').innerHTML = (alerts || [])
+            .slice(0, 3)
+            .map(
+              (a) => `
+            <div class="row" style="border:0; display:block; padding:8px 0; border-top:1px solid rgba(13,20,33,0.08)">
+              <div class="u-bar"></div>
+              <div class="kicker">${(a.urgency || 'INFO') + ' · ' + (a.triggerType || '')}</div>
+              <div class="h2" style="margin: 6px 0 0 0">${(a.title || '').replace(/</g, '')}</div>
+            </div>
+            `
+            )
+            .join('') || '<div class="muted">No alerts yet.</div>'
+
+          document.getElementById('intelBox').textContent = 'Set targets in Settings. Monthly letter comes later.'
+        }
+
+        const snaps = d.snapshots || []
+        if (snaps && snaps.length > 0) {
+          allPts = snaps
+            .map((s) => ({ t: new Date(s.date).getTime(), y: s.netWorthCzk || 0 }))
+            .sort((a, b) => a.t - b.t)
+          const hint = document.getElementById('chartHint')
+          if (hint) hint.textContent = 'Hover for values.'
+        } else {
+          document.getElementById('chartHint').textContent = 'Building history — data appears after the first refresh job.'
+        }
+        refreshChart('1y')
+        wireChartControls()
+      }
+      load().catch(() => ArthaUI.showToast('Load failed', 'error'))
+    </script>
+  </body>
+</html>

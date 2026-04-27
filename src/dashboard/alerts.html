@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Alerts</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE — Simulated Portfolio</div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true"></div>
+          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
+        </div>
+        <nav class="nav">
+          <a href="/this-month">This month</a>
+          <a href="/">Overview</a>
+          <a href="/portfolio">Portfolio</a>
+          <a href="/india">India</a>
+          <a href="/tax-calendar">Tax calendar</a>
+          <a class="active" href="/alerts">Alerts</a>
+          <a href="/finances">Finances</a>
+          <a href="/reports">Reports</a>
+          <a href="/intelligence">Intelligence</a>
+          <a href="/library">Library</a>
+          <a href="/settings">Settings</a>
+        </nav>
+      </aside>
+      <div class="main">
+        <header class="topbar">
+          <div class="greeting" id="greet"></div>
+          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
+          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
+          <div class="actions"><button class="btn" id="btnTheme" type="button">Theme</button></div>
+        </header>
+        <main class="content" id="root"></main>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      ArthaUI.setGreeting(document.getElementById('greet'))
+      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
+      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
+      ;(async () => {
+        const r = await fetch('/api/alerts')
+        const j = await r.json()
+        ArthaUI.applyDemoChrome(!!j.demo)
+        const als = (j.data && j.data.alerts) || []
+        const root = document.getElementById('root')
+        if (!als.length) {
+          root.innerHTML =
+            '<div class="card"><div class="h2">Alerts</div><div class="muted">No alerts yet. System is watching your wealth.</div></div>'
+          return
+        }
+        root.innerHTML =
+          '<div class="card"><div class="h2">Alerts</div><div id="list"></div></div>'
+        const list = document.getElementById('list')
+        list.innerHTML = als
+          .map((a) => {
+            const u = String(a.urgency || 'INFO')
+            return `<div class="urg-${u}" style="border: 1px solid rgba(13,20,33,0.08); padding: 12px; border-radius: 2px; margin: 10px 0">
+              <div class="u-bar"></div>
+              <div class="kicker">${u} · ${String(a.triggerType || '')}</div>
+              <div class="h2" style="margin: 8px 0 0 0">${(a.title || '').replace(/</g, '')}</div>
+              <div class="sub">${(a.message || '').replace(/</g, '')}</div>
+              <div class="muted" style="margin-top: 10px">${new Date(a.firedAt).toLocaleString('en-GB')}</div>
+            </div>`
+          })
+          .join('')
+      })().catch(() => ArthaUI.showToast('Load failed', 'error'))
+    </script>
+  </body>
+</html>
