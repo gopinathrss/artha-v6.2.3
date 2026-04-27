@@ -125,7 +125,16 @@
                   <div id="alertsMini"></div>
                 </div>
                 <div class="col-6" style="grid-column: span 6">
-                  <div class="h2">This month’s action</div>
+                  <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap">
+                    <div class="h2" style="margin: 0">This month’s action</div>
+                    <div
+                      class="sub mono"
+                      id="adhereHome"
+                      style="text-align: right; min-width: 8rem; font-size: 13px"
+                    >
+                      —
+                    </div>
+                  </div>
                   <div class="goldbox" id="intelBox">—</div>
                   <div style="margin-top: 10px">
                     <a class="btn btn-gold" href="/this-month">This month’s plan</a>
@@ -457,6 +466,28 @@
         }
         refreshChart('1y')
         wireChartControls()
+
+        try {
+          const ar = await fetch('/api/this-month/adherence?months=6')
+          const aj = await ar.json()
+          const ad = (aj && aj.data) || {}
+          const h = document.getElementById('adhereHome')
+          if (h && ad.adherencePct != null && ad.adherencePct !== undefined) {
+            h.textContent = 'Adherence: ' + ad.adherencePct + '% (last 6 mo)'
+            const p = Number(ad.adherencePct) || 0
+            h.style.color = p > 85 ? 'var(--green)' : p >= 60 ? 'var(--amber)' : 'var(--red)'
+            h.title =
+              'Done: ' +
+              (ad.doneRows != null ? ad.doneRows : '—') +
+              ', Skipped: ' +
+              (ad.skippedRows != null ? ad.skippedRows : '—') +
+              ', Pending: ' +
+              (ad.pendingRows != null ? ad.pendingRows : '—')
+          }
+        } catch (_) {
+          const h = document.getElementById('adhereHome')
+          if (h) h.textContent = '—'
+        }
       }
       load().catch(() => ArthaUI.showToast('Load failed', 'error'))
     </script>

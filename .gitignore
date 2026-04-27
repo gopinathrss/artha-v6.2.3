@@ -3,4 +3,5 @@ dist/
 .next/
 .env
 *.log
+.node-portable/
 tests/reports/*.html
