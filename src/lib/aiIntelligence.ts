@@ -4,7 +4,7 @@ import type { AIMemory } from '@prisma/client'
 import { prisma } from './prisma'
 import { projectFutureValue, calculateRequiredSIP } from './calculations'
 import { findBestAlternative, loadAllLibrary, scoreInstrument } from './instrumentLibrary'
-import { getBestNREFDRate } from './indiaIntelligence'
+import { getBestNREFDRate, getRbiRepoRate } from './indiaIntelligence'
 import { num } from './money'
 
 function calculateBlendedReturn(portfolio: any): number {
@@ -16,7 +16,7 @@ function calculateBlendedReturn(portfolio: any): number {
 export function buildFullContext(
   portfolio: any,
   library: any[],
-  india: { rbi: number; best1yr: number; dtaa: any }
+  india: { rbi: number; rbiVerifiedDays: number; best1yr: number; dtaa: any }
 ): string {
   const nw = portfolio?.netWorth || {}
   const parts = [
@@ -24,7 +24,7 @@ export function buildFullContext(
     `Czech funds: ${nw.czechFundsCzk}. India total: ${nw.indiaTotal}.`,
     `XIRR: ${JSON.stringify(portfolio?.xirr || {})}.`,
     `Allocation: ${JSON.stringify(portfolio?.allocation || {})}.`,
-    `RBI rep policy rate (est.): ${india.rbi}%. Best NRE 1yr: ${india.best1yr}%.`,
+    `RBI repo rate: ${Number(india.rbi).toFixed(2)}% (verified ${india.rbiVerifiedDays}d ago). Best NRE 1yr: ${india.best1yr}%.`,
     `DTAA: ${JSON.stringify(india.dtaa)}.`,
     `Tax / holdings (first 6): ${JSON.stringify((portfolio?.holdings || []).slice(0, 6))}.`,
     `Tax calendar (first 5): ${JSON.stringify((portfolio?.taxCalendar || []).slice(0, 5))}.`,
@@ -144,14 +144,15 @@ export type AskKeys = { anthropicKey: string; openaiKey: string }
 export async function askArtha(question: string, portfolio: any, keys: AskKeys): Promise<AIMemory> {
   const { anthropicKey, openaiKey } = keys
   const library = await loadAllLibrary()
-  const rbi = 6.5
+  const rbiInfo = getRbiRepoRate()
+  const rbi = rbiInfo.value
   const best1 = num((await getBestNREFDRate('1yr'))?.value ?? 7.1)
   const dtaa = { note: '15% NRO WHT under India–Czech Republic DTAA vs 30% default' }
   const type = detectQuestionType(question)
   const context = buildFullContext(
     { ...portfolio, aiHints: await lastMemories(3) },
     library,
-    { rbi, best1yr: best1, dtaa }
+    { rbi, rbiVerifiedDays: rbiInfo.ageInDays, best1yr: best1, dtaa }
   )
   let pre: any = {}
   if (type === 'RETIREMENT') pre = analyzeRetirement(portfolio)

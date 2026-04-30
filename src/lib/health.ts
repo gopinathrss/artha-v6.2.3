@@ -1,12 +1,14 @@
 import { prisma } from './prisma'
 import { num } from './money'
+import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS, getFxAgeHours } from './currency'
+import { getRbiRepoRate, getStalestNREFDAge } from './indiaIntelligence'
 
 export type HealthRow = { name: string; status: 'PASS' | 'WARN' | 'FAIL'; message?: string }
 
-/** Spec target: 12 named checks (trust score divides by this count). */
-export const HEALTH_CHECK_COUNT = 12
+/** Spec target: named checks (trust score divides by this count). */
+export const HEALTH_CHECK_COUNT = 14
 
-/** When the DB is unreachable, return 12 named rows so `/api/health` stays JSON 200 (observability). */
+/** When the DB is unreachable, return 14 named rows so `/api/health` stays JSON 200 (observability). */
 function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trustScore: number } {
   const rest: HealthRow['name'][] = [
     'FX_FRESHNESS',
@@ -14,6 +16,8 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
     'EMAIL_CONFIGURED',
     'AI_REACHABLE',
     'PROFILE_COMPLETE',
+    'RBI_RATE_FRESHNESS',
+    'NRE_FD_RATE_FRESHNESS',
     'LIBRARY',
     'SNAPSHOT_FRESHNESS',
     'PLAN_COVERAGE',
@@ -43,24 +47,49 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     return healthChecksWhenDbDown(msg)
   }
 
-  const fx = await prisma.fXRate.findFirst({
-    where: { base: 'CZK', quote: 'EUR' },
-    orderBy: { fetchedAt: 'desc' }
-  })
-  const fxAgeH = fx ? (Date.now() - fx.fetchedAt.getTime()) / 3600000 : 999
+  const fxAgeH = await getFxAgeHours()
+  const fxOk = Number.isFinite(fxAgeH)
+  let fxSt: HealthRow['status'] = 'FAIL'
+  let fxMsg = 'No FX rows'
+  if (fxOk) {
+    if (fxAgeH > FX_STALENESS_FAIL_HOURS) fxSt = 'FAIL'
+    else if (fxAgeH > FX_STALENESS_WARN_HOURS) fxSt = 'WARN'
+    else fxSt = 'PASS'
+    fxMsg = `FX age (stalest leg) ${fxAgeH.toFixed(1)}h (warn>${FX_STALENESS_WARN_HOURS}h, fail>${FX_STALENESS_FAIL_HOURS}h)`
+  }
   checks.push({
     name: 'FX_FRESHNESS',
-    status: fxAgeH < 24 ? 'PASS' : fxAgeH < 72 ? 'WARN' : 'FAIL',
-    message: fx ? `Last fetch ${fxAgeH.toFixed(1)}h ago` : 'No FX rows'
+    status: fxSt,
+    message: fxMsg
   })
 
   try {
     const nav = await prisma.navHistory.findFirst({ orderBy: { date: 'desc' } })
     const navAgeDays = nav ? (Date.now() - nav.date.getTime()) / 86400000 : 999
+    const tracked = await prisma.holding.findMany({
+      where: { status: 'ACTIVE', navSourceType: { in: ['ERSTE', 'YAHOO', 'AMFI'] } },
+      select: { navLastFetchedAt: true }
+    })
+    let worstHoldDays = 0
+    for (const h of tracked) {
+      if (!h.navLastFetchedAt) {
+        worstHoldDays = 999
+        break
+      }
+      const d = (Date.now() - h.navLastFetchedAt.getTime()) / 86400000
+      if (d > worstHoldDays) worstHoldDays = d
+    }
+    const histStale = !nav || navAgeDays >= 10
+    const holdStale = tracked.length > 0 && worstHoldDays > 7
+    let st: HealthRow['status'] = 'PASS'
+    if (!nav && tracked.length === 0) st = 'WARN'
+    else if (histStale || holdStale) st = navAgeDays >= 14 || worstHoldDays > 10 ? 'FAIL' : 'WARN'
     checks.push({
       name: 'NAV_FRESHNESS',
-      status: nav ? (navAgeDays < 5 ? 'PASS' : navAgeDays < 10 ? 'WARN' : 'FAIL') : 'WARN',
-      message: nav ? `Last NAV ${navAgeDays.toFixed(1)}d` : 'No NavHistory yet'
+      status: st,
+      message: nav
+        ? `NavHistory ${navAgeDays.toFixed(1)}d; ERSTE/YAHOO/AMFI holdings max ${worstHoldDays.toFixed(1)}d since fetch`
+        : 'No NavHistory yet'
     })
   } catch {
     checks.push({ name: 'NAV_FRESHNESS', status: 'WARN', message: 'Skip' })
@@ -85,6 +114,41 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     status: prof && num(prof.monthlyNetIncomeCzk) > 0 ? 'PASS' : 'WARN',
     message: prof ? 'Profile exists' : 'Run onboarding'
   })
+
+  {
+    const rbi = getRbiRepoRate()
+    let rbiSt: HealthRow['status'] = 'PASS'
+    if (rbi.ageInDays > 180) rbiSt = 'FAIL'
+    else if (rbi.ageInDays >= 90) rbiSt = 'WARN'
+    checks.push({
+      name: 'RBI_RATE_FRESHNESS',
+      status: rbiSt,
+      message:
+        rbiSt === 'FAIL'
+          ? `RBI rate verified ${rbi.ageInDays}d ago (>180d). Update RBI_REPO_RATE in indiaIntelligence.ts.`
+          : rbiSt === 'WARN'
+            ? `RBI repo ${rbi.value.toFixed(2)}% — verified ${rbi.ageInDays}d ago (≥90d; check rbi.org.in/MonetaryPolicy).`
+            : `RBI repo ${rbi.value.toFixed(2)}% (${rbi.source}; verified ${rbi.ageInDays}d ago)`
+    })
+  }
+
+  try {
+    const ageRaw = await getStalestNREFDAge()
+    const days = Number.isFinite(ageRaw) ? Math.floor(ageRaw) : NaN
+    let st: HealthRow['status'] = 'PASS'
+    if (!Number.isFinite(days)) st = 'WARN'
+    else if (days > 60) st = 'FAIL'
+    else if (days >= 30) st = 'WARN'
+    checks.push({
+      name: 'NRE_FD_RATE_FRESHNESS',
+      status: st,
+      message: Number.isFinite(days)
+        ? `Oldest NRE FD rate row: ${days}d since validFrom (warn>=30d, fail>60d)`
+        : 'No NRE FD rate rows'
+    })
+  } catch {
+    checks.push({ name: 'NRE_FD_RATE_FRESHNESS', status: 'WARN', message: 'Skip' })
+  }
 
   const libN = await prisma.instrumentLibrary.count()
   checks.push({
@@ -227,7 +291,7 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
 
   const pass = checks.filter((c) => c.status === 'PASS').length
   const warn = checks.filter((c) => c.status === 'WARN').length
-  const trustPct = Math.min(100, Math.round((pass * 100 + warn * 50) / 12))
+  const trustPct = Math.min(100, Math.round((pass * 100 + warn * 50) / HEALTH_CHECK_COUNT))
 
   return { checks, trustScore: trustPct }
 }

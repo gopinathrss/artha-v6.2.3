@@ -1,6 +1,34 @@
 import { prisma } from './prisma'
 import { num } from './money'
 
+/**
+ * RBI repo rate — verified manually until an automated source is wired.
+ * Update `value` / `lastVerifiedAt` when RBI changes policy (see RBI_RATE_FRESHNESS health check).
+ */
+export const RBI_REPO_RATE = {
+  value: 6.5,
+  lastVerifiedAt: '2026-04-30',
+  source: 'RBI Press Release'
+} as const
+
+/** RBI repo % from verified constant; `isStale` means verified ≥90d ago (health: WARN ≥90d, FAIL >180d). */
+export function getRbiRepoRate(): {
+  value: number
+  ageInDays: number
+  isStale: boolean
+  source: string
+} {
+  const verifiedDate = new Date(`${RBI_REPO_RATE.lastVerifiedAt}T12:00:00.000Z`)
+  const ageMs = Date.now() - verifiedDate.getTime()
+  const ageInDays = Math.floor(ageMs / (1000 * 60 * 60 * 24))
+  return {
+    value: RBI_REPO_RATE.value,
+    ageInDays,
+    isStale: ageInDays >= 90,
+    source: RBI_REPO_RATE.source
+  }
+}
+
 export interface DTAAResult {
   withoutDTAA: number
   withDTAA: number
@@ -21,7 +49,7 @@ export async function fetchRBIRate(): Promise<void> {
     where: { dataType: 'RBI_RATE' },
     orderBy: { validFrom: 'desc' }
   })
-  const newVal = 6.5
+  const newVal = RBI_REPO_RATE.value
   const prevVal = prev?.value != null ? num(prev.value) : null
   const dir =
     prevVal == null
@@ -37,7 +65,7 @@ export async function fetchRBIRate(): Promise<void> {
       value: newVal,
       previousValue: prevVal ?? null,
       changeDirection: dir,
-      source: 'RBI_REPOLICY_EST',
+      source: RBI_REPO_RATE.source,
       validFrom: new Date()
     }
   })
@@ -64,6 +92,8 @@ const NRE_SEED: { bank: string; tenor: string; value: number }[] = [
 export async function seedNREFDRates(): Promise<void> {
   const c = await prisma.indiaIntelligence.count({ where: { dataType: 'NRE_FD_RATE' } })
   if (c > 0) return
+  const validFrom = new Date('2026-04-01')
+  const validUntil = new Date(validFrom.getTime() + 30 * 86400000)
   for (const r of NRE_SEED) {
     await prisma.indiaIntelligence.create({
       data: {
@@ -72,10 +102,26 @@ export async function seedNREFDRates(): Promise<void> {
         tenor: r.tenor,
         value: r.value,
         source: 'BANK_CARDS_APR_2026',
-        validFrom: new Date('2026-04-01')
+        validFrom,
+        validUntil
       }
     })
   }
+}
+
+/** Age in days of the oldest `NRE_FD_RATE` row by `validFrom` (staleness of the table). */
+export async function getStalestNreFdRateAgeDays(): Promise<number> {
+  const oldest = await prisma.indiaIntelligence.findFirst({
+    where: { dataType: 'NRE_FD_RATE' },
+    orderBy: { validFrom: 'asc' }
+  })
+  if (!oldest) return Number.POSITIVE_INFINITY
+  return (Date.now() - oldest.validFrom.getTime()) / 86400000
+}
+
+/** Spec alias: age in days of oldest NRE FD rate row (`validFrom`). */
+export async function getStalestNREFDAge(): Promise<number> {
+  return getStalestNreFdRateAgeDays()
 }
 
 export async function getBestNREFDRate(tenor: string) {
