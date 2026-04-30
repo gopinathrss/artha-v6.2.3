@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>ARTHA — Premium report</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,500;600&display=swap"
+    />
+    <script type="application/json" id="artha-report">
+      __REPORT_JSON__
+    </script>
+    <style>
+      :root {
+        --ink: #0a1628;
+        --bg-page: #e8e4dd;
+        --paper: #ffffff;
+        --gold: #b8922a;
+        --muted: #5a6578;
+        --bd: #e8e4dc;
+        --teal: #0a7a8a;
+        --green: #1e7a4a;
+      }
+      [data-theme='dark'] {
+        --bg-page: #0f1419;
+        --paper: #151b24;
+        --ink: #f0ebe3;
+        --muted: #9aa2af;
+        --bd: #2a3140;
+      }
+      @media screen {
+        body {
+          background: var(--bg-page);
+          padding: 40px;
+        }
+        .report {
+          max-width: 850px;
+          margin: 0 auto;
+        }
+        .page {
+          background: var(--paper);
+          padding: 60px 50px;
+          margin-bottom: 24px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+          border-radius: 4px;
+        }
+        .print-button {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 9;
+          background: var(--gold);
+          color: #fff;
+          border: 0;
+          font-weight: 600;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          padding: 12px 24px;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+      }
+      @media print {
+        @page {
+          size: A4;
+          margin: 18mm 14mm;
+        }
+        body {
+          background: #fff;
+          padding: 0;
+        }
+        .report {
+          max-width: none;
+        }
+        .page {
+          box-shadow: none;
+          border-radius: 0;
+          padding: 0;
+          margin: 0;
+          page-break-after: always;
+        }
+        .page:last-child {
+          page-break-after: auto;
+        }
+        .print-button,
+        .no-print {
+          display: none !important;
+        }
+        .chart svg {
+          max-width: 100% !important;
+        }
+      }
+      body {
+        color: var(--ink);
+        font-family: 'DM Sans', system-ui, sans-serif;
+        font-size: 13px;
+        line-height: 1.45;
+        margin: 0;
+      }
+      h1,
+      h2,
+      .f-title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-size: 1.05rem;
+        margin: 0 0 8px;
+        color: #1a2332;
+        border-bottom: 1px solid var(--bd);
+        padding-bottom: 6px;
+      }
+      .f-hero {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 64px;
+        line-height: 1.1;
+        font-weight: 600;
+        margin: 12px 0;
+        word-break: break-all;
+      }
+      .pos {
+        color: #1e7a4a;
+        font-weight: 600;
+      }
+      .divider-gold {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        margin: 16px 0 20px;
+      }
+      .tbl {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin: 6px 0 10px;
+      }
+      .tbl th,
+      .tbl td {
+        border-bottom: 1px solid var(--bd);
+        padding: 6px 4px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .right {
+        text-align: right;
+      }
+      .kpi {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      @media (max-width: 720px) {
+        .kpi {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .f-hero {
+          font-size: 42px;
+        }
+      }
+      .kbox {
+        border: 1px solid var(--bd);
+        border-radius: 6px;
+        padding: 10px;
+        background: rgba(184, 146, 42, 0.04);
+      }
+      .kbox b {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
+      }
+      .kbox .big {
+        font-size: 1.25rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .chart-trajectory,
+      #chart_traj,
+      #chart_water,
+      #chart_pie,
+      #chart_goals,
+      #chart_cash {
+        width: 170mm;
+        max-width: 100%;
+        height: 80mm;
+        margin: 0 auto 8px;
+      }
+      #chart_pie,
+      .chart-alloc {
+        width: 80mm;
+        height: 80mm;
+      }
+      .grid2 {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+      .mark {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      tr.tax-ok {
+        background: rgba(30, 122, 74, 0.08);
+      }
+      tr.tax-near {
+        background: rgba(184, 146, 42, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <button class="print-button no-print" type="button" onclick="window.print()">Download PDF</button>
+    <div class="report" id="root">
+      <div class="page" data-page="1" id="p1"></div>
+      <div class="page" data-page="2" id="p2"></div>
+      <div class="page" data-page="3" id="p3"></div>
+      <div class="page" data-page="4" id="p4"></div>
+      <div class="page" data-page="5" id="p5"></div>
+      <div class="page" data-page="6" id="p6"></div>
+      <div class="page" data-page="7" id="p7"></div>
+      <div class="page" data-page="8" id="p8"></div>
+      <div class="page" data-page="9" id="p9"></div>
+      <div class="page" data-page="10" id="p10"></div>
+    </div>
+    <script src="/vendor/echarts/echarts.min.js"></script>
+    <script>
+      ;(function () {
+        var D = null
+        try {
+          D = JSON.parse(document.getElementById('artha-report').textContent)
+        } catch (e) {
+          document.getElementById('p1').innerHTML = '<h1>Invalid report data</h1>'
+          return
+        }
+        function czk(n) {
+          n = Number(n) || 0
+          return (
+            n.toLocaleString('cs-CZ', { maximumFractionDigits: 0 }) + ' Kč'
+          )
+        }
+        var fmtPct = function (n) { return (Number(n) || 0).toFixed(2) + '%' }
+        if (D.cover) {
+          document.getElementById('p1').innerHTML = `
+          <h1 class="f-title" style="margin-top:0">${(D.cover.titleLine || 'ARTHA — Monthly report').replace(/</g, '&lt;')}</h1>
+          <p class="muted" style="margin:0 0 8px">${(D.cover.periodStartLabel || '')} — ${(D.cover.periodEndLabel || '')}</p>
+          <div class="f-hero mono">${czk(D.cover.netWorthCzk)}</div>
+          <p class="${(D.cover.momCzk || 0) >= 0 ? 'pos' : ''}" style="margin:0 0 4px">
+            MoM: ${(D.cover.momCzk || 0) >= 0 ? '+' : ''}${czk(D.cover.momCzk)} (${fmtPct(D.cover.momPct || 0)})
+          </p>
+          <p class="muted" style="margin:-2px 0 4px;font-size:0.9em">${String(D.cover.momLabel || '').replace(/</g, '&lt;')}</p>
+          <p class="muted" style="margin:0 0 16px">${(D.cover.generatedLabel || '').replace(/</g, '&lt;')}</p>
+          <div class="divider-gold" aria-hidden="true"></div>
+          <h2>Contents</h2>
+          <table class="tbl" style="max-width: 420px">
+            <tbody>
+              <tr><td>1. Cover & net worth</td><td class="right">1</td></tr>
+              <tr><td>2. Executive summary</td><td class="right">2</td></tr>
+              <tr><td>3. Plan vs executed</td><td class="right">3</td></tr>
+              <tr><td>4. Performance & allocation</td><td class="right">4</td></tr>
+              <tr><td>5. Czech holdings</td><td class="right">5</td></tr>
+              <tr><td>6. India (NRE/NRO, MF, FDs)</td><td class="right">6</td></tr>
+              <tr><td>7. Fee analysis</td><td class="right">7</td></tr>
+              <tr><td>8. Goals & trajectory</td><td class="right">8</td></tr>
+              <tr><td>9. Cash flow & journal</td><td class="right">9</td></tr>
+              <tr><td>10. Next month draft</td><td class="right">10</td></tr>
+            </tbody>
+          </table>`
+        }
+        if (D.executive) {
+          var ex = D.executive
+          document.getElementById('p2').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Executive summary</h1>
+            <div class="kpi">
+              <div class="kbox"><b>Net worth</b><span class="big">${czk(ex.netWorthCzk)}</span></div>
+              <div class="kbox"><b>MoM</b><span class="big">${(ex.momCzk || 0) >= 0 ? '+' : ''}${czk(ex.momCzk)}</span>
+                <div class="muted" style="margin-top:2px">${fmtPct(ex.momPct)}</div>
+                <div class="muted" style="margin-top:2px;font-size:0.85em">${String(ex.momLabel || '').replace(/</g, '&lt;')}</div>
+              </div>
+              <div class="kbox"><b>Adherence (6m)</b><span class="big">${(Number(ex.adherencePct) || 0).toFixed(0)}%</span></div>
+              <div class="kbox"><b>XIRR (est.)</b><span class="big">${ex.xirr == null ? 'n/a' : (Number(ex.xirr).toFixed(2) + '%')}</span></div>
+              <div class="kbox"><b>Equity gap</b><span class="big">${(Number(ex.allocDriftEquityPp) || 0).toFixed(1)} pp</span></div>
+              <div class="kbox"><b>Months to goal</b><span class="big">${ex.monthsToFF == null ? '—' : String(ex.monthsToFF)}</span></div>
+            </div>
+            <p class="mark" style="margin-top:8px">Internal: ${D.audience === 'CLIENT' ? 'no' : 'yes'}. Rounded in client mode.</p>`
+        }
+        if (D.planVsExecuted) {
+          var pv = D.planVsExecuted
+          var rsum = 0
+          var rows = (pv.rows || [])
+            .map(function (r) {
+              rsum += Number(r.planned) || 0
+              return (
+                '<tr><td>' +
+                String(r.destination || '—') +
+                '</td><td class="right">' +
+                czk(r.planned) +
+                '</td><td class="right">' +
+                (r.executed == null ? '—' : czk(r.executed)) +
+                '</td><td>' +
+                String(r.status) +
+                '</td><td class="right">' +
+                (r.variance == null ? '—' : czk(r.variance)) +
+                '</td></tr>'
+              )
+            })
+            .join('')
+          var skip = (pv.skippedNotes || [])
+            .map(function (s) {
+              return '<li>' + String(s).replace(/</g, '&lt;') + '</li>'
+            })
+            .join('')
+          document.getElementById('p3').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Allocation plan vs executed</h1>
+            <p class="muted" style="margin:0 0 6px">Period: <strong>${pv.monthYear || ''}</strong></p>
+            <table class="tbl"><thead><tr><th>Destination</th><th class="right">Planned</th><th class="right">Executed</th>
+            <th>Status</th><th class="right">Variance</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="5" class="muted">No plan rows for this month.</td></tr>'}</tbody>
+            <tfoot><tr><th>Total planned</th><th class="right">${czk(rsum)}</th><th colspan="3"></th></tr></tfoot>
+            </table>
+            <p class="muted" style="margin-top:4px">Skipped (reasons):</p>
+            <ul class="muted" style="margin:0">${skip || '<li>None</li>'}</ul>`
+        }
+        document.getElementById('p4').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Portfolio performance</h1>
+            <h2>Wealth trajectory (snapshots)</h2>
+            <div id="chart_traj" class="chart-trajectory"></div>
+            <div class="grid2">
+              <div>
+                <h2>Target vs actual</h2>
+                <div class="grid2" style="justify-content: flex-start; gap: 10px; align-items: center">
+                  <div id="chart_pie" class="chart-alloc" role="img" aria-label="Actual allocation pie"></div>
+                  <div id="bar_tgt" class="chart-alloc" style="height: 80mm; min-width: 200px; flex: 1"></div>
+                </div>
+              </div>
+            </div>
+            <h2>Net worth waterfall (illustrative)</h2>
+            <div id="chart_water" class="chart-trajectory" style="height: 64mm"></div>`
+
+        if (D.czechHoldings && D.czechHoldings.length) {
+          var trows = D.czechHoldings
+            .map(function (h) {
+              var c = h.taxHighlight === 'ok' ? 'tax-ok' : h.taxHighlight === 'near' ? 'tax-near' : ''
+              return (
+                '<tr class="' +
+                c +
+                '"><td>' +
+                h.fund +
+                '</td><td class="right mono small">' +
+                h.isin +
+                '</td><td class="right">' +
+                (h.units || 0).toFixed(2) +
+                '</td><td class="right">' +
+                (h.nav || 0).toFixed(2) +
+                '</td><td class="right">' +
+                czk(h.valueCzk) +
+                '</td><td class="right">' +
+                czk(0) +
+                '</td><td class="right">' +
+                (h.xirr == null ? '—' : h.xirr.toFixed(2) + '%') +
+                '</td><td class="right">' +
+                h.taxFreeDate +
+                '</td></tr>'
+              )
+            })
+            .join('')
+          document.getElementById('p5').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Czech holdings</h1>
+            <table class="tbl" style="font-size: 11px">
+            <thead><tr><th>Fund</th><th class="right">ISIN</th><th class="right">Units</th><th class="right">NAV</th>
+            <th class="right">Value</th><th class="right">Gain</th><th class="right">XIRR</th><th class="right">Tax-free</th></tr></thead>
+            <tbody>${trows}</tbody></table>`
+        } else {
+          document.getElementById('p5').innerHTML = '<h1 class="f-title" style="margin-top:0">Czech holdings</h1><p class="muted">No Czech fund rows in snapshot.</p>'
+        }
+        if (D.india) {
+          var ind = D.india
+          var mfs = (ind.mfs || [])
+            .map(function (m) {
+              return (
+                '<tr><td>' +
+                m.scheme +
+                '</td><td>' +
+                (m.amc || '') +
+                '</td><td class="right">' +
+                m.units.toFixed(2) +
+                '</td><td class="right">' +
+                m.nav.toFixed(2) +
+                '</td><td class="right">' +
+                m.valueInr.toLocaleString('en-IN') +
+                '</td><td class="right">' +
+                czk(m.valueCzk) +
+                '</td><td class="right">' +
+                (m.xirr == null ? '—' : m.xirr) +
+                '</td><td>' +
+                m.taxLabel +
+                '</td></tr>'
+              )
+            })
+            .join('')
+          var fdt = (ind.fds || [])
+            .map(function (f) {
+              return (
+                '<tr><td>' +
+                f.bank +
+                '</td><td class="right">₹ ' +
+                f.principalInr.toLocaleString('en-IN') +
+                '</td><td class="right">' +
+                f.rate.toFixed(2) +
+                '%</td><td>' +
+                f.maturity +
+                '</td><td class="right">' +
+                f.daysLeft +
+                'd</td></tr>'
+              )
+            })
+            .join('')
+          document.getElementById('p6').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">India holdings</h1>
+            <h2>Balances (NRE / NRO)</h2>
+            <p class="muted" style="margin:0 0 6px">
+            NRE: ${
+              ind.nre
+                ? '₹ ' + (ind.nre.inr || 0).toLocaleString('en-IN') + ' · ' + czk(ind.nre.czk)
+                : '—'
+            } · NRO: ${
+            ind.nro
+              ? '₹ ' + (ind.nro.inr || 0).toLocaleString('en-IN') + ' · ' + czk(ind.nro.czk)
+              : '—'
+          }</p>
+            <h2>Mutual funds</h2>
+            <div style="min-height: 48mm" id="chart_india_fd"></div>
+            <table class="tbl" style="font-size: 11px"><thead><tr><th>Scheme</th><th>AMC</th>
+            <th class="right">U</th><th class="right">NAV</th><th class="right">INR</th><th class="right">CZK</th><th class="right">XIRR</th><th>Tax</th></tr></thead>
+            <tbody>${mfs || '<tr><td colspan="8" class="muted">—</td></tr>'}</tbody></table>
+            <h2>FD ladder (table)</h2>
+            <table class="tbl" style="font-size: 11px"><thead><tr><th>Bank</th><th class="right">Principal</th>
+            <th class="right">Rate</th><th>Maturity</th><th class="right">Days</th></tr></thead>
+            <tbody>${fdt || '<tr><td colspan="5" class="muted">—</td></tr>'}</tbody></table>`
+        } else {
+          document.getElementById('p6').innerHTML = '<h1 class="f-title">India</h1><p class="muted">No India data.</p>'
+        }
+        if (D.feeAnalysis) {
+          var fr = (D.feeAnalysis.rows || [])
+            .map(function (f) {
+              return (
+                '<tr><td>' +
+                f.yourFund +
+                '</td><td>' +
+                f.bestEtf +
+                '</td><td class="right">' +
+                (Number(f.terDiff) || 0).toFixed(2) +
+                ' pp</td><td class="right">' +
+                czk(f.annualSavingCzk) +
+                '</td></tr>'
+              )
+            })
+            .join('')
+          document.getElementById('p7').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Fee analysis (library best ETF, George)</h1>
+            <p class="pos" style="font-size: 1.1rem; font-weight: 600">Total potential save / yr: ${czk(
+              D.feeAnalysis.totalSavingCzk
+            )}</p>
+            <table class="tbl" style="margin-top: 8px"><thead><tr><th>Your fund</th><th>Best in category</th>
+            <th class="right">TER diff</th><th class="right">Annual CZK</th></tr></thead>
+            <tbody>${fr || '<tr><td colspan="4" class="muted">No material gaps vs library alts</td></tr>'}</tbody></table>`
+        }
+        if (D.goals && D.goals.length) {
+          document.getElementById('p8').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Goals & trajectory (illustrative)</h1>
+            <div id="chart_goals" class="chart-trajectory" style="height: 80mm; width: 170mm"></div>
+            <table class="tbl" style="margin-top:4px">` +
+            D.goals
+              .map(function (g) {
+                return (
+                  '<tr><td>' +
+                  (g.title || 'Goal') +
+                  '</td><td class="right">' +
+                  czk(g.targetCzk) +
+                  '</td><td class="right">' +
+                  czk(g.currentCzk) +
+                  '</td><td class="right">' +
+                  (g.pct || 0).toFixed(0) +
+                  '%</td><td class="right">' +
+                  (g.prob == null ? '—' : g.prob) +
+                  '</td><td class="right">' +
+                  (g.monthsLeft == null ? '—' : g.monthsLeft) +
+                  '</td></tr>'
+                )
+              })
+              .join('') + '</table>'
+        }
+        var jn = (D.journal || [])
+          .map(function (j) {
+            return (
+              '<li><strong>[' + j.date + ']</strong> ' + String(j.category) + ' — ' + String(j.content) + '</li>'
+            )
+          })
+          .join('')
+        document.getElementById('p9').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Cash flow (plan month) + advisor notes</h1>
+            <div id="chart_cash" class="chart-trajectory" style="height: 64mm; width: 150mm; margin: 0"></div>
+            <p class="muted" style="margin:0 0 2px">Income: ${czk(
+              (D.cashflow && D.cashflow.income) || 0
+            )} · Fixed: ${czk(
+          (D.cashflow && D.cashflow.fixed) || 0
+        )} · Events: ${czk(
+          (D.cashflow && D.cashflow.events) || 0
+        )} · Investable: ${czk(
+          (D.cashflow && D.cashflow.investable) || 0
+        )}</p>
+            <h2 style="margin-top:6px">Journal (top ${(D.journal && D.journal.length) || 0} recent)</h2>
+            <ul class="muted" style="margin:0; padding-left:1.1rem">${jn || '<li>—</li>'}</ul>`
+
+        if (D.nextMonth) {
+          var nrows = (D.nextMonth.rows || [])
+            .map(function (r) {
+              return (
+                '<tr><td>' +
+                (r.destination || '—') +
+                '</td><td class="right">' +
+                czk(r.amountCzk) +
+                '</td><td class="muted">' +
+                String(r.reason || '—') +
+                '</td></tr>'
+              )
+            })
+            .join('')
+          document.getElementById('p10').innerHTML = `
+            <h1 class="f-title" style="margin-top:0">Next month (draft plan)</h1>
+            <p class="muted">${(D.nextMonth.caveat || '').replace(/</g, '&lt;')}</p>
+            <p class="muted" style="margin:0 0 2px">Month: <strong>${(D.nextMonth && D.nextMonth.monthYear) || ''}</strong></p>
+            <table class="tbl"><thead><tr><th>Destination</th><th class="right">Amount</th><th>Reason</th></tr></thead>
+            <tbody>${nrows || '<tr><td colspan="3" class="muted">—</td></tr>'}</tbody></table>
+            <p class="mark" style="margin-top: 8px">In print, disable browser “Headers and footers” in More settings for a clean A4 output.</p>`
+        }
+
+        if (typeof echarts === 'undefined') {
+          return
+        }
+        var cGold = D.theme && D.theme.gold ? D.theme.gold : '#B8922A'
+        if (D.charts && D.charts.trajectory) {
+          var tch = echarts.init(document.getElementById('chart_traj'), null, { renderer: 'svg' })
+          tch.setOption({
+            grid: { left: 48, right: 20, top: 18, bottom: 28, containLabel: true },
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'time' },
+            yAxis: { type: 'value' },
+            series: [
+              {
+                type: 'line',
+                smooth: true,
+                name: 'Net worth CZK',
+                data: (D.charts.trajectory || []).map(function (a) { return [a[0], a[1]] }),
+                lineStyle: { color: cGold, width: 2 },
+                areaStyle: { color: 'rgba(184, 146, 42, 0.12)' }
+              }
+            ]
+          })
+        }
+        if (D.charts) {
+          var a = D.charts.actualAlloc || { equity: 0, bonds: 0, cash: 0 }
+          var pich = echarts.init(document.getElementById('chart_pie'), null, { renderer: 'svg' })
+          pich.setOption({
+            tooltip: { trigger: 'item' },
+            series: [
+              {
+                type: 'pie',
+                radius: ['32%', '68%'],
+                data: [
+                  { name: 'Equity', value: a.equity, itemStyle: { color: cGold } },
+                  { name: 'Bonds', value: a.bonds, itemStyle: { color: '#0a7a8a' } },
+                  { name: 'Cash', value: a.cash, itemStyle: { color: '#4a5a6b' } }
+                ]
+              }
+            ]
+          })
+        }
+        if (D.charts) {
+          var tA = D.charts.targetAlloc || { equity: 0, bonds: 0, cash: 0 }
+          var aA = D.charts.actualAlloc || { equity: 0, bonds: 0, cash: 0 }
+          var bch = echarts.init(document.getElementById('bar_tgt'), null, { renderer: 'svg' })
+          bch.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['Target', 'Actual'] },
+            xAxis: { type: 'category', data: ['Equity', 'Bonds', 'Cash'] },
+            yAxis: { type: 'value', max: 100 },
+            series: [
+              { name: 'Target', type: 'bar', data: [tA.equity, tA.bonds, tA.cash], itemStyle: { color: 'rgba(184,146,42,0.35)' } },
+              { name: 'Actual', type: 'bar', data: [aA.equity, aA.bonds, aA.cash], itemStyle: { color: cGold } }
+            ]
+          })
+        }
+        if (D.charts && D.charts.waterfall) {
+          var wch = echarts.init(document.getElementById('chart_water'), null, { renderer: 'svg' })
+          wch.setOption({
+            grid: { left: 50, right: 16, top: 18, bottom: 32, containLabel: true },
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: (D.charts.waterfall || []).map(function (r) { return r.name }) },
+            yAxis: { type: 'value' },
+            series: [
+              { type: 'bar', name: 'CZK', data: (D.charts.waterfall || []).map(function (r) { return r.value }) }
+            ]
+          })
+        }
+        if (D.charts && D.charts.goalFan) {
+          var g = D.charts.goalFan
+          var gch = echarts.init(document.getElementById('chart_goals'), null, { renderer: 'svg' })
+          gch.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['p50', 'p25–p75', 'p5–p95'] },
+            xAxis: { type: 'category', data: g.t },
+            yAxis: { type: 'value' },
+            series: [
+              { name: 'p50', type: 'line', data: g.p50, lineStyle: { color: cGold, width: 2 } },
+              { name: 'p25', type: 'line', data: g.p25, showSymbol: false, lineStyle: { opacity: 0 } },
+              { name: 'p75', type: 'line', data: g.p75, showSymbol: false, lineStyle: { opacity: 0 } }
+            ]
+          })
+        }
+        if (D.cashflow) {
+          var cch = echarts.init(document.getElementById('chart_cash'), null, { renderer: 'svg' })
+          cch.setOption({
+            xAxis: { type: 'category', data: ['Income', 'Fixed', 'Events', 'Investable'] },
+            yAxis: { type: 'value' },
+            series: [
+              {
+                type: 'bar',
+                data: [
+                  D.cashflow.income || 0,
+                  D.cashflow.fixed || 0,
+                  D.cashflow.events || 0,
+                  D.cashflow.investable || 0
+                ],
+                itemStyle: { color: cGold }
+              }
+            ]
+          })
+        }
+        // India FD mini (last 24 months) — if container exists
+        var fdc = document.getElementById('chart_india_fd')
+        if (fdc && D.india && D.india.fds && D.india.fds.length) {
+          var fch = echarts.init(fdc, null, { renderer: 'svg' })
+          fch.setOption({
+            grid: { left: 100, right: 16, top: 6, bottom: 24, containLabel: true },
+            tooltip: { trigger: 'axis' },
+            yAxis: { type: 'category', data: (D.india.fds || []).map(function (f) { return f.bank }), inverse: true },
+            xAxis: { type: 'value', name: 'Principal (INR)' },
+            series: [
+              { type: 'bar', name: 'INR', data: (D.india.fds || []).map(function (f) { return f.principalInr }), itemStyle: { color: cGold } }
+            ]
+          })
+        }
+        if (/[?&]print=1(?:&|$)/.test(location.search)) {
+          setTimeout(function () { window.print() }, 500)
+        }
+        window.addEventListener('afterprint', function () {
+          try { document.hasFocus() } catch (e) {}
+        })
+        window.addEventListener('beforeprint', function () {
+          try {
+            if (typeof echarts === 'function') { /* resize */ }
+          } catch (e) {}
+        })
+      })()
+    </script>
+  </body>
+</html>

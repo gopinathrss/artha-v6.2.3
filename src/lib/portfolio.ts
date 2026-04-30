@@ -73,16 +73,33 @@ export async function getPortfolioSummary() {
       }))
       .sort((a, b) => a.tax.daysUntilTaxFree - b.tax.daysUntilTaxFree)
 
-    const lastSnapshot = snapshots[1]
-    const momChange = lastSnapshot
-      ? {
-          czk: netWorth.totalCzk - lastSnapshot.netWorthCzk,
-          pct:
-            lastSnapshot.netWorthCzk === 0
-              ? 0
-              : ((netWorth.totalCzk - lastSnapshot.netWorthCzk) / lastSnapshot.netWorthCzk) * 100
+    const today = new Date()
+    const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
+    const subDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - n)
+    const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
+    const monthAgoSnapshot = await prisma.snapshot.findFirst({
+      where: {
+        date: {
+          gte: subDays(oneMonthAgo, 3),
+          lte: addDays(oneMonthAgo, 3)
         }
-      : { czk: 0, pct: 0 }
+      },
+      orderBy: { date: 'desc' }
+    })
+    const momChange = monthAgoSnapshot
+      ? {
+          czk: netWorth.totalCzk - monthAgoSnapshot.netWorthCzk,
+          pct:
+            monthAgoSnapshot.netWorthCzk === 0
+              ? null
+              : ((netWorth.totalCzk - monthAgoSnapshot.netWorthCzk) / monthAgoSnapshot.netWorthCzk) * 100,
+          label: `vs ${monthAgoSnapshot.date.toISOString().slice(0, 10)}`
+        }
+      : {
+          czk: null,
+          pct: null,
+          label: 'MoM unavailable (no snapshot ~30 days old)'
+        }
 
     return {
       success: true,

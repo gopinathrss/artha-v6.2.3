@@ -21,6 +21,10 @@
         </div>
         <nav class="nav">
           <a href="/this-month">This month</a>
+          <a href="/onboarding" data-artha-setup-nav
+            ><span class="artha-setup-label">✨ Complete Setup</span
+            ><span class="artha-setup-dot" aria-hidden="true"></span
+          ></a>
           <a class="active" href="/">Overview</a>
           <a href="/portfolio">Portfolio</a>
           <a href="/india">India</a>
@@ -51,6 +55,7 @@
               <div class="sub" style="margin-top: 10px">
                 MoM:
                 <span id="mom" class="mono">—</span>
+                <div id="momLabel" class="sub" style="margin-top: 4px; font-size: 0.85em; opacity: 0.85"></div>
               </div>
               <div class="split">
                 <div class="pane">
@@ -67,12 +72,66 @@
             <section class="card col-6" id="cardChart">
               <div class="h2">Wealth trajectory</div>
               <div class="chart-ctrl" role="tablist" aria-label="Range">
+                <button class="seg" type="button" data-range="1m">1M</button>
+                <button class="seg" type="button" data-range="3m">3M</button>
                 <button class="seg" type="button" data-range="6m">6M</button>
                 <button class="seg active" type="button" data-range="1y">1Y</button>
+                <button class="seg" type="button" data-range="3y">3Y</button>
                 <button class="seg" type="button" data-range="all">ALL</button>
               </div>
-              <svg class="chart" id="chartSvg" viewBox="0 0 900 240" preserveAspectRatio="none"></svg>
+              <div
+                id="chartEcharts"
+                class="chart-echarts"
+                role="img"
+                aria-label="Net worth over time"
+              ></div>
               <div class="muted" id="chartHint" style="margin-top: 8px; font-size: 12px"></div>
+            </section>
+
+            <section class="card col-12 card--soft" id="cardAdhere" aria-label="Plan adherence" style="padding: 20px 22px">
+              <div
+                class="kicker"
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px"
+              >
+                <span>Follow-through</span>
+                <a class="btn btn-gold" style="font-size: 12px" href="/this-month">This month’s plan</a>
+              </div>
+              <div class="v4-hero adhere-widget-grid" style="margin-top: 6px">
+                <div>
+                  <div
+                    class="h1"
+                    id="adhereWidgetPct"
+                    style="font-size: clamp(2.25rem, 4.5vw, 3.25rem); line-height: 1.1; font-variant-numeric: tabular-nums"
+                  >
+                    —
+                  </div>
+                  <p class="sub" id="adhereWidgetCaption" style="margin: 8px 0 0 0; max-width: 36ch">
+                    How consistently you close the book on the monthly plan (last 6 months).
+                  </p>
+                </div>
+                <div>
+                  <div class="sub muted" style="margin: 0 0 6px 0" id="adhereBarLabel">Adherence</div>
+                  <div class="meter" style="height: 12px; border-radius: 6px" aria-hidden="true">
+                    <i id="adhereBar" style="width: 0%"></i>
+                  </div>
+                  <p class="sub mono" id="adhereWidgetStats" style="margin: 10px 0 0 0; font-size: 13px">
+                    —
+                  </p>
+                  <p class="sub mono" id="adhereStreakLine" style="margin: 6px 0 0 0; font-size: 12px; line-height: 1.35">
+                    —
+                  </p>
+                  <p class="sub mono" id="adhereImpactLine" style="margin: 4px 0 0 0; font-size: 12px; line-height: 1.35">
+                    —
+                  </p>
+                </div>
+                <div
+                  class="goldbox mono"
+                  id="adhereWidgetHint"
+                  style="font-size: 12px; line-height: 1.4; min-width: min(100%, 9rem); padding: 10px 12px"
+                >
+                  Small, repeatable steps beat the occasional perfect month.
+                </div>
+              </div>
             </section>
 
             <section class="card col-4" id="cardCz">
@@ -102,7 +161,13 @@
 
             <section class="card col-4" id="cardAlloc">
               <div class="h2">Allocation vs target</div>
-              <div id="allocRows"></div>
+              <div
+                class="grid"
+                style="display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; align-items: start"
+              >
+                <div id="allocRows"></div>
+                <div id="allocPie" class="chart-echarts" style="height: 96px; width: 96px" role="img" aria-label="Actual mix"></div>
+              </div>
             </section>
 
             <section class="card col-6" id="cardGoals">
@@ -125,16 +190,7 @@
                   <div id="alertsMini"></div>
                 </div>
                 <div class="col-6" style="grid-column: span 6">
-                  <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap">
-                    <div class="h2" style="margin: 0">This month’s action</div>
-                    <div
-                      class="sub mono"
-                      id="adhereHome"
-                      style="text-align: right; min-width: 8rem; font-size: 13px"
-                    >
-                      —
-                    </div>
-                  </div>
+                  <div class="h2" style="margin: 0">This month’s action</div>
                   <div class="goldbox" id="intelBox">—</div>
                   <div style="margin-top: 10px">
                     <a class="btn btn-gold" href="/this-month">This month’s plan</a>
@@ -147,13 +203,22 @@
         </main>
       </div>
     </div>
+    <script src="/vendor/echarts/echarts.min.js"></script>
+    <script src="/charts/echartsTheme.js"></script>
     <script src="/artha-ui.js"></script>
     <script>
-      /* global ArthaUI */
+      /* global ArthaUI, echarts */
       ArthaUI.initTheme()
       ArthaUI.setGreeting(document.getElementById('greet'))
       if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
+      document.getElementById('btnTheme').addEventListener('click', () => {
+        ArthaUI.toggleTheme()
+        if (typeof window.__arthaWealthChartRelayout === 'function') {
+          setTimeout(function () {
+            window.__arthaWealthChartRelayout()
+          }, 0)
+        }
+      })
 
       function unwrapOverview(j) {
         if (!j || j.success === false) return null
@@ -201,77 +266,162 @@
           .join('')
       }
 
-      function drawChart(pts) {
-        const svg = document.getElementById('chartSvg')
-        if (!pts || pts.length < 2) {
-          svg.innerHTML = ''
+      let allPts = []
+      let chartInstance = null
+      let allocPie = null
+      let currentRange = '1y'
+
+      function filterPts(range) {
+        if (!allPts.length) return []
+        const sorted = allPts.slice().sort((a, b) => a.t - b.t)
+        if (range === 'all') return sorted
+        const end = sorted[sorted.length - 1].t
+        const day = 86400000
+        const windowMs = {
+          '1m': 30 * day,
+          '3m': 90 * day,
+          '6m': 180 * day,
+          '1y': 365 * day,
+          '3y': 3 * 365 * day
+        }[range]
+        if (windowMs == null) return sorted
+        const start = end - windowMs
+        return sorted.filter((p) => p.t >= start)
+      }
+
+      function themeChartColors() {
+        const st = getComputedStyle(document.documentElement)
+        return {
+          gold: (st.getPropertyValue('--gold') || '#b8922a').trim(),
+          text: (st.getPropertyValue('--text-primary') || '#1a1614').trim(),
+          muted: (st.getPropertyValue('--text-muted') || '#8a8070').trim(),
+          border: (st.getPropertyValue('--border-subtle') || '#e8e4dc').trim()
+        }
+      }
+
+      function renderWealthChart(pts) {
+        const dom = document.getElementById('chartEcharts')
+        if (!dom || typeof echarts === 'undefined') return
+        const c = themeChartColors()
+        if (!chartInstance) {
+          chartInstance = echarts.init(dom, null, { renderer: 'svg' })
+        }
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+        const data = pts && pts.length ? pts.map((p) => [p.t, p.y]) : []
+        if (data.length < 1) {
+          chartInstance.setOption(
+            {
+              title: {
+                text: 'No history in this range yet',
+                left: 'center',
+                top: 'center',
+                textStyle: { color: c.muted, fontSize: 13, fontWeight: 400 }
+              },
+              xAxis: { show: false },
+              yAxis: { show: false },
+              series: []
+            },
+            { notMerge: true }
+          )
           return
         }
-        const vals = pts.map((p) => p.y)
-        const min = Math.min(...vals)
-        const max = Math.max(...vals)
-        const pad = 16
-        const w = 900
-        const h = 240
-        const n = vals.length
-        const x = (i) => pad + (i * (w - pad * 2)) / (n - 1)
-        const yv = (v) => h - pad - ((v - min) / (max - min + 1e-9)) * (h - pad * 2)
-        const d = pts
-          .map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + x(i).toFixed(1) + ' ' + yv(p.y).toFixed(1))
-          .join(' ')
-        svg.innerHTML = `<path d="${d}" fill="none" stroke="#B8922A" stroke-width="2" />
-          ${pts
-            .map(
-              (p, i) =>
-                '<circle data-i="' + i + '" cx="' + x(i) + '" cy="' + yv(p.y) + '" r="2.2" fill="#0D1421" />'
-            )
-            .join('')}`
-
-        let tip = svg.querySelector('#tip')
-        if (!tip) {
-          tip = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-          tip.setAttribute('id', 'tip')
-          tip.setAttribute('visibility', 'hidden')
-          tip.innerHTML = `<line id="tipLine" x1="0" y1="16" x2="0" y2="224" stroke="rgba(13,20,33,0.25)"/>
-            <g id="tipText"></g>`
-          svg.appendChild(tip)
-        }
-
-        const hint = document.getElementById('chartHint')
-        svg.addEventListener('mousemove', (ev) => {
-          const r = svg.getBoundingClientRect()
-          const mx = ev.clientX - r.left
-          const i = Math.round(((mx - pad) / (r.width - pad * 2)) * (n - 1))
-          const ii = Math.max(0, Math.min(n - 1, i))
-          const p = pts[ii]
-          if (!p) return
-          tip.setAttribute('visibility', 'visible')
-          const xr = (mx / r.width) * 900
-          const line = tip.querySelector('#tipLine')
-          if (line) {
-            line.setAttribute('x1', String(xr))
-            line.setAttribute('x2', String(xr))
-          }
-          if (hint) {
-            const dt = new Date(p.t)
-            hint.textContent = `${dt.toLocaleDateString('en-GB')} — ${ArthaUI.formatCZK(p.y)}`
-          }
-        })
-        svg.addEventListener('mouseleave', () => {
-          tip.setAttribute('visibility', 'hidden')
-        })
+        const area = isDark ? 'rgba(200, 168, 75, 0.12)' : 'rgba(184, 146, 42, 0.14)'
+        chartInstance.setOption(
+          {
+            title: { show: false },
+            grid: { left: 58, right: 18, top: 20, bottom: 28, containLabel: true },
+            tooltip: {
+              trigger: 'axis',
+              backgroundColor: isDark ? 'rgba(12,18,32,0.92)' : 'rgba(255,253,248,0.95)',
+              borderColor: c.border,
+              textStyle: { color: c.text, fontSize: 12 },
+              formatter: function (items) {
+                const it = items[0]
+                if (!it || !it.data) return ''
+                const t = it.data[0]
+                const v = it.data[1]
+                const d = new Date(t)
+                const idx = typeof it.dataIndex === 'number' ? it.dataIndex : 0
+                const prev = data[idx - 1] ? data[idx - 1][1] : null
+                const mom =
+                  prev != null && Math.abs(prev) > 0
+                    ? '<br/>MoM: ' + (((v - prev) / Math.abs(prev)) * 100).toFixed(2) + '%'
+                    : ''
+                return d.toLocaleDateString('en-GB') + '<br/>' + ArthaUI.formatCZK(v) + mom
+              }
+            },
+            xAxis: {
+              type: 'time',
+              axisLine: { lineStyle: { color: c.border } },
+              axisLabel: { color: c.muted, fontSize: 11, hideOverlap: true }
+            },
+            yAxis: {
+              type: 'value',
+              scale: true,
+              splitLine: { lineStyle: { color: c.border, opacity: 0.45 } },
+              axisLine: { show: false },
+              axisLabel: {
+                color: c.muted,
+                fontSize: 11,
+                formatter: function (v) {
+                  v = Number(v) || 0
+                  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M'
+                  if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(0) + 'k'
+                  return String(Math.round(v))
+                }
+              }
+            },
+            series: [
+              {
+                type: 'line',
+                name: 'Net worth',
+                smooth: true,
+                showSymbol: data.length <= 36,
+                symbolSize: 5,
+                lineStyle: { width: 2, color: c.gold },
+                itemStyle: { color: c.gold, borderColor: c.gold },
+                areaStyle: { color: area },
+                data: data
+              }
+            ]
+          },
+          { notMerge: true }
+        )
       }
 
-      let allPts = []
-      function filterPts(range) {
-        if (range === '6m') return allPts.slice(-6)
-        if (range === '1y') return allPts.slice(-12)
-        return allPts
-      }
       function refreshChart(range) {
-        const pts = filterPts(range).map((p) => p)
-        drawChart(pts)
+        currentRange = range || '1y'
+        const pts = filterPts(currentRange)
+        renderWealthChart(pts)
+        const hint = document.getElementById('chartHint')
+        if (hint) {
+          hint.textContent = pts.length
+            ? 'Hover the chart for date and amount (CZK).'
+            : 'No data points in this range — try ALL or wait for more snapshots.'
+        }
       }
+
+      window.__arthaWealthChartRelayout = function () {
+        if (chartInstance) {
+          try {
+            chartInstance.resize()
+          } catch (e) {}
+        }
+        if (allocPie) {
+          try {
+            allocPie.resize()
+          } catch (e) {}
+        }
+        refreshChart(currentRange)
+      }
+
+      window.addEventListener('resize', function () {
+        if (chartInstance) {
+          try {
+            chartInstance.resize()
+          } catch (e) {}
+        }
+      })
 
       function wireChartControls() {
         const btns = document.querySelectorAll('.seg')
@@ -298,10 +448,18 @@
         const nw = d.netWorth || {}
         document.getElementById('nwCzk').textContent = ArthaUI.formatCZK(nw.totalCzk || 0)
         document.getElementById('nwEur').textContent = '≈ ' + ArthaUI.formatEUR(nw.totalEur || 0)
-        const mom = d.momChange || { czk: 0, pct: 0 }
+        const mom = d.momChange || { czk: 0, pct: 0, label: '' }
         const mEl = document.getElementById('mom')
-        mEl.textContent = `${ArthaUI.formatCZK(mom.czk || 0)} (${fmtPct(mom.pct || 0)})`
-        mEl.className = (mom.czk || 0) >= 0 ? 'mono' : 'mono'
+        const momLbl = document.getElementById('momLabel')
+        if (mom.czk == null) {
+          mEl.textContent = '—'
+          mEl.className = 'mono'
+        } else {
+          const pctPart = mom.pct == null ? 'n/a' : fmtPct(mom.pct)
+          mEl.textContent = `${ArthaUI.formatCZK(mom.czk)} (${pctPart})`
+          mEl.className = mom.czk >= 0 ? 'mono' : 'mono'
+        }
+        if (momLbl) momLbl.textContent = mom.label || ''
         document.getElementById('czTot').textContent = ArthaUI.formatCZK(
           (nw.czechTotal != null ? nw.czechTotal : 0) || 0
         )
@@ -332,6 +490,31 @@
           (xv == null ? 'XIRR — n/a' : 'XIRR ' + (xv || 0).toFixed(2) + '%') + (x.isEstimate ? ' (est.)' : '')
 
         setAllocRows(document.getElementById('allocRows'), a, tE, tB, tC)
+        const pieEl = document.getElementById('allocPie')
+        if (pieEl && typeof echarts !== 'undefined') {
+          if (!allocPie) allocPie = echarts.init(pieEl, null, { renderer: 'svg' })
+          const cGold = (window.ArthaEcharts && window.ArthaEcharts.getGold) ? window.ArthaEcharts.getGold() : themeChartColors().gold
+          const cTeal = (window.ArthaEcharts && window.ArthaEcharts.getTeal) ? window.ArthaEcharts.getTeal() : '#0a7a8a'
+          const cSlate = (window.ArthaEcharts && window.ArthaEcharts.getSlate) ? window.ArthaEcharts.getSlate() : '#4a5a6b'
+          allocPie.setOption(
+            {
+              tooltip: { trigger: 'item' },
+              series: [
+                {
+                  type: 'pie',
+                  radius: ['32%', '72%'],
+                  data: [
+                    { name: 'Equity', value: Number(a.equityPct) || 0, itemStyle: { color: cGold } },
+                    { name: 'Bonds', value: Number(a.bondsPct) || 0, itemStyle: { color: cTeal } },
+                    { name: 'Cash', value: Number(a.cashPct) || 0, itemStyle: { color: cSlate } }
+                  ],
+                  label: { show: false }
+                }
+              ]
+            },
+            { notMerge: true }
+          )
+        }
 
         if (demo) {
           const nre = d.indiaAccounts && d.indiaAccounts.nre
@@ -459,10 +642,12 @@
           allPts = snaps
             .map((s) => ({ t: new Date(s.date).getTime(), y: s.netWorthCzk || 0 }))
             .sort((a, b) => a.t - b.t)
-          const hint = document.getElementById('chartHint')
-          if (hint) hint.textContent = 'Hover for values.'
         } else {
-          document.getElementById('chartHint').textContent = 'Building history — data appears after the first refresh job.'
+          allPts = []
+        }
+        if (!allPts.length) {
+          document.getElementById('chartHint').textContent =
+            'Building history — data appears after the first morning job or refresh.'
         }
         refreshChart('1y')
         wireChartControls()
@@ -471,22 +656,80 @@
           const ar = await fetch('/api/this-month/adherence?months=6')
           const aj = await ar.json()
           const ad = (aj && aj.data) || {}
-          const h = document.getElementById('adhereHome')
-          if (h && ad.adherencePct != null && ad.adherencePct !== undefined) {
-            h.textContent = 'Adherence: ' + ad.adherencePct + '% (last 6 mo)'
+          const pctEl = document.getElementById('adhereWidgetPct')
+          const bar = document.getElementById('adhereBar')
+          const stats = document.getElementById('adhereWidgetStats')
+          const cap = document.getElementById('adhereWidgetCaption')
+          const hint = document.getElementById('adhereWidgetHint')
+          if (ad.adherencePct != null && ad.adherencePct !== undefined) {
             const p = Number(ad.adherencePct) || 0
-            h.style.color = p > 85 ? 'var(--green)' : p >= 60 ? 'var(--amber)' : 'var(--red)'
-            h.title =
-              'Done: ' +
-              (ad.doneRows != null ? ad.doneRows : '—') +
-              ', Skipped: ' +
-              (ad.skippedRows != null ? ad.skippedRows : '—') +
-              ', Pending: ' +
-              (ad.pendingRows != null ? ad.pendingRows : '—')
+            if (pctEl) {
+              pctEl.textContent = p.toFixed(1) + '%'
+              pctEl.style.color = p > 85 ? 'var(--green)' : p >= 60 ? 'var(--amber)' : 'var(--red)'
+            }
+            if (bar) {
+              const w = Math.max(0, Math.min(100, p))
+              bar.style.width = w + '%'
+            }
+            if (stats) {
+              stats.textContent =
+                'Done ' +
+                (ad.doneRows != null ? ad.doneRows : 0) +
+                ' · Skipped ' +
+                (ad.skippedRows != null ? ad.skippedRows : 0) +
+                ' · Still open ' +
+                (ad.pendingRows != null ? ad.pendingRows : 0) +
+                (ad.totalRows != null ? ' · ' + ad.totalRows + ' rows in window' : '')
+            }
+            const streakEl = document.getElementById('adhereStreakLine')
+            const impEl = document.getElementById('adhereImpactLine')
+            const sm = ad.onTrackStreakMonths != null ? Number(ad.onTrackStreakMonths) : 0
+            const ft = ad.followThroughCzk6m != null ? Number(ad.followThroughCzk6m) : 0
+            if (streakEl) {
+              streakEl.textContent =
+                sm > 0
+                  ? 'On-track streak: ' + sm + ' month' + (sm === 1 ? '' : 's') + ' in a row (plan with rows, nothing left pending).'
+                  : 'On-track streak: start by clearing this month’s pending lines — streaks count fully “closed” months.'
+            }
+            if (impEl) {
+              impEl.textContent =
+                'Est. follow-through (6m): ' +
+                ArthaUI.formatMoneyFromCzk(ft) +
+                ' logged via executed SIPs — money you actually moved, not just planned.'
+            }
+            if (cap) {
+              cap.textContent =
+                'You decided on ' +
+                p.toFixed(0) +
+                '% of closable rows in the last 6 months. Momentum is what you do next month, not last month’s score.'
+            }
+            if (hint) {
+              if (p >= 80) {
+                hint.textContent =
+                  'You are building a reliable habit. Keep /this-month current — that signal feeds reports and nudges.'
+              } else if (p >= 50) {
+                hint.textContent =
+                  'Steady progress. Finish the last few pending lines; small wins stack faster than you think.'
+              } else {
+                hint.textContent = 'Re-open /this-month and make one real execution — the first step repairs the whole trail.'
+              }
+            }
+            const cardA = document.getElementById('cardAdhere')
+            if (cardA) {
+              cardA.title =
+                'Adherence: done ÷ (done+skipped) across all allocation rows in the lookback window.'
+            }
           }
         } catch (_) {
-          const h = document.getElementById('adhereHome')
-          if (h) h.textContent = '—'
+          const pctEl = document.getElementById('adhereWidgetPct')
+          if (pctEl) {
+            pctEl.textContent = '—'
+            pctEl.style.color = ''
+          }
+          const sE = document.getElementById('adhereStreakLine')
+          const iE = document.getElementById('adhereImpactLine')
+          if (sE) sE.textContent = '—'
+          if (iE) iE.textContent = '—'
         }
       }
       load().catch(() => ArthaUI.showToast('Load failed', 'error'))
