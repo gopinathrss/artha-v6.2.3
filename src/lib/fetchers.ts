@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { prisma } from './prisma'
+import { ensureFreshRatesIfStale } from './currency'
 
 const FALLBACK_RATES = { EURCZK: 24.5, EURINR: 89.0 }
 const TIMEOUT = 5000 // 5 seconds max per request
@@ -18,100 +19,55 @@ export async function fetchYahooPrice(ticker: string): Promise<number | null> {
   }
 }
 
-export async function fetchCNBRates(): Promise<{ EURCZK: number } | null> {
-  try {
-    const url =
-      'https://www.cnb.cz/en/financial-markets/foreign-exchange-market/central-bank-exchange-rate-fixing/central-bank-exchange-rate-fixing/daily.txt'
-    const res = await axios.get(url, { timeout: TIMEOUT })
-    const lines = (res.data as string).split('\n')
-    for (const line of lines) {
-      const parts = line.split('|')
-      if (parts[3] === 'EUR') {
-        const rate = parseFloat(parts[4])
-        if (!isNaN(rate) && rate > 20 && rate < 35) return { EURCZK: rate }
-      }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
-
-export async function fetchECBRate(currency: string): Promise<number | null> {
-  try {
-    const url = `https://data-api.ecb.europa.eu/service/data/EXR/D.${currency}.EUR.SP00.A?lastNObservations=1&format=jsondata`
-    const res = await axios.get(url, { timeout: TIMEOUT })
-    const val = res.data?.dataSets?.[0]?.series?.['0:0:0:0:0']?.observations?.['0']?.[0]
-    return typeof val === 'number' && val > 0 ? val : null
-  } catch {
-    return null
-  }
-}
-
+/**
+ * Cross rates for portfolio / legacy callers (same shape as before F1.5).
+ * Reads **only** `FXRate` (via `ensureFreshRatesIfStale`); never `PriceHistory`.
+ */
 export async function getFXRates(): Promise<{
   EURCZK: number
   EURINR: number
   source: string
   ageHours: number
 }> {
-  const cnb = await fetchCNBRates()
-  const ecb = await fetchECBRate('INR')
-
-  if (cnb && ecb) {
-    await saveFXToHistory(cnb.EURCZK, ecb).catch(() => {})
-    return { EURCZK: cnb.EURCZK, EURINR: ecb, source: 'live', ageHours: 0 }
-  }
-
-  const cached = await getCachedFX()
-  if (cached) return { ...cached, source: 'cached' }
-
-  return { ...FALLBACK_RATES, source: 'fallback', ageHours: 999 }
-}
-
-async function saveFXToHistory(eurczk: number, eurinr: number) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  await prisma.priceHistory.upsert({
-    where: { isin_date: { isin: 'FX_EURCZK', date: today } },
-    update: { price: eurczk },
-    create: {
-      isin: 'FX_EURCZK',
-      date: today,
-      price: eurczk,
-      currency: 'CZK',
-      source: 'CNB'
-    }
-  })
-  await prisma.priceHistory.upsert({
-    where: { isin_date: { isin: 'FX_EURINR', date: today } },
-    update: { price: eurinr },
-    create: {
-      isin: 'FX_EURINR',
-      date: today,
-      price: eurinr,
-      currency: 'INR',
-      source: 'ECB'
-    }
-  })
-}
-
-async function getCachedFX() {
   try {
-    const czk = await prisma.priceHistory.findFirst({
-      where: { isin: 'FX_EURCZK' },
-      orderBy: { date: 'desc' }
-    })
-    const inr = await prisma.priceHistory.findFirst({
-      where: { isin: 'FX_EURINR' },
-      orderBy: { date: 'desc' }
-    })
-    if (!czk || !inr) return null
-    const ageHours = (Date.now() - czk.date.getTime()) / 3600000
-    return { EURCZK: czk.price, EURINR: inr.price, ageHours }
+    await ensureFreshRatesIfStale(48)
   } catch {
-    return null
+    // Use whatever FX rows already exist
   }
+
+  const eur = await prisma.fXRate.findFirst({
+    where: { base: 'CZK', quote: 'EUR' },
+    orderBy: { fetchedAt: 'desc' }
+  })
+  const inr = await prisma.fXRate.findFirst({
+    where: { base: 'CZK', quote: 'INR' },
+    orderBy: { fetchedAt: 'desc' }
+  })
+
+  if (!eur || !inr) {
+    return { ...FALLBACK_RATES, source: 'fallback', ageHours: 999 }
+  }
+
+  const EURCZK = eur.rate
+  const EURINR = inr.rate > 0 && eur.rate > 0 ? eur.rate / inr.rate : FALLBACK_RATES.EURINR
+  const oldestMs = Math.min(eur.fetchedAt.getTime(), inr.fetchedAt.getTime())
+  const ageHours = (Date.now() - oldestMs) / 3600000
+
+  let source = 'cached'
+  if (eur.source === 'FALLBACK' || inr.source === 'FALLBACK') source = 'fallback'
+  else if (!eur.stale && !inr.stale && ageHours < 48) source = 'live'
+
+  return { EURCZK, EURINR, source, ageHours }
 }
+
+/*
+ * REMOVED 2026-05-01 (F1.5): Previously `saveFXToHistory` wrote FX_EURCZK / FX_EURINR into
+ * `PriceHistory`, duplicating `FXRate` from `currency.fetchAllRates`. Callers now refresh
+ * via `ensureFreshRatesIfStale` / `fetchAllRates` only.
+ *
+ * async function saveFXToHistory(eurczk: number, eurinr: number) { ... }
+ * async function getCachedFX() { ... read PriceHistory ... }
+ */
 
 export async function getHoldingPrice(isin: string, ticker?: string): Promise<number | null> {
   if (!ticker) return null

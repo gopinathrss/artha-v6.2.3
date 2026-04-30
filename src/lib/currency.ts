@@ -128,11 +128,22 @@ export async function fetchAllRates(): Promise<CoreFx> {
   return { EUR: eur, USD: usd, INR: inr, fetchedAt: now, stale, source }
 }
 
-function latestCzkPerUnit(quote: 'EUR' | 'USD' | 'INR') {
+/** Latest row from `FXRate` (single source of truth for FX; see F1.5). */
+export async function getLatestFXRate(
+  base: string,
+  quote: string
+): Promise<{ rate: number; fetchedAt: Date; stale: boolean; source: string } | null> {
+  const b = (base || 'CZK').toUpperCase()
+  const q = (quote || '').toUpperCase()
+  if (b !== 'CZK' || (q !== 'EUR' && q !== 'USD' && q !== 'INR')) return null
   return prisma.fXRate.findFirst({
-    where: { base: 'CZK', quote },
+    where: { base: 'CZK', quote: q as 'EUR' | 'USD' | 'INR' },
     orderBy: { fetchedAt: 'desc' }
   })
+}
+
+function latestCzkPerUnit(quote: 'EUR' | 'USD' | 'INR') {
+  return getLatestFXRate('CZK', quote)
 }
 
 export async function convertCurrency(amount: number, fromCcy: string, toCcy: string): Promise<number> {
