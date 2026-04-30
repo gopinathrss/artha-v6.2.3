@@ -4,6 +4,7 @@ import { getPortfolioSummary } from '../portfolio'
 import { computeAdherenceStats } from '../adherence'
 import { getPlanForMonth, currentMonthYear } from '../allocationPlanner'
 import { markPlanRowDone } from '../planRowUpdate'
+import { ensureRowType } from '../allocationRowTypes'
 import { askArtha } from '../aiIntelligence'
 
 let botInstance: TelegramBot | null = null
@@ -148,25 +149,31 @@ export async function startTelegramBot() {
       await botInstance!.sendMessage(msg.chat.id, 'No plan for this month yet.')
       return
     }
-    const all = plan.allocations as Array<{
-      destination?: string
-      executionStatus?: string
-      amountCzk?: number
-      reason?: string
-    }>
+    const all = plan.allocations as unknown[]
     let text = `*Plan for ${plan.monthYear}*\n\n`
     if (!Array.isArray(all) || all.length === 0) {
       text += 'No rows.'
     } else {
-      all.forEach((row, i) => {
+      all.forEach((raw, i) => {
+        const row = ensureRowType(raw)
         const status =
           (row.executionStatus || 'PENDING').toUpperCase() === 'DONE'
             ? '✓'
             : (row.executionStatus || 'PENDING').toUpperCase() === 'SKIPPED'
               ? '✗'
               : '○'
-        text += `${status} ${i + 1}. ${(row.destination || '—').replace(/\*/g, '')}\n`
-        text += `   ${formatCzk(Number(row.amountCzk) || 0)} Kč — ${String(row.reason || '—')}\n\n`
+        const label =
+          row.type === 'SELL'
+            ? `SELL ${(row as { source?: string }).source || '—'}`
+            : row.type === 'HOLD'
+              ? `HOLD ${(row as { isin?: string }).isin || '—'}`
+              : (row as { destination?: string }).destination || '—'
+        const amt =
+          row.type === 'HOLD'
+            ? formatCzk(Number((row as { currentValueCzk?: number }).currentValueCzk) || 0)
+            : formatCzk(Number(row.amountCzk) || 0)
+        text += `${status} ${i + 1}. ${label.replace(/\*/g, '')}\n`
+        text += `   ${amt} Kč — ${String(row.reason || '—')}\n\n`
       })
     }
     text += `Use /done <n> to mark a row done (1-based).`
@@ -189,13 +196,12 @@ export async function startTelegramBot() {
       await botInstance!.sendMessage(msg.chat.id, 'Invalid row number')
       return
     }
-    const row = all[n] as { destination?: string; amountCzk?: number }
+    const row = ensureRowType(all[n])
     try {
       await markPlanRowDone(plan.id, n, { source: 'TELEGRAM' })
-      await botInstance!.sendMessage(
-        msg.chat.id,
-        `✓ Marked row ${n + 1} as executed: ${(row.destination || 'row').replace(/</g, '')}`
-      )
+      const label =
+        row.type === 'SELL' ? (row as { source?: string }).source || 'row' : (row as { destination?: string }).destination || 'row'
+      await botInstance!.sendMessage(msg.chat.id, `✓ Marked row ${n + 1} as executed: ${String(label).replace(/</g, '')}`)
     } catch (e) {
       await botInstance!.sendMessage(
         msg.chat.id,

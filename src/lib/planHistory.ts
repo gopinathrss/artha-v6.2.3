@@ -1,5 +1,6 @@
 import { prisma } from './prisma'
 import { num } from './money'
+import { isAdherenceRow } from './allocationRowTypes'
 
 export type MonthPlanOutcome = {
   monthYear: string
@@ -38,6 +39,7 @@ function countRows(arr: unknown): { total: number; done: number; skipped: number
     return { total: 0, done: 0, skipped: 0, pending: 0 }
   }
   for (const raw of arr) {
+    if (!isAdherenceRow(raw)) continue
     const row = raw as Row
     const st = (row.executionStatus || 'PENDING').toUpperCase()
     total += 1

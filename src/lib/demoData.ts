@@ -355,6 +355,7 @@ export function getDemoFinances() {
       planSource: 'DEMO',
       allocations: [
         {
+          type: 'BUY',
           rowKey: 'r1',
           destination: 'iShares Core MSCI World',
           isin: 'IE00B4L5Y983',
@@ -364,6 +365,7 @@ export function getDemoFinances() {
           executionStatus: 'PENDING'
         },
         {
+          type: 'BUY',
           rowKey: 'r2',
           destination: 'Sporobond',
           isin: 'CZ0008476009',
@@ -373,8 +375,10 @@ export function getDemoFinances() {
           executionStatus: 'PENDING'
         },
         {
+          type: 'RESERVE',
           rowKey: 'r3',
-          destination: 'Prague trip reserve',
+          destination: 'Prague trip',
+          eventId: 'ev1',
           amountCzk: 10_000,
           reason: 'Event reserve',
           currency: 'CZK',

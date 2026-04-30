@@ -7,7 +7,9 @@ const prismaMock = vi.hoisted(() => ({
   upcomingEvent: { findMany: vi.fn() },
   settings: { findFirst: vi.fn() },
   holding: { findMany: vi.fn() },
-  account: { findMany: vi.fn() }
+  account: { findMany: vi.fn() },
+  indiaMutualFund: { findMany: vi.fn() },
+  indiaFixedDeposit: { findMany: vi.fn() }
 }))
 
 vi.mock('../../src/lib/prisma', () => ({ prisma: prismaMock }))
@@ -95,15 +97,58 @@ const equityHolding = (taxFreeSoon: boolean) => {
     nav: 100,
     currentValueCzk: 10_000,
     status: 'ACTIVE',
+    country: 'CZ',
     purchaseStartDate: purchase,
-    taxFreeDate: taxFree
+    taxFreeDate: taxFree,
+    cashflows: [] as { amountCzk: number; type: string }[]
   }
+}
+
+/** ~65/25/10 CZK split so drift sell engine does not fire in routine tests. */
+function balancedHoldings65(eq: Record<string, unknown>) {
+  const p = new Date()
+  p.setDate(p.getDate() - 400)
+  const tf = new Date(p)
+  tf.setFullYear(tf.getFullYear() + 3)
+  return [
+    eq,
+    {
+      id: 'h2',
+      isin: 'CZBD',
+      name: 'Czech bonds',
+      category: 'BONDS',
+      units: 40,
+      nav: 100,
+      currentValueCzk: 3846,
+      status: 'ACTIVE',
+      country: 'CZ',
+      purchaseStartDate: p,
+      taxFreeDate: tf,
+      cashflows: [] as { amountCzk: number; type: string }[]
+    },
+    {
+      id: 'h3',
+      isin: 'CZZ',
+      name: 'Cash sleeve',
+      category: 'CASH',
+      units: 100,
+      nav: 15.38,
+      currentValueCzk: 1538,
+      status: 'ACTIVE',
+      country: 'CZ',
+      purchaseStartDate: p,
+      taxFreeDate: tf,
+      cashflows: [] as { amountCzk: number; type: string }[]
+    }
+  ] as never[]
 }
 
 beforeEach(() => {
   for (const x of Object.values(prismaMock) as { mockReset?: () => void }[]) {
     x?.mockReset?.()
   }
+  prismaMock.indiaMutualFund.findMany.mockResolvedValue([] as never)
+  prismaMock.indiaFixedDeposit.findMany.mockResolvedValue([] as never)
 })
 
 describe('buildMonthlyPlanPayload (10 scenarios)', () => {
@@ -113,13 +158,16 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(33_000)] as never)
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue(settings(65, 25, 10) as never)
-    prismaMock.holding.findMany.mockResolvedValue([equityHolding(false) as never])
+    prismaMock.holding.findMany.mockResolvedValue(balancedHoldings65(equityHolding(false) as never))
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzk: 300_000, type: 'SAVINGS', isActive: true, balanceLocal: 300_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
+    expect(p.allocations.every((a) => Boolean((a as { type?: string }).type))).toBe(true)
     // income 65k − fixed 33k, no events/emergency top-up → investable 32k
     expect(p.investableCzk).toBeCloseTo(32_000, -1)
     expect(p.allocations.length).toBeGreaterThanOrEqual(1)
-    const totalAlloc = p.allocations.reduce((s, a) => s + a.amountCzk, 0)
+    const totalAlloc = p.allocations
+      .filter((a) => (a as { type?: string }).type === 'BUY' || (a as { type?: string }).type === 'RESERVE')
+      .reduce((s, a) => s + a.amountCzk, 0)
     // Planner uses partial multipliers (e.g. 0.6/0.5 of sleeves) — sum may be < investable
     expect(totalAlloc).toBeGreaterThan(0)
     expect(totalAlloc).toBeLessThanOrEqual(p.investableCzk + 2_000)
@@ -181,10 +229,12 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(20_000)] as never)
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue(settings(85, 10, 5) as never)
-    prismaMock.holding.findMany.mockResolvedValue([equityHolding(false) as never])
+    prismaMock.holding.findMany.mockResolvedValue(balancedHoldings65(equityHolding(false) as never))
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzk: 400_000, type: 'SAVINGS', isActive: true, balanceLocal: 400_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
-    const sumEq = p.allocations.filter((a) => a.destination.includes('Equity') || a.isin === 'EQTOP').reduce((s, a) => s + a.amountCzk, 0)
+    const sumEq = p.allocations
+      .filter((a) => a.type === 'BUY' && (a.destination.includes('Equity') || a.isin === 'EQTOP'))
+      .reduce((s, a) => s + a.amountCzk, 0)
     expect(sumEq).toBeGreaterThan(0)
   })
 
@@ -194,7 +244,7 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(20_000)] as never)
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue(settings() as never)
-    prismaMock.holding.findMany.mockResolvedValue([equityHolding(false) as never])
+    prismaMock.holding.findMany.mockResolvedValue(balancedHoldings65(equityHolding(false) as never))
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzk: 200_000, type: 'SAVINGS', isActive: true, balanceLocal: 200_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
     expect(p.reservedEventsCzk).toBe(0)
@@ -206,7 +256,7 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(62_000)] as never)
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue(settings() as never)
-    prismaMock.holding.findMany.mockResolvedValue([equityHolding(false) as never])
+    prismaMock.holding.findMany.mockResolvedValue(balancedHoldings65(equityHolding(false) as never))
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzk: 1_000_000, type: 'SAVINGS', isActive: true, balanceLocal: 1_000_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
     const tight = p.investableCzk < p.totalAvailableCzk * 0.05
@@ -228,8 +278,10 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
       nav: 100,
       currentValueCzk: 10_000,
       status: 'ACTIVE',
+      country: 'CZ',
       purchaseStartDate: purchase,
-      taxFreeDate: taxFree
+      taxFreeDate: taxFree,
+      cashflows: [] as { amountCzk: number; type: string }[]
     }
     prismaMock.userProfile.findUnique.mockResolvedValue(baseProfile() as never)
     prismaMock.incomeEvent.findMany.mockResolvedValue([{ recurring: true, amountCzk: 0, date: new Date(), id: 'i', source: 'x', amountLocal: 0, currency: 'CZK', createdAt: new Date() }])
@@ -257,8 +309,10 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
       nav: 100,
       currentValueCzk: 10_000,
       status: 'ACTIVE',
+      country: 'CZ',
       purchaseStartDate: purchase,
-      taxFreeDate: taxFree
+      taxFreeDate: taxFree,
+      cashflows: [] as { amountCzk: number; type: string }[]
     }
     prismaMock.userProfile.findUnique.mockResolvedValue(baseProfile() as never)
     prismaMock.incomeEvent.findMany.mockResolvedValue([{ recurring: true, amountCzk: 0, date: new Date(), id: 'i', source: 'x', amountLocal: 0, currency: 'CZK', createdAt: new Date() }])
@@ -268,7 +322,7 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.holding.findMany.mockResolvedValue([h as never])
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzk: 400_000, type: 'SAVINGS', isActive: true, balanceLocal: 400_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
-    const eq = p.allocations.find((a) => a.isin === 'CZNEAR')
+    const eq = p.allocations.find((a) => a.type === 'BUY' && a.isin === 'CZNEAR')
     expect(eq).toBeTruthy()
     expect(p.allocations.some((a) => a.isin === 'EQTOP' && a.reason.toLowerCase().includes('george'))).toBe(false)
   })
@@ -279,13 +333,17 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(20_000)] as never)
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue(settings(40, 50, 10) as never)
-    prismaMock.holding.findMany.mockResolvedValue([equityHolding(false) as never])
+    prismaMock.holding.findMany.mockResolvedValue(balancedHoldings65(equityHolding(false) as never))
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzk: 500_000, type: 'SAVINGS', isActive: true, balanceLocal: 500_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
-    const fromBd = p.allocations.filter((a) => a.destination.toLowerCase().includes('bond')).reduce((s, a) => s + a.amountCzk, 0)
+    const fromBd = p.allocations
+      .filter((a) => a.type === 'BUY' && a.destination.toLowerCase().includes('bond'))
+      .reduce((s, a) => s + a.amountCzk, 0)
     prismaMock.settings.findFirst.mockResolvedValue(settings(85, 10, 5) as never)
     const g = await buildMonthlyPlanPayload('2026-05')
-    const gBd = g.allocations.filter((a) => a.destination.toLowerCase().includes('bond')).reduce((s, a) => s + a.amountCzk, 0)
+    const gBd = g.allocations
+      .filter((a) => a.type === 'BUY' && a.destination.toLowerCase().includes('bond'))
+      .reduce((s, a) => s + a.amountCzk, 0)
     expect(fromBd).toBeGreaterThan(gBd)
   })
 })

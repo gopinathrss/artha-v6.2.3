@@ -10,7 +10,9 @@ const prismaMock = vi.hoisted(() => ({
   upcomingEvent: { findMany: vi.fn() },
   settings: { findFirst: vi.fn() },
   holding: { findMany: vi.fn() },
-  account: { findMany: vi.fn() }
+  account: { findMany: vi.fn() },
+  indiaMutualFund: { findMany: vi.fn() },
+  indiaFixedDeposit: { findMany: vi.fn() }
 }))
 
 vi.mock('../../src/lib/prisma', () => ({ prisma: prismaMock }))
@@ -63,12 +65,16 @@ describe('stress: data correctness (hand checks)', () => {
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue({ id: 's', targetEquityPct: 65, targetBondsPct: 25, targetCashPct: 10 } as never)
     prismaMock.holding.findMany.mockResolvedValue([] as never)
+    prismaMock.indiaMutualFund.findMany.mockResolvedValue([] as never)
+    prismaMock.indiaFixedDeposit.findMany.mockResolvedValue([] as never)
     prismaMock.account.findMany.mockResolvedValue([
       { type: 'SAVINGS', balanceCzk: 200_000, isActive: true, balanceLocal: 200_000, currency: 'CZK' }
     ] as never)
     const p = await buildMonthlyPlanPayload('2026-06')
     expect(p.investableCzk).toBeCloseTo(30_000, -1)
-    const t = p.allocations.reduce((s, a) => s + a.amountCzk, 0)
+    const t = p.allocations
+      .filter((a) => a.type === 'BUY' || a.type === 'RESERVE')
+      .reduce((s, a) => s + a.amountCzk, 0)
     expect(t).toBeLessThanOrEqual(p.investableCzk + 1)
     expect(p.allocations.length).toBeGreaterThanOrEqual(1)
   })

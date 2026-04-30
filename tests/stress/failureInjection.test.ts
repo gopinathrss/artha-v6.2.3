@@ -21,7 +21,7 @@ describe('stress: failure handling (mocks)', () => {
     prismaFI.allocationPlan.findUnique.mockResolvedValue({
       id: 'p1',
       allocations: [
-        { destination: 'A', isin: 'I1', amountCzk: 1, reason: 'x', rowKey: 'r1' }
+        { type: 'BUY', destination: 'A', isin: 'I1', amountCzk: 1, reason: 'x', rowKey: 'r1' }
       ]
     } as never)
     prismaFI.sipExecution.create.mockRejectedValue(new Error('db down'))

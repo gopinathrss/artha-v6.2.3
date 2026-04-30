@@ -155,13 +155,13 @@
 
 **F4.4 [LOW] [LOGIC]** `topEq` filter requires `(score ?? scoreInstrument(i)) > 0` (147). Instruments with score 0 are excluded — may skip valid funds.
 
-**F4.5 [CRITICAL] [ARCHITECTURE]** **Sell planner does not exist.** Triggers list: tax window approaching (`TAX_FREE_APPROACHING`) and allocation drift (`ALLOCATION_DRIFT`) only (`triggers.ts` 13–40). **No** profit-taking, stop-loss, tax-loss harvesting, currency rebalance sell, FD ladder roll, or “exit now” workflow.
+**F4.5 [CLOSED 2026-04-30 — Area 3]** Typed `SELL` rows in monthly plan: `TAX_FREE_EXIT` (CZ ≥1095d), `REBALANCE_DRIFT` (>10pp, tax-defer window respected), `FD_MATURITY` (India FD ≤30d, non–auto-renew). `SipExecution.side` + journal wording for sells.
 
-**F4.6 [MEDIUM] [UI]** “Hold” is implicit: no row type that says “hold for reason X”; default is absence of buy rows after deficit branch.
+**F4.6 [CLOSED 2026-04-30 — Area 3]** Explicit `HOLD` rows with `holdReason` + optional `daysToAction`; rendered on `/this-month` without action buttons.
 
-**F4.7 [HIGH] [LOGIC]** Execution variance: `markPlanRowDone` records `executedAmountCzk` optionally (`planRowUpdate.ts` 22–24). **Next month’s `buildMonthlyPlanPayload` does not read** prior plan or executed amounts — **no catch-up** math.
+**F4.7 [CLOSED 2026-04-30 — Area 3]** `buildFullContext` appends **RECENT EXECUTION HISTORY** from prior plan (recommended / executed / skipped / adherence); **no** automatic carry-forward of missed amounts in the planner (by design).
 
-**F4.8 [HIGH] [DATA]** User buys a different fund than recommended: they can `SKIP` with reason and/or `POST /api/sip-executions` with arbitrary `isin` (`cfoRoutes.ts` 533–554). **No** link enforcing `isin` against plan row; planner does not ingest ad-hoc buys into holdings automatically.
+**F4.8 [CLOSED 2026-04-30 — Area 3]** AI context includes skip reasons and **PATTERN DETECTED** when the same skip key repeats across recent plans; still no hard link between ad-hoc `POST /api/sip-executions` and plan rows (out of scope).
 
 ---
 

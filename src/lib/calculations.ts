@@ -406,7 +406,8 @@ export interface AllocationResult {
   cashGap: number
 }
 
-function mapCategoryToBuckets(category: string): { eq: number; bd: number; ca: number } {
+/** Split holding `category` into equity / bonds / cash bucket weights (0–1 each). */
+export function mapCategoryToBuckets(category: string): { eq: number; bd: number; ca: number } {
   const c = String(category || 'MIXED').toUpperCase()
   if (c === 'EQUITY' || c === 'COMMODITY') return { eq: 1, bd: 0, ca: 0 }
   if (c === 'BONDS') return { eq: 0, bd: 1, ca: 0 }

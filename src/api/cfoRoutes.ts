@@ -416,7 +416,13 @@ export function registerCfoRoutes(app: Application) {
     if (!isFinite(rowIndex) || rowIndex < 0) {
       return res.status(400).json({ success: false, error: 'Invalid row index' })
     }
-    const body = req.body as { action?: string; executedAmountCzk?: number; executedAt?: string; skipReason?: string }
+    const body = req.body as {
+      action?: string
+      executedAmountCzk?: number
+      executedAt?: string
+      skipReason?: string
+      navAtExecution?: number
+    }
     const action = String(body.action || '').toUpperCase()
     if (!['DONE', 'SKIPPED', 'PENDING'].includes(action)) {
       return res.status(400).json({ success: false, error: 'action must be DONE, SKIPPED, or PENDING' })
@@ -439,6 +445,7 @@ export function registerCfoRoutes(app: Application) {
         await markPlanRowDone(planId, rowIndex, {
           executedAmountCzk: body.executedAmountCzk != null ? Number(body.executedAmountCzk) : undefined,
           executedAt: body.executedAt,
+          navAtExecution: body.navAtExecution != null ? Number(body.navAtExecution) : undefined,
           source: 'DASHBOARD'
         })
         const updatedDone = await prisma.allocationPlan.findUnique({ where: { id: planId } })
@@ -455,10 +462,17 @@ export function registerCfoRoutes(app: Application) {
           executedAmountCzk: null
         }
         const r = next[rowIndex] as Record<string, unknown>
+        const rowType = String(r.type || 'BUY').toUpperCase()
+        const destLabel =
+          rowType === 'SELL' ? String(r.source || 'position') : String(r.destination || 'destination')
+        const skipLine =
+          rowType === 'SELL'
+            ? `Skipped sell ${amt} CZK from ${destLabel}: ${reason}`
+            : `Skipped ${amt} CZK to ${destLabel}: ${reason}`
         await prisma.advisorJournal.create({
           data: {
             category: 'MISSED',
-            content: `Skipped ${amt} CZK to ${String(r.destination || 'destination')}: ${reason}`,
+            content: skipLine,
             relatedIsin: r.isin != null ? String(r.isin) : null,
             impactCzk: null,
             metadata: { planId, rowIndex, action: 'SKIPPED' } as object

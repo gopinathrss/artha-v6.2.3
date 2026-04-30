@@ -9,7 +9,9 @@ const prismaMock = vi.hoisted(() => ({
   upcomingEvent: { findMany: vi.fn() },
   settings: { findFirst: vi.fn() },
   holding: { findMany: vi.fn() },
-  account: { findMany: vi.fn() }
+  account: { findMany: vi.fn() },
+  indiaMutualFund: { findMany: vi.fn() },
+  indiaFixedDeposit: { findMany: vi.fn() }
 }))
 
 vi.mock('../../src/lib/prisma', () => ({ prisma: prismaMock }))
@@ -52,6 +54,8 @@ describe('stress: load (no production traffic — in-process)', () => {
     prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
     prismaMock.settings.findFirst.mockResolvedValue({ id: 's' } as never)
     prismaMock.holding.findMany.mockResolvedValue([] as never)
+    prismaMock.indiaMutualFund.findMany.mockResolvedValue([] as never)
+    prismaMock.indiaFixedDeposit.findMany.mockResolvedValue([] as never)
     prismaMock.account.findMany.mockResolvedValue([{ type: 'SAVINGS', balanceCzk: 0, isActive: true, balanceLocal: 0, currency: 'CZK' }] as never)
     for (let j = 0; j < 100; j++) {
       const p = await buildMonthlyPlanPayload('2026-01')

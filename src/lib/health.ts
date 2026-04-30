@@ -1,5 +1,6 @@
 import { prisma } from './prisma'
 import { num } from './money'
+import { isAdherenceRow } from './allocationRowTypes'
 import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS, getFxAgeHours } from './currency'
 import { getRbiRepoRate, getStalestNREFDAge } from './indiaIntelligence'
 
@@ -235,6 +236,7 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
       let n = 0
       let closed = 0
       for (const r of rows) {
+        if (!isAdherenceRow(r)) continue
         n += 1
         const st = (r.executionStatus || 'PENDING').toUpperCase()
         if (st !== 'PENDING') closed += 1

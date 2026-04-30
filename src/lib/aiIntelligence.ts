@@ -6,6 +6,8 @@ import { projectFutureValue, calculateRequiredSIP } from './calculations'
 import { findBestAlternative, loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import { getBestNREFDRate, getRbiRepoRate } from './indiaIntelligence'
 import { num } from './money'
+import { ensureRowType } from './allocationRowTypes'
+import type { BuyRow, ReserveRow, SellRow } from './allocationRowTypes'
 
 function calculateBlendedReturn(portfolio: any): number {
   const a = portfolio?.allocation
@@ -13,11 +15,71 @@ function calculateBlendedReturn(portfolio: any): number {
   return (a.equityPct / 100) * 13 + (a.bondsPct / 100) * 6.5 + (a.cashPct / 100) * 5
 }
 
-export function buildFullContext(
+async function buildExecutionHistoryAppendix(): Promise<string> {
+  const plans = await prisma.allocationPlan.findMany({ orderBy: { generatedAt: 'desc' }, take: 4 })
+  if (plans.length < 2) return ''
+  const prev = plans[1]
+  const rawRows = Array.isArray(prev.allocations) ? (prev.allocations as unknown[]) : []
+  const rows = rawRows.map(ensureRowType).filter((r) => r.type !== 'HOLD')
+  let recommended = 0
+  let executed = 0
+  let skippedAmt = 0
+  let doneN = 0
+  const skipLines: string[] = []
+  for (const r of rows) {
+    recommended += Number(r.amountCzk) || 0
+    const st = (r.executionStatus || 'PENDING').toUpperCase()
+    if (st === 'DONE') {
+      doneN += 1
+      executed += Number(r.executedAmountCzk ?? r.amountCzk) || 0
+    } else if (st === 'SKIPPED') {
+      skippedAmt += Number(r.amountCzk) || 0
+      const label =
+        r.type === 'SELL'
+          ? `Sell from ${(r as SellRow).source}`
+          : r.type === 'RESERVE'
+            ? `Reserve ${(r as ReserveRow).destination}`
+            : `To ${(r as BuyRow).destination || (r as BuyRow).isin || 'destination'}`
+      skipLines.push(`- ${label}: "${String(r.skipReason || '').slice(0, 120)}"`)
+    }
+  }
+  const closable = rows.filter((r) => ['DONE', 'SKIPPED'].includes((r.executionStatus || '').toUpperCase())).length
+  const adherencePct = closable > 0 ? Math.round((doneN / closable) * 1000) / 10 : 0
+  const header = `RECENT EXECUTION HISTORY: Prior plan ${prev.monthYear}: recommended ~${Math.round(recommended)} CZK across ${rows.length} actionable rows; executed ~${Math.round(executed)} CZK (${doneN} done); skipped ~${Math.round(skippedAmt)} CZK.`
+  const skips = skipLines.length ? ` Skip reasons: ${skipLines.join(' ')}` : ''
+  const adherence = ` Adherence (done vs done+skipped on that plan): ${adherencePct}%.`
+
+  const subtypeCounts = new Map<string, number>()
+  for (const p of plans) {
+    const arr = Array.isArray(p.allocations) ? (p.allocations as unknown[]) : []
+    for (const raw of arr) {
+      const r = ensureRowType(raw)
+      if ((r.executionStatus || '').toUpperCase() !== 'SKIPPED') continue
+      const rec = r as unknown as Record<string, unknown>
+      const key =
+        r.type === 'SELL' && (r as SellRow).sellSubtype
+          ? String((r as SellRow).sellSubtype)
+          : typeof rec.isin === 'string' && rec.isin
+            ? `ISIN:${rec.isin}`
+            : 'OTHER'
+      subtypeCounts.set(key, (subtypeCounts.get(key) || 0) + 1)
+    }
+  }
+  const patterns = [...subtypeCounts.entries()]
+    .filter(([, v]) => v >= 2)
+    .map(
+      ([k, v]) =>
+        `PATTERN DETECTED: Skips involving "${k}" appeared in ${v} recent plan(s). Consider whether advice thresholds match user preference.`
+    )
+  const patS = patterns.length ? ` ${patterns.join(' ')}` : ''
+  return ` ${header}${skips}${adherence}${patS}`
+}
+
+export async function buildFullContext(
   portfolio: any,
   library: any[],
   india: { rbi: number; rbiVerifiedDays: number; best1yr: number; dtaa: any }
-): string {
+): Promise<string> {
   const nw = portfolio?.netWorth || {}
   const parts = [
     `NetWorth CZK: ${nw.totalCzk}. EUR equiv: ${nw.totalEur}.`,
@@ -33,8 +95,9 @@ export function buildFullContext(
   const libS = `Library top by category: ${JSON.stringify(
     library.slice(0, 8).map((l) => ({ isin: l.isin, name: l.name, s: l.score, ter: l.terPct }))
   )}.`
-  const s = parts.join(' ') + libS
-  return s.length > 2800 ? s.slice(0, 2800) + '...' : s
+  const exec = await buildExecutionHistoryAppendix()
+  const s = parts.join(' ') + libS + exec
+  return s.length > 3200 ? s.slice(0, 3200) + '...' : s
 }
 
 function detectQuestionType(q: string): string {
@@ -149,7 +212,7 @@ export async function askArtha(question: string, portfolio: any, keys: AskKeys):
   const best1 = num((await getBestNREFDRate('1yr'))?.value ?? 7.1)
   const dtaa = { note: '15% NRO WHT under India–Czech Republic DTAA vs 30% default' }
   const type = detectQuestionType(question)
-  const context = buildFullContext(
+  const context = await buildFullContext(
     { ...portfolio, aiHints: await lastMemories(3) },
     library,
     { rbi, rbiVerifiedDays: rbiInfo.ageInDays, best1yr: best1, dtaa }

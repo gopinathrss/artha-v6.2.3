@@ -327,6 +327,8 @@ model SipExecution {
   executedDate         DateTime?
   isin                 String
   fundName             String
+  /** BUY | SELL | RESERVE — execution tracking for typed allocation rows */
+  side                 String    @default("BUY")
   amountCzk            Decimal   @db.Decimal(14, 2)
   amountLocal          Decimal?  @db.Decimal(14, 2)
   currency             String

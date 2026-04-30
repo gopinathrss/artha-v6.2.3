@@ -1,5 +1,6 @@
 import type { AllocationPlan } from '@prisma/client'
 import { prisma } from './prisma'
+import { ensureRowType, isAdherenceRow } from './allocationRowTypes'
 
 type AllocRow = Record<string, unknown>
 
@@ -22,6 +23,7 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
     : new Date().toISOString()
   const pendingIndices: number[] = []
   for (let i = 0; i < next.length; i++) {
+    if (!isAdherenceRow(next[i])) continue
     const st = String((next[i].executionStatus as string) || 'PENDING').toUpperCase()
     if (st === 'PENDING') pendingIndices.push(i)
   }
@@ -45,7 +47,10 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
     for (const rowIndex of pendingIndices) {
       const r = next[rowIndex] as AllocRow
       const executedAmountCzk = Number(r.executedAmountCzk != null ? r.executedAmountCzk : r.amountCzk) || 0
+      const typed = ensureRowType(r)
       const isin = r.isin != null ? String(r.isin) : ''
+      const isSell = typed.type === 'SELL'
+      const fundLabel = isSell ? String((r as { source?: string }).source || 'Fund') : String(r.destination || 'Fund')
       if (isin) {
         await tx.sipExecution.create({
           data: {
@@ -53,7 +58,8 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
             scheduledDate: new Date(),
             executedDate: new Date(executedAtIso),
             isin,
-            fundName: String(r.destination || 'Fund'),
+            fundName: fundLabel,
+            side: isSell ? 'SELL' : 'BUY',
             amountCzk: executedAmountCzk,
             currency: String(r.currency || 'CZK'),
             status: 'EXECUTED',
@@ -68,7 +74,9 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
       await tx.advisorJournal.create({
         data: {
           category: 'FOLLOWED',
-          content: `Bulk: executed ${executedAmountCzk} CZK to ${String(r.destination || 'destination')}`,
+          content: isSell
+            ? `Bulk: sold ${executedAmountCzk} CZK from ${fundLabel}`
+            : `Bulk: executed ${executedAmountCzk} CZK to ${fundLabel}`,
           relatedIsin: isin || null,
           impactCzk: executedAmountCzk,
           metadata: { planId, rowIndex, action: 'DONE', bulk: true } as object
@@ -90,6 +98,7 @@ export function countPendingInPlan(allocations: unknown): number {
   if (!Array.isArray(allocations)) return 0
   let n = 0
   for (const raw of allocations) {
+    if (!isAdherenceRow(raw)) continue
     const row = raw as { executionStatus?: string }
     const st = (row.executionStatus || 'PENDING').toUpperCase()
     if (st === 'PENDING') n += 1

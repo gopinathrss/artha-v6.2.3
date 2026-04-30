@@ -7,6 +7,7 @@ import { loadAllLibrary, findBestAlternative, compareFundToETF } from '../instru
 import { calculateTaxStatus } from '../calculations'
 import { indiaMfTaxBadge } from '../indiaTax'
 import { num } from '../money'
+import { ensureRowType } from '../allocationRowTypes'
 
 export type ReportAudience = 'INTERNAL' | 'CLIENT'
 
@@ -362,7 +363,12 @@ export async function buildReportData(
     const pre = await buildMonthlyPlanPayload(nextMonthYearString())
     nextPayload = {
       monthYear: pre.monthYear,
-      rows: pre.allocations.map((r) => ({ destination: r.destination, amountCzk: r.amountCzk, reason: r.reason }))
+      rows: pre.allocations.map((raw) => {
+        const r = ensureRowType(raw)
+        const destination =
+          r.type === 'SELL' ? r.source : r.type === 'HOLD' ? r.isin : (r as { destination?: string }).destination ?? ''
+        return { destination, amountCzk: r.amountCzk, reason: r.reason }
+      })
     }
   } catch {
     nextPayload.rows = []

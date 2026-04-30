@@ -163,12 +163,18 @@
 
     <div id="modalDone" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px" aria-modal="true" role="dialog">
       <div class="card" style="max-width: 400px; width: 100%; padding: 16px" onclick="event.stopPropagation()">
-        <div class="h2" style="margin-top: 0">Confirm execution</div>
-        <p class="muted" style="font-size: 13px">Amount executed and date. Creates a SIP (if ISIN) and journal (FOLLOWED).</p>
-        <label class="sub" style="display: block; margin-top: 10px">Amount (CZK)</label>
+        <div class="h2" style="margin-top: 0" id="doneModalTitle">Confirm execution</div>
+        <p class="muted" style="font-size: 13px" id="doneModalHint">
+          Amount executed and date. Creates a SIP (if ISIN) and journal (FOLLOWED).
+        </p>
+        <label class="sub" style="display: block; margin-top: 10px" id="doneAmtLabel">Amount (CZK)</label>
         <input class="inp" id="inDoneAmt" type="number" min="0" style="width: 100%; box-sizing: border-box" />
         <label class="sub" style="display: block; margin-top: 10px">Date</label>
         <input class="inp" id="inDoneDate" type="date" style="width: 100%; box-sizing: border-box" />
+        <div id="rowDoneNavWrap" style="display: none; margin-top: 10px">
+          <label class="sub" style="display: block">NAV at sale (optional)</label>
+          <input class="inp" id="inDoneNav" type="number" min="0" step="0.0001" style="width: 100%; box-sizing: border-box" placeholder="—" />
+        </div>
         <div style="display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end">
           <button type="button" class="btn" id="btnDoneCancel">Cancel</button>
           <button type="button" class="btn btn-gold" id="btnDoneOk">Confirm</button>
@@ -244,12 +250,17 @@
       var __planId = null
       var __isDemo = false
       var __rowIdx = 0
+      var __doneRowKind = 'BUY'
       var __my = ''
       var __dup = null
+      function rowKind(a) {
+        return String((a && a.type) || 'BUY').toUpperCase()
+      }
       function countPendingRows(rows) {
         if (!rows || !rows.length) return 0
         var n = 0
         for (var i = 0; i < rows.length; i++) {
+          if (rowKind(rows[i]) === 'HOLD') continue
           var st = (rows[i].executionStatus || 'PENDING').toUpperCase()
           if (st === 'PENDING') n += 1
         }
@@ -430,85 +441,198 @@
         return { text: 'Pending', cls: 'badge badge-n' }
       }
 
+      function allocRank(k) {
+        var o = { SELL: 0, RESERVE: 1, BUY: 2, HOLD: 3 }
+        return o[k] != null ? o[k] : 9
+      }
+      /** Original row indices preserved for PATCH /row/:idx */
+      function sortedIndexedAlloc(rows) {
+        var arr = (rows || []).map(function (a, i) {
+          return { a: a, idx: i }
+        })
+        arr.sort(function (x, y) {
+          return allocRank(rowKind(x.a)) - allocRank(rowKind(y.a))
+        })
+        return arr
+      }
+      function sectionHeaderIfNeeded(prevK, k) {
+        if (prevK === k) return ''
+        var lab =
+          k === 'SELL'
+            ? 'Sells (free up cash)'
+            : k === 'RESERVE'
+              ? 'Reserves (event budgets)'
+              : k === 'BUY'
+                ? 'Buys (deploy investable)'
+                : k === 'HOLD'
+                  ? 'Holds (no action needed)'
+                  : ''
+        if (!lab) return ''
+        return (
+          '<tr><td colspan="1" style="padding:10px 0 4px 0;border-bottom:0"><span class="kicker" style="font-size:11px;letter-spacing:0.04em">' +
+          lab +
+          '</span></td></tr>'
+        )
+      }
+      function rowIcon(k) {
+        if (k === 'SELL') return '<span style="color:var(--amber);font-size:16px;margin-right:6px" title="Sell">↙</span>'
+        if (k === 'BUY') return '<span style="color:var(--gold);font-size:16px;margin-right:6px" title="Buy">↗</span>'
+        if (k === 'HOLD') return '<span class="muted" style="font-size:16px;margin-right:6px" title="Hold">−</span>'
+        if (k === 'RESERVE') return '<span style="color:var(--muted);font-size:14px;margin-right:6px" title="Reserve">🔒</span>'
+        return ''
+      }
+      function sellSubtypeBadge(a) {
+        if (rowKind(a) !== 'SELL') return ''
+        var st = String(a.sellSubtype || '')
+        var t = ''
+        var cls = 'badge badge-n'
+        if (st === 'TAX_FREE_EXIT') {
+          t = 'TAX FREE'
+          cls = 'pill-ok'
+        } else if (st === 'REBALANCE_DRIFT') {
+          t = 'REBALANCE'
+          cls = 'badge'
+        } else if (st === 'FD_MATURITY') {
+          t = 'FD MATURE'
+          cls = 'badge'
+        }
+        return t ? ' <span class="' + cls + '" style="font-size:10px;margin-left:6px">' + t + '</span>' : ''
+      }
+      function taxImpactHtml(a) {
+        if (rowKind(a) !== 'SELL') return ''
+        var t = Number(a.taxImpactCzk != null ? a.taxImpactCzk : 0)
+        var col = t <= 0 ? 'var(--green)' : 'var(--amber)'
+        return (
+          '<div class="sub" style="color:' + col + ';margin-top:4px;font-size:12px">Tax: ' + Math.round(t) + ' CZK</div>'
+        )
+      }
+      function daysToActionHtml(a) {
+        if (rowKind(a) !== 'HOLD' || a.daysToAction == null) return ''
+        return (
+          '<div style="margin-top:6px"><span class="badge badge-n" style="font-size:10px">⏱ ' +
+          Math.round(a.daysToAction) +
+          ' days to tax-free</span></div>'
+        )
+      }
+      function rowTitle(a) {
+        var k = rowKind(a)
+        if (k === 'SELL') return String(a.source || '—').replace(/</g, '&lt;')
+        if (k === 'HOLD') return String(a.isin || '—').replace(/</g, '&lt;')
+        return String(a.destination || '—').replace(/</g, '&lt;')
+      }
+      function rowSubIsin(a) {
+        var k = rowKind(a)
+        if (k === 'HOLD') return ''
+        return ' <span class="mono" style="font-size:12px; font-weight:600">' + String(a.isin || '—') + '</span>'
+      }
+      function rowMainAmount(a) {
+        var k = rowKind(a)
+        var v = k === 'HOLD' ? (a.currentValueCzk != null ? a.currentValueCzk : 0) : a.amountCzk || 0
+        return ArthaUI.formatMoneyFromCzk(v)
+      }
+      function renderOneAllocRow(idx, a, live) {
+        var k = rowKind(a)
+        var st = (a.executionStatus || 'PENDING').toUpperCase()
+        var title = rowIcon(k) + rowTitle(a) + sellSubtypeBadge(a) + rowSubIsin(a)
+        var reasonCls = k === 'HOLD' ? 'muted' : 'muted'
+        var reasonStyle =
+          k === 'HOLD'
+            ? 'font-size:12px; font-style:italic; max-width:50ch; margin-top:4px;opacity:0.85'
+            : 'font-size:12px; font-style:italic; max-width:50ch; margin-top:4px'
+        var body =
+          '<div><div class="h2" style="font-size:15px; margin:0 0 4px 0">' +
+          title +
+          '</div>' +
+          '<div class="mono" style="font-size:17px; font-weight:800">' +
+          rowMainAmount(a) +
+          '</div>' +
+          '<div class="' +
+          reasonCls +
+          '" style="' +
+          reasonStyle +
+          '">' +
+          String(a.reason || '').replace(/</g, '&lt;') +
+          '</div>' +
+          taxImpactHtml(a) +
+          daysToActionHtml(a) +
+          (st === 'DONE'
+            ? '<div class="sub" style="color: var(--green); margin-top:6px">✓ Executed ' +
+              (a.executedAt ? new Date(a.executedAt).toLocaleDateString('en-GB') : '—') +
+              ', ' +
+              Math.round(a.executedAmountCzk != null ? a.executedAmountCzk : 0) +
+              ' CZK</div>'
+            : '') +
+          (st === 'SKIPPED'
+            ? '<div class="sub" style="color: var(--amber); margin-top:6px">✕ Skipped: ' +
+              String(a.skipReason || '—').replace(/</g, '&lt;') +
+              '</div>'
+            : '') +
+          '</div>'
+        var actions = ''
+        if (live && st === 'PENDING' && k !== 'HOLD') {
+          actions =
+            '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">' +
+            '<button type="button" class="btn btn-gold" data-d="' +
+            idx +
+            '">Done</button>' +
+            '<button type="button" class="btn" data-s="' +
+            idx +
+            '">Skip</button></div>'
+        } else if (live && st !== 'PENDING') {
+          actions =
+            '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end"><button type="button" class="btn btn-ghost" data-r="' +
+            idx +
+            '">Reset</button></div>'
+        } else if (!live) {
+          actions =
+            '<span class="muted" style="font-size:11px">' +
+            (a.executionStatus && a.executionStatus !== 'PENDING' ? '' : '(edit in live mode)') +
+            '</span>'
+        }
+        var statusBlock =
+          '<div style="text-align:right">' +
+          (function () {
+            var s = rowStatusLabel(a.executionStatus)
+            return '<div style="margin-bottom:6px"><span class="' + s.cls + '">' + s.text + '</span></div>'
+          })() +
+          actions +
+          '</div>'
+        return (
+          '<td style="border-bottom:1px solid var(--border-subtle); padding: 12px 0; vertical-align:top"><div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:flex-start">' +
+          body +
+          statusBlock +
+          '</div></td>'
+        )
+      }
       function renderAllocBody(rows) {
         var tb = document.getElementById('allocBody')
         tb.innerHTML = ''
+        var sorted = sortedIndexedAlloc(rows)
+        var prevK = ''
         if (!__planId || __isDemo) {
-          for (var i = 0; i < rows.length; i++) {
-            var a = rows[i]
+          for (var i = 0; i < sorted.length; i++) {
+            var a = sorted[i].a
+            var ix = sorted[i].idx
+            var k = rowKind(a)
+            tb.insertAdjacentHTML('beforeend', sectionHeaderIfNeeded(prevK, k))
+            prevK = k
             var tr = document.createElement('tr')
-            tr.innerHTML =
-              '<td colspan="1" style="border-bottom:1px solid var(--border-subtle); padding: 12px 0">' +
-              '<div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:flex-start">' +
-              '<div><div class="h2" style="font-size:15px; margin:0 0 4px 0">' +
-              (a.destination || '—').replace(/</g, '&lt;') +
-              '</div><div class="mono" style="font-size:17px; font-weight:800">' +
-              ArthaUI.formatMoneyFromCzk(a.amountCzk || 0) +
-              '</div><div class="muted" style="font-size:12px; font-style:italic; max-width:42ch; margin-top:4px">' +
-              (a.reason || '').replace(/</g, '&lt;') +
-              '</div>' +
-              (a.executionStatus && a.executionStatus !== 'PENDING'
-                ? '<div class="sub" style="margin-top:6px">' + escSub(a) + '</div>'
-                : '') +
-              '</div><div class="sub">' +
-              (function () {
-                var s = rowStatusLabel(a.executionStatus)
-                return '<span class="' + s.cls + '">' + s.text + '</span>'
-              })() +
-              ' <span class="muted" style="font-size:11px">(edit in live mode)</span></div></div></td>'
+            tr.innerHTML = renderOneAllocRow(ix, a, false)
             tb.appendChild(tr)
           }
           refreshPendingUIFromRows(rows)
           return
         }
-        for (var j = 0; j < rows.length; j++) {
-          (function (idx) {
-            var a = rows[idx]
-            var st = (a.executionStatus || 'PENDING').toUpperCase()
+        for (var j = 0; j < sorted.length; j++) {
+          ;(function (item) {
+            var a = item.a
+            var idx = item.idx
+            var k = rowKind(a)
+            tb.insertAdjacentHTML('beforeend', sectionHeaderIfNeeded(prevK, k))
+            prevK = k
             var tr = document.createElement('tr')
-            tr.innerHTML =
-              '<td style="border-bottom:1px solid var(--border-subtle); padding: 12px 0; vertical-align:top"><div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:flex-start">' +
-              '<div><div class="h2" style="font-size:15px; margin:0 0 4px 0">' +
-              (a.destination || '—').replace(/</g, '&lt;') +
-              ' <span class="mono" style="font-size:12px; font-weight:600"> ' +
-              (a.isin || '—') +
-              '</span></div>' +
-              '<div class="mono" style="font-size:17px; font-weight:800">' +
-              ArthaUI.formatMoneyFromCzk(a.amountCzk || 0) +
-              '</div>' +
-              '<div class="muted" style="font-size:12px; font-style:italic; max-width:50ch; margin-top:4px">' +
-              (a.reason || '').replace(/</g, '&lt;') +
-              '</div>' +
-              (st === 'DONE'
-                ? '<div class="sub" style="color: var(--green); margin-top:6px">✓ Executed ' +
-                  (a.executedAt ? new Date(a.executedAt).toLocaleDateString('en-GB') : '—') +
-                  ', ' +
-                  Math.round(a.executedAmountCzk != null ? a.executedAmountCzk : 0) +
-                  ' CZK</div>'
-                : '') +
-              (st === 'SKIPPED'
-                ? '<div class="sub" style="color: var(--amber); margin-top:6px">✕ Skipped: ' +
-                  String(a.skipReason || '—').replace(/</g, '&lt;') +
-                  '</div>'
-                : '') +
-              '</div><div style="text-align:right">' +
-              (function () {
-                var s = rowStatusLabel(a.executionStatus)
-                return '<div style="margin-bottom:6px"><span class="' + s.cls + '">' + s.text + '</span></div>'
-              })() +
-              (st === 'PENDING'
-                ? '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">' +
-                  '<button type="button" class="btn btn-gold" data-d="' +
-                  idx +
-                  '">Done</button>' +
-                  '<button type="button" class="btn" data-s="' +
-                  idx +
-                  '">Skip</button></div>'
-                : '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end"><button type="button" class="btn btn-ghost" data-r="' +
-                  idx +
-                  '">Reset</button></div>') +
-              '</div></div></td>'
-            tr.querySelector('[data-d]') &&
+            tr.innerHTML = renderOneAllocRow(idx, a, true)
+            if (tr.querySelector('[data-d]'))
               tr.querySelector('[data-d]').addEventListener('click', function () {
                 openDone(idx, a)
               })
@@ -521,7 +645,7 @@
                 doReset(idx)
               })
             tb.appendChild(tr)
-          })(j)
+          })(sorted[j])
         }
         refreshPendingUIFromRows(rows)
       }
@@ -538,8 +662,25 @@
 
       function openDone(idx, a) {
         __rowIdx = idx
-        document.getElementById('inDoneAmt').value = Math.round(a.amountCzk || 0)
+        __doneRowKind = rowKind(a)
+        var isSell = __doneRowKind === 'SELL'
+        var title = document.getElementById('doneModalTitle')
+        var hint = document.getElementById('doneModalHint')
+        var amtLab = document.getElementById('doneAmtLabel')
+        if (title) title.textContent = isSell ? 'Confirm sale' : 'Confirm execution'
+        if (hint)
+          hint.textContent = isSell
+            ? 'Amount sold and date. Logs execution with side SELL when ISIN is set.'
+            : 'Amount executed and date. Creates a SIP (if ISIN) and journal (FOLLOWED).'
+        if (amtLab) amtLab.textContent = isSell ? 'Amount sold (CZK)' : 'Amount (CZK)'
+        document.getElementById('inDoneAmt').value = Math.round(
+          isSell ? a.amountCzk || 0 : a.amountCzk || 0
+        )
         document.getElementById('inDoneDate').value = new Date().toISOString().slice(0, 10)
+        var nw = document.getElementById('rowDoneNavWrap')
+        var navIn = document.getElementById('inDoneNav')
+        if (nw) nw.style.display = isSell ? 'block' : 'none'
+        if (navIn) navIn.value = ''
         document.getElementById('modalDone').style.display = 'flex'
       }
 
@@ -689,7 +830,13 @@
             ArthaUI.showToast('Invalid amount', 'error')
             return
           }
-          await patchRow('DONE', { executedAmountCzk: amt, executedAt: dt ? new Date(dt + 'T12:00:00').toISOString() : undefined })
+          var extra = { executedAmountCzk: amt, executedAt: dt ? new Date(dt + 'T12:00:00').toISOString() : undefined }
+          if (__doneRowKind === 'SELL') {
+            var navRaw = document.getElementById('inDoneNav').value
+            var navN = Number(navRaw)
+            if (navRaw && isFinite(navN) && navN > 0) extra.navAtExecution = navN
+          }
+          await patchRow('DONE', extra)
           closeModals()
           ArthaUI.showToast('Saved', 'ok')
           await load()

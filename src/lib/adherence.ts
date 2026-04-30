@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { isAdherenceRow } from './allocationRowTypes'
 
 function lastNMonthYearLabels(n: number): string[] {
   const out: string[] = []
@@ -23,6 +24,7 @@ function countRowStates(arr: unknown): { total: number; done: number; skipped: n
     return { total: 0, done: 0, skipped: 0, pending: 0 }
   }
   for (const raw of arr) {
+    if (!isAdherenceRow(raw)) continue
     const row = raw as Row
     const st = (row.executionStatus || 'PENDING').toUpperCase()
     total += 1
@@ -86,6 +88,7 @@ export async function computeAdherenceStats(months: number) {
     const arr = plan.allocations as unknown
     if (!Array.isArray(arr)) continue
     for (const raw of arr) {
+      if (!isAdherenceRow(raw)) continue
       const row = raw as Row
       const st = (row.executionStatus || 'PENDING').toUpperCase()
       totalRows += 1
