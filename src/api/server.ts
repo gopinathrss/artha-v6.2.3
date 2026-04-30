@@ -16,6 +16,7 @@ import {
 } from '../lib/indiaIntelligence'
 import { registerCfoRoutes } from './cfoRoutes'
 import { num, serializeJsonBody } from '../lib/money'
+import { getRbiRepoRate } from '../lib/indiaIntelligence'
 
 const app = express()
 app.use(express.json({ limit: '10mb' }))
@@ -466,14 +467,14 @@ app.get('/api/india/analysis', async (_req, res) => {
     const best1yr = rates.find((r) => r.tenor === '1yr')
     const fx = await getFXRates()
     const nroInr = 200_000
-    const dtaa = calculateDTAABenefit(nroInr, num(rbi?.value ?? 6.5), fx.EURCZK, fx.EURINR)
+    const dtaa = calculateDTAABenefit(nroInr, num(rbi?.value ?? getRbiRepoRate().value), fx.EURCZK, fx.EURINR)
     const fcnr = compareFCNRvsNRE(5_000_000, 3, { eurCzk: fx.EURCZK, eurInr: fx.EURINR })
     res.json({
       success: true,
       data: {
         rbi: rbi
           ? { value: rbi.value, changeDirection: rbi.changeDirection, asOf: rbi.validFrom }
-          : { value: 6.5, changeDirection: 'STABLE' },
+          : { value: getRbiRepoRate().value, changeDirection: 'STABLE' },
         bestNre1yr: best1yr
           ? { bank: best1yr.bankName, value: best1yr.value, tenor: best1yr.tenor }
           : { bank: 'HDFC Bank', value: 7.25, tenor: '1yr' },
@@ -505,7 +506,7 @@ app.post('/api/scheduler/run-now', async (_req, res) => {
 app.get('/api/currency/rates', async (_req, res) => {
   try {
     const { ensureFreshRatesIfStale, getRateAge } = await import('../lib/currency')
-    await ensureFreshRatesIfStale(24)
+    await ensureFreshRatesIfStale()
     const [e, u, i, age] = await Promise.all([
       prisma.fXRate.findFirst({ where: { base: 'CZK', quote: 'EUR' }, orderBy: { fetchedAt: 'desc' } }),
       prisma.fXRate.findFirst({ where: { base: 'CZK', quote: 'USD' }, orderBy: { fetchedAt: 'desc' } }),
@@ -558,7 +559,7 @@ if (process.env.NODE_ENV !== 'test') {
     const { startTelegramBot } = await import('../lib/telegram/bot')
     const { ensureFreshRatesIfStale } = await import('../lib/currency')
     try {
-      await ensureFreshRatesIfStale(24).catch((e) => {
+      await ensureFreshRatesIfStale().catch((e) => {
         // eslint-disable-next-line no-console
         console.error('[ARTHA] FX bootstrap:', e)
       })

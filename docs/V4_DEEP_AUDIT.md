@@ -67,6 +67,8 @@
 
 **F2.3 [HIGH] [DATA]** Czech mutual fund / ETF NAV refresh: morning job updates `Holding.nav` only when `instrumentLibrary` has a matching `isin` **and** `ticker`, via Yahoo (`triggers.ts` 103–114, `fetchYahooPrice`).
 
+- **Area 2 (2026-04) — partial close:** Dedicated Erste + Yahoo NAV pipeline (`src/lib/nav/*`), `POST /api/holdings/refresh-nav`, weekday 17:00 Prague cron, schema fields `navSourceType` / `navSourceId` / `navLastFetchedAt`, settings C UI for source metadata. **Live Erste verification still blocked on user-supplied notation IDs** (PIE sheet).
+
 - **Evidence:** No AMFI-like pipeline for CZ funds in repo; manual `nav` on `Holding` remains authoritative otherwise.
 - **Impact:** “Sporobond”-style names depend on user edits or library tickers — **stale NAV risk** unless disciplined manually.
 
@@ -74,16 +76,24 @@
 
 - **Where:** `src/lib/indiaIntelligence.ts` 18–41; `src/lib/aiIntelligence.ts` 146–153 (`const rbi = 6.5`).
 - **Impact:** Any guidance mentioning RBI rate can be wrong vs reality — classify as **wrong money-adjacent advice risk** if presented as live.
+- **Area 2 (2026-04):** `RBI_REPO_RATE` + `getRbiRepoRate()`, `RBI_RATE_FRESHNESS` health check, AI context includes verification age — manual refresh protocol (no fragile live scrape).
 
 **F2.5 [HIGH] [INTEGRATION]** FX: `fetchers.getFXRates` returns `ageHours: 0` on “live” path even when using **just-fetched** CNB/ECB — OK — but on failure uses **hardcoded** `FALLBACK_RATES` with `ageHours: 999` (`fetchers.ts` 4–5, 65–68). Portfolio still computes.
 
 - **Impact:** Net worth can show numbers with **unknowingly stale FX** unless UI surfaces `source` / `ageHours` everywhere (partially done via confidence — see F3.x).
+- **Area 2 (2026-04):** `FX_STALENESS_WARN_HOURS` / `FX_STALENESS_FAIL_HOURS` and `getFxAgeHours()` in `currency.ts`; health + callers aligned.
 
 **F2.6 [MEDIUM] [INTEGRATION]** `currency.convertCurrency` refuses FX older than **7 days** (`MAX_AGE_MS`, throws) — **different** tolerance than health confidence (24–48h) and scheduler “24h” bootstrap — see **F1.5** / **F3.12**.
 
+- **Area 2 (2026-04):** FX age semantics unified with `getFxAgeHours()` (same thresholds as F2.5).
+
 **F2.7 [MEDIUM] [DATA]** Instrument library scores and returns: `seedLibraryWithTopETFs` runs at server boot (`server.ts` 559); `score` / `scoreUpdatedAt` in schema (`InstrumentLibrary` 193–194) are not continuously refreshed by market cron in reviewed code.
 
+- **Area 2 (2026-04):** `refreshAllLibraryScores()` from `NavHistory`, `POST /api/library/refresh-scores`, monthly cron 1st 02:00 Prague.
+
 **F2.8 [HIGH] [OBSERVABILITY]** NRE FD card rates seeded once from static table `NRE_SEED` (`indiaIntelligence.ts` 45–77) with `source: 'BANK_CARDS_APR_2026'`. **No live scrape.**
+
+- **Area 2 (2026-04):** `getStalestNreFdRateAgeDays`, `NRE_FD_RATE_FRESHNESS` health check, seed `validUntil`, `PATCH /api/india/nre-fd-rate/:id`, settings D2 table for inline edits.
 
 **F2.9 [MEDIUM] [UI]** Manual entry surfaces: Czech holdings form (`settings.html` 110–127), India MF CRUD (`cfoRoutes.ts` 654+), FDs, income/expenses/events via finances APIs (not re-listed line-by-line here). **Frequency / staleness** is entirely user-driven — no automatic degradation except health widgets.
 

@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { d, num } from './money'
+import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS } from './currency'
 
 // XIRR
 export interface CashflowPoint {
@@ -524,7 +525,14 @@ export function calculateHealth(
   )
   const goalAlignment = Math.max(0, Math.min(15, 15 * (1 - Math.min(1, gap / 50))))
 
-  const dataQuality = Math.max(0, Math.min(10, 10 - (fxRatesAge > 48 ? 6 : fxRatesAge > 24 ? 3 : 0)))
+  const dataQuality = Math.max(
+    0,
+    Math.min(
+      10,
+      10 -
+        (fxRatesAge > FX_STALENESS_FAIL_HOURS ? 6 : fxRatesAge > FX_STALENESS_WARN_HOURS ? 3 : 0)
+    )
+  )
 
   const score = Math.max(
     0,
@@ -612,8 +620,8 @@ export function calculateConfidence(
   let score = 100
   if (priceAgeHours > 72) score -= 20
   else if (priceAgeHours > 24) score -= 10
-  if (fxAgeHours > 48) score -= 15
-  else if (fxAgeHours > 24) score -= 8
+  if (fxAgeHours > FX_STALENESS_FAIL_HOURS) score -= 15
+  else if (fxAgeHours > FX_STALENESS_WARN_HOURS) score -= 8
   score -= (holdingsWithMissingDates || 0) * 5
   if (monthsOfHistory < 3) score -= 15
   else if (monthsOfHistory < 6) score -= 8

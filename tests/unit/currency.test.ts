@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { convertCurrency, ensureFreshRatesIfStale, formatCurrency, getRateAge, needsFetchWithin } from '../../src/lib/currency'
+import {
+  convertCurrency,
+  ensureFreshRatesIfStale,
+  formatCurrency,
+  getFxAgeHours,
+  getRateAge,
+  needsFetchWithin
+} from '../../src/lib/currency'
 
 const findFirst = vi.fn()
 
@@ -80,7 +87,7 @@ describe('convertCurrency', () => {
       if (q === 'INR') return { ...fresh('INR', 0.28), fetchedAt: old }
       return null
     })
-    await expect(convertCurrency(100, 'CZK', 'EUR')).rejects.toThrow(/7 days/i)
+    await expect(convertCurrency(100, 'CZK', 'EUR')).rejects.toThrow(/168h/i)
   })
 })
 
@@ -99,6 +106,22 @@ describe('needsFetchWithin & ensureFreshRatesIfStale', () => {
     const c = await ensureFreshRatesIfStale(0.001) // very small hours → still "fresh" if findFirst returns now
     expect(c).not.toBeNull()
     expect(c!.source).toBe('CACHED')
+  })
+})
+
+describe('getFxAgeHours', () => {
+  it('returns stalest leg age in hours across EUR/USD/INR', async () => {
+    const now = Date.now()
+    findFirst.mockImplementation(async (args: { where?: { quote?: string } }) => {
+      const q = args?.where?.quote
+      const t = (hoursAgo: number) => new Date(now - hoursAgo * 3_600_000)
+      if (q === 'EUR') return { ...fresh('EUR', 25), fetchedAt: t(10) }
+      if (q === 'USD') return { ...fresh('USD', 23), fetchedAt: t(5) }
+      if (q === 'INR') return { ...fresh('INR', 0.28), fetchedAt: t(30) }
+      return null
+    })
+    const h = await getFxAgeHours()
+    expect(h).toBeCloseTo(30, 5)
   })
 })
 

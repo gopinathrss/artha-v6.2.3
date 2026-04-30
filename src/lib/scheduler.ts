@@ -231,6 +231,59 @@ export function startScheduler() {
     { timezone: 'Asia/Kolkata' }
   )
 
+  cron.schedule(
+    '0 17 * * 1-5',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Czech NAV refresh starting')
+      try {
+        const { refreshAllCzechNavs } = await import('./nav/refreshAll')
+        const result = await refreshAllCzechNavs()
+        // eslint-disable-next-line no-console
+        console.log(
+          `[Scheduler] Czech NAV refresh: ${result.refreshed} refreshed, ${result.failed} failed, ${result.skipped} skipped`
+        )
+        if (result.errors.length > 0) {
+          await prisma.advisorJournal.create({
+            data: {
+              category: 'OBSERVATION',
+              content: `Czech NAV refresh had ${result.failed} failures: ${result.errors.map((e) => e.holdingId).join(', ')}`,
+              metadata: { errors: result.errors } as object
+            }
+          })
+        }
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[Scheduler] Czech NAV refresh failed:', err?.message || err)
+      }
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
+    '0 2 1 * *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Library scores refresh (monthly)…')
+      try {
+        const { refreshAllLibraryScores } = await import('./instrumentLibrary')
+        const result = await refreshAllLibraryScores()
+        // eslint-disable-next-line no-console
+        console.log(
+          `[Scheduler] Library scores refresh: ${result.updated} updated, ${result.errors} errors`
+        )
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[Scheduler] Library scores refresh failed:', err?.message || err)
+      }
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
   // eslint-disable-next-line no-console
   console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Czech NAV refresh registered (weekdays 17:00 Europe/Prague)')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Library scores cron registered (1st of month 02:00 Europe/Prague)')
 }

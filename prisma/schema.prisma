@@ -26,6 +26,9 @@ model Holding {
   interestRatePct   Decimal?    @db.Decimal(7, 4)
   maturityDate      DateTime?
   notes             String?
+  navSourceType     String? // ERSTE | YAHOO | AMFI | MANUAL
+  navSourceId       String? // Erste notation ID or Yahoo ticker
+  navLastFetchedAt  DateTime?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   cashflows         Cashflow[]

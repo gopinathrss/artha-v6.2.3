@@ -3,8 +3,34 @@ import { prisma } from './prisma'
 import { num } from './money'
 
 const TIMEOUT = 8000
-const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 const FALLBACK = { EUR: 25.0, USD: 23.0, INR: 0.28 }
+
+/** FX older than this (hours) → health WARN, `convertCurrency` logs a warning. */
+export const FX_STALENESS_WARN_HOURS = 24
+/** FX older than this (hours) → health FAIL, `convertCurrency` throws. */
+export const FX_STALENESS_FAIL_HOURS = 168
+
+/**
+ * Hours since the **stalest** of the latest CZK↔EUR/USD/INR `FXRate` rows (worst leg).
+ * Single source of truth for FX age (F2.5 / F2.6).
+ */
+export async function getFxAgeHours(): Promise<number> {
+  const quotes = ['EUR', 'USD', 'INR'] as const
+  let maxH = 0
+  let found = 0
+  for (const q of quotes) {
+    const row = await prisma.fXRate.findFirst({
+      where: { base: 'CZK', quote: q },
+      orderBy: { fetchedAt: 'desc' }
+    })
+    if (!row) continue
+    found++
+    const h = (Date.now() - row.fetchedAt.getTime()) / 3_600_000
+    if (h > maxH) maxH = h
+  }
+  if (found === 0) return Number.POSITIVE_INFINITY
+  return maxH
+}
 
 export type CoreFx = {
   EUR: number
@@ -154,38 +180,44 @@ export async function convertCurrency(amount: number, fromCcy: string, toCcy: st
   const b = (toCcy || 'CZK').toUpperCase()
   if (a === b) return amount
 
+  const fxAge = await getFxAgeHours()
+  if (fxAge > FX_STALENESS_FAIL_HOURS) {
+    throw new Error(
+      `FX data is older than ${FX_STALENESS_FAIL_HOURS}h (~${fxAge.toFixed(1)}h). Refresh via /api/currency/refresh or fetchAllRates().`
+    )
+  }
+  if (fxAge > FX_STALENESS_WARN_HOURS) {
+    // eslint-disable-next-line no-console
+    console.warn(`[currency] FX age ${fxAge.toFixed(1)}h exceeds warn threshold ${FX_STALENESS_WARN_HOURS}h; conversion proceeds.`)
+  }
+
   const toCzk = async (ccy: string, v: number): Promise<number> => {
     if (ccy === 'CZK') return v
     const row = await latestCzkPerUnit(ccy as 'EUR' | 'USD' | 'INR')
     if (!row) throw new Error('No FX rate in database')
-    if (Date.now() - row.fetchedAt.getTime() > MAX_AGE_MS) {
-      throw new Error('FX rate is older than 7 days. Refresh rates or run fetchAllRates().')
-    }
     return v * row.rate
   }
   const fromCzk = async (ccy: string, czk: number): Promise<number> => {
     if (ccy === 'CZK') return czk
     const row = await latestCzkPerUnit(ccy as 'EUR' | 'USD' | 'INR')
     if (!row) throw new Error('No FX rate in database')
-    if (Date.now() - row.fetchedAt.getTime() > MAX_AGE_MS) {
-      throw new Error('FX rate is older than 7 days.')
-    }
     return czk / row.rate
   }
   const czkVal = await toCzk(a, amount)
   return fromCzk(b, czkVal)
 }
 
+/** Age of each CZK quote leg in minutes (API compat); derived from same rows as `getFxAgeHours`. */
 export async function getRateAge(): Promise<{ stalest: number; freshest: number }> {
   const quotes: ('EUR' | 'USD' | 'INR')[] = ['EUR', 'USD', 'INR']
-  const ages: number[] = []
+  const agesMs: number[] = []
   for (const q of quotes) {
     const r = await latestCzkPerUnit(q)
-    if (r) ages.push(Date.now() - r.fetchedAt.getTime())
+    if (r) agesMs.push(Date.now() - r.fetchedAt.getTime())
   }
-  if (ages.length === 0) return { stalest: 999_999, freshest: 999_999 }
-  const m = (ms: number) => Math.round(ms / 60_000)
-  return { stalest: m(Math.max(...ages)), freshest: m(Math.min(...ages)) }
+  if (agesMs.length === 0) return { stalest: 999_999, freshest: 999_999 }
+  const toMin = (ms: number) => Math.round(ms / 60_000)
+  return { stalest: toMin(Math.max(...agesMs)), freshest: toMin(Math.min(...agesMs)) }
 }
 
 export function formatCurrency(amount: number, currency: string): string {
@@ -213,15 +245,11 @@ export function formatCurrency(amount: number, currency: string): string {
 }
 
 export async function needsFetchWithin(hours: number): Promise<boolean> {
-  const latest = await prisma.fXRate.findFirst({
-    where: { base: 'CZK', quote: 'EUR' },
-    orderBy: { fetchedAt: 'desc' }
-  })
-  if (!latest) return true
-  return Date.now() - latest.fetchedAt.getTime() > hours * 3_600_000
+  const age = await getFxAgeHours()
+  return !Number.isFinite(age) || age > hours
 }
 
-export async function ensureFreshRatesIfStale(maxAgeHours = 24): Promise<CoreFx | null> {
+export async function ensureFreshRatesIfStale(maxAgeHours = FX_STALENESS_WARN_HOURS): Promise<CoreFx | null> {
   if (await needsFetchWithin(maxAgeHours)) {
     return fetchAllRates()
   }

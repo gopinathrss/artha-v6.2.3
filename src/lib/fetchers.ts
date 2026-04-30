@@ -1,7 +1,11 @@
 import axios from 'axios'
 import { prisma } from './prisma'
 import { num } from './money'
-import { ensureFreshRatesIfStale } from './currency'
+import {
+  ensureFreshRatesIfStale,
+  FX_STALENESS_WARN_HOURS,
+  getFxAgeHours
+} from './currency'
 
 const FALLBACK_RATES = { EURCZK: 24.5, EURINR: 89.0 }
 const TIMEOUT = 5000 // 5 seconds max per request
@@ -31,7 +35,7 @@ export async function getFXRates(): Promise<{
   ageHours: number
 }> {
   try {
-    await ensureFreshRatesIfStale(48)
+    await ensureFreshRatesIfStale(FX_STALENESS_WARN_HOURS)
   } catch {
     // Use whatever FX rows already exist
   }
@@ -52,12 +56,11 @@ export async function getFXRates(): Promise<{
   const EURCZK = num(eur.rate)
   const EURINR =
     num(inr.rate) > 0 && num(eur.rate) > 0 ? num(eur.rate) / num(inr.rate) : FALLBACK_RATES.EURINR
-  const oldestMs = Math.min(eur.fetchedAt.getTime(), inr.fetchedAt.getTime())
-  const ageHours = (Date.now() - oldestMs) / 3600000
+  const ageHours = await getFxAgeHours()
 
   let source = 'cached'
   if (eur.source === 'FALLBACK' || inr.source === 'FALLBACK') source = 'fallback'
-  else if (!eur.stale && !inr.stale && ageHours < 48) source = 'live'
+  else if (!eur.stale && !inr.stale && ageHours < FX_STALENESS_WARN_HOURS) source = 'live'
 
   return { EURCZK, EURINR, source, ageHours }
 }
