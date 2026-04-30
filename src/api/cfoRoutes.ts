@@ -645,6 +645,47 @@ export function registerCfoRoutes(app: Application) {
     }
   })
 
+  app.post('/api/holdings/refresh-nav', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const holdingId = (req.body as { holdingId?: string } | undefined)?.holdingId
+    const { refreshAllCzechNavs } = await import('../lib/nav/refreshAll')
+    const r = await refreshAllCzechNavs(holdingId)
+    return res.json({ success: true, data: r })
+  })
+
+  app.post('/api/library/refresh-scores', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const { refreshAllLibraryScores } = await import('../lib/instrumentLibrary')
+    const r = await refreshAllLibraryScores()
+    return res.json({ success: true, data: r })
+  })
+
+  const patchNreFdIntelligenceRate = async (req: Request, res: Response) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const b = req.body as { value?: number }
+    if (b.value == null || Number.isNaN(Number(b.value))) {
+      return res.status(400).json({ success: false, error: 'value required' })
+    }
+    const existing = await prisma.indiaIntelligence.findFirst({
+      where: { id: String(req.params.id), dataType: 'NRE_FD_RATE' }
+    })
+    if (!existing) return res.status(404).json({ success: false, error: 'Not found' })
+    const updated = await prisma.indiaIntelligence.update({
+      where: { id: String(req.params.id) },
+      data: {
+        value: Number(b.value),
+        validFrom: new Date(),
+        validUntil: new Date(Date.now() + 30 * 86400000)
+      }
+    })
+    return res.json({ success: true, data: { rate: updated } })
+  }
+  app.patch('/api/india/fd-rate/:id', patchNreFdIntelligenceRate)
+  app.patch('/api/india/nre-fd-rate/:id', patchNreFdIntelligenceRate)
+
   app.get('/api/india/mf', async (_req, res) => {
     const { demo } = await demoState()
     if (demo) return res.json({ success: true, data: { funds: [] }, demo: true })

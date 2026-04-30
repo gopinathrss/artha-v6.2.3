@@ -120,6 +120,14 @@
                   </select>
                   <input class="btn" id="a_units" placeholder="Units" type="number" step="0.0001" />
                   <input class="btn" id="a_nav" placeholder="NAV" type="number" step="0.0001" />
+                  <select class="btn" id="a_navSrc" title="Auto NAV source (optional)">
+                    <option value="">NAV source — none</option>
+                    <option value="ERSTE">ERSTE (notation ID)</option>
+                    <option value="YAHOO">YAHOO (ticker)</option>
+                    <option value="AMFI">AMFI</option>
+                    <option value="MANUAL">MANUAL</option>
+                  </select>
+                  <input class="btn" id="a_navSrcId" placeholder="Erste notation or Yahoo ticker" />
                   <input class="btn" id="a_sip" placeholder="Monthly SIP (CZK)" type="number" step="1" value="0" />
                   <input class="btn" id="a_start" placeholder="Start date (YYYY-MM-DD)" value="2023-01-15" />
                 </div>
@@ -133,10 +141,35 @@
                       <th>ISIN</th>
                       <th>Val</th>
                       <th>SIP</th>
+                      <th>NAV src</th>
+                      <th>ID</th>
+                      <th></th>
                       <th></th>
                     </tr>
                   </thead>
                     <tbody id="holdBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card col-12">
+              <div class="h2">D2 — India NRE FD reference rates</div>
+              <p class="muted" style="margin-bottom: 8px">
+                Card rates for intelligence. <span class="mono">NRE_FD_RATE_FRESHNESS</span> in health warns when stale. Save updates
+                <span class="mono">validFrom</span> to today.
+              </p>
+              <div style="overflow: auto">
+                <table class="table" id="tblNreFd">
+                  <thead>
+                    <tr>
+                      <th>Bank</th>
+                      <th>Tenor</th>
+                      <th>Age (d)</th>
+                      <th>Rate %</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="nreFdBody"></tbody>
                 </table>
               </div>
             </div>
@@ -264,6 +297,8 @@
           'a_cat',
           'a_units',
           'a_nav',
+          'a_navSrc',
+          'a_navSrcId',
           'a_sip',
           'a_start',
           'btnAddHolding',
@@ -280,6 +315,9 @@
         }
         for (const ex of document.querySelectorAll('.exit-b')) {
           isLocked ? ex.setAttribute('disabled', 'true') : ex.removeAttribute('disabled')
+        }
+        for (const el of document.querySelectorAll('.hold-nav-src, .hold-nav-id, .hold-save, .nre-rate-in, .nre-save')) {
+          isLocked ? el.setAttribute('disabled', 'true') : el.removeAttribute('disabled')
         }
         if (isLocked) document.getElementById('add').style.display = 'none'
         else document.getElementById('add').style.display = 'block'
@@ -339,18 +377,55 @@
         ArthaUI.applyDemoChrome(!!hJ.demo)
         const hRows = (hJ.data && hJ.data.holdings) || []
         document.getElementById('holdBody').innerHTML = hRows
-          .map(
-            (h) => `
+          .map((h) => {
+            const ns = (h.navSourceType || '').replace(/</g, '')
+            const nid = String(h.navSourceId || '')
+              .replace(/</g, '')
+              .replace(/"/g, '')
+            const age =
+              h.navLastFetchedAt != null
+                ? Math.floor((Date.now() - new Date(h.navLastFetchedAt).getTime()) / 86400000)
+                : '—'
+            return `
           <tr>
             <td>${(h.name || '').replace(/</g, '')}</td>
             <td class="mono">${(h.isin || '').replace(/</g, '')}</td>
             <td class="mono">${(h.currentValueCzk || 0).toLocaleString('cs-CZ')}</td>
             <td class="mono">${(h.monthlySipCzk || 0).toLocaleString('cs-CZ')}</td>
+            <td>
+              <select class="btn hold-nav-src" data-id="${h.id}" style="min-width: 88px">
+                <option value="" ${!h.navSourceType ? 'selected' : ''}>—</option>
+                <option value="ERSTE" ${ns === 'ERSTE' ? 'selected' : ''}>ERSTE</option>
+                <option value="YAHOO" ${ns === 'YAHOO' ? 'selected' : ''}>YAHOO</option>
+                <option value="AMFI" ${ns === 'AMFI' ? 'selected' : ''}>AMFI</option>
+                <option value="MANUAL" ${ns === 'MANUAL' ? 'selected' : ''}>MANUAL</option>
+              </select>
+            </td>
+            <td><input class="btn hold-nav-id" data-id="${h.id}" value="${nid}" placeholder="ID" style="min-width: 100px" /></td>
+            <td><button class="btn hold-save" data-id="${h.id}" type="button" title="Last fetch ${age}d">Save</button></td>
             <td><button class="btn exit-b" data-id="${h.id}" type="button">Exit</button></td>
           </tr>
         `
-          )
+          })
           .join('')
+
+        const nreRes = await fetch('/api/india/rates')
+        const nreJ = await nreRes.json().catch(() => ({}))
+        const nreRows = (nreJ.data && nreJ.data.rates) || []
+        const nreBody = document.getElementById('nreFdBody')
+        if (nreBody) {
+          nreBody.innerHTML = nreRows
+            .map((r) => {
+              const vf = r.validFrom ? new Date(r.validFrom).getTime() : 0
+              const age = vf ? Math.floor((Date.now() - vf) / 86400000) : '—'
+              const bank = String(r.bankName || '').replace(/</g, '')
+              const ten = String(r.tenor || '').replace(/</g, '')
+              const val = Number(r.value)
+              return `<tr><td>${bank}</td><td class="mono">${ten}</td><td class="mono">${age}</td><td><input type="number" step="0.01" class="btn nre-rate-in" data-id="${r.id}" value="${val}" /></td><td><button type="button" class="btn nre-save" data-id="${r.id}">Save</button></td></tr>`
+            })
+            .join('')
+        }
+
         reapplyLock()
 
         const aRes = await fetch('/api/accounts')
@@ -485,7 +560,9 @@
           units: Number(document.getElementById('a_units').value || 0),
           nav: Number(document.getElementById('a_nav').value || 0),
           monthlySipCzk: Number(document.getElementById('a_sip').value || 0),
-          purchaseStartDate: document.getElementById('a_start').value
+          purchaseStartDate: document.getElementById('a_start').value,
+          navSourceType: document.getElementById('a_navSrc').value || null,
+          navSourceId: document.getElementById('a_navSrcId').value.trim() || null
         }
         const res = await fetch('/api/holdings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
         if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
@@ -499,10 +576,48 @@
         if (!(t instanceof HTMLButtonElement)) return
         const id = t.getAttribute('data-id')
         if (!id) return
+        if (t.classList.contains('hold-save')) {
+          const row = t.closest('tr')
+          const sel = row && row.querySelector('.hold-nav-src')
+          const inp = row && row.querySelector('.hold-nav-id')
+          const navSourceType = sel && sel.value ? String(sel.value) : null
+          const navSourceId = inp && inp.value.trim() ? String(inp.value.trim()) : null
+          const res = await fetch('/api/holdings/' + encodeURIComponent(id), {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ navSourceType, navSourceId })
+          })
+          if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
+          if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
+          ArthaUI.showToast('NAV source saved', 'ok')
+          load()
+          return
+        }
+        if (!t.classList.contains('exit-b')) return
         const res = await fetch('/api/holdings/' + encodeURIComponent(id), { method: 'DELETE' })
         if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
         if (!res.ok) return ArthaUI.showToast('Exit failed', 'error')
         ArthaUI.showToast('Marked exited', 'ok')
+        load()
+      })
+
+      document.getElementById('nreFdBody').addEventListener('click', async (ev) => {
+        const t = ev.target
+        if (!(t instanceof HTMLButtonElement) || !t.classList.contains('nre-save')) return
+        const id = t.getAttribute('data-id')
+        if (!id) return
+        const row = t.closest('tr')
+        const inp = row && row.querySelector('.nre-rate-in')
+        const value = inp ? Number(inp.value) : NaN
+        if (!Number.isFinite(value)) return ArthaUI.showToast('Invalid rate', 'error')
+        const res = await fetch('/api/india/fd-rate/' + encodeURIComponent(id), {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ value })
+        })
+        if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
+        if (!res.ok) return ArthaUI.showToast('NRE FD save failed', 'error')
+        ArthaUI.showToast('NRE FD rate updated', 'ok')
         load()
       })
       document.getElementById('btnTestEmail').addEventListener('click', async () => {
