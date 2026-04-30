@@ -1,4 +1,5 @@
 import express from 'express'
+import fs from 'fs'
 import path from 'path'
 import { prisma } from '../lib/prisma'
 import { getPortfolioSummary } from '../lib/portfolio'
@@ -14,9 +15,15 @@ import {
   getNRIEligibleMutualFunds
 } from '../lib/indiaIntelligence'
 import { registerCfoRoutes } from './cfoRoutes'
+import { num, serializeJsonBody } from '../lib/money'
 
 const app = express()
 app.use(express.json({ limit: '10mb' }))
+app.use((_req, res, next) => {
+  const send = res.json.bind(res)
+  res.json = (body: unknown) => send(serializeJsonBody(body))
+  next()
+})
 // Avoid stale dashboard during dev: browsers cache /artha-ui.css & HTML aggressively
 app.use(
   express.static(path.join(__dirname, '../dashboard'), {
@@ -26,6 +33,26 @@ app.use(
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
         res.setHeader('Pragma', 'no-cache')
       }
+    }
+  })
+)
+app.use(
+  '/charts',
+  express.static(
+    (() => {
+      const a = path.join(process.cwd(), 'src', 'dashboard', 'charts')
+      const b = path.join(__dirname, '../dashboard/charts')
+      return fs.existsSync(a) ? a : b
+    })(),
+    { maxAge: process.env.NODE_ENV === 'production' ? 86_400_000 : 0 }
+  )
+)
+app.use(
+  '/vendor/echarts',
+  express.static(path.join(__dirname, '../../node_modules/echarts/dist'), {
+    maxAge: process.env.NODE_ENV === 'production' ? 7 * 86_400_000 : 0,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8')
     }
   })
 )
@@ -60,6 +87,7 @@ async function getIntelligencePortfolio() {
 
 const PAGES = [
   '/',
+  '/onboarding',
   '/this-month',
   '/finances',
   '/india',
@@ -73,6 +101,7 @@ const PAGES = [
 ]
 const PAGE_FILES: Record<string, string> = {
   '/': 'index.html',
+  '/onboarding': 'onboarding.html',
   '/this-month': 'this-month.html',
   '/finances': 'finances.html',
   '/india': 'india.html',
@@ -89,6 +118,11 @@ PAGES.forEach((route) => {
   app.get(route, (_req, res) => {
     res.sendFile(path.join(__dirname, '../dashboard', PAGE_FILES[route]))
   })
+})
+
+// No standalone profile.html — identity & targets live under Settings (`/settings`).
+app.get('/profile', (_req, res) => {
+  res.redirect(302, '/settings')
 })
 
 registerCfoRoutes(app)
@@ -411,7 +445,7 @@ app.get('/api/india/rates', async (_req, res) => {
     for (const r of rows) {
       const b = r.bankName || 'Unknown'
       if (!byBank[b]) byBank[b] = []
-      if (r.tenor) byBank[b]!.push({ tenor: r.tenor, value: r.value })
+      if (r.tenor) byBank[b]!.push({ tenor: r.tenor, value: num(r.value) })
     }
     res.json({ success: true, data: { rates: rows, byBank } })
   } catch (e: any) {
@@ -432,7 +466,7 @@ app.get('/api/india/analysis', async (_req, res) => {
     const best1yr = rates.find((r) => r.tenor === '1yr')
     const fx = await getFXRates()
     const nroInr = 200_000
-    const dtaa = calculateDTAABenefit(nroInr, rbi?.value ?? 6.5, fx.EURCZK, fx.EURINR)
+    const dtaa = calculateDTAABenefit(nroInr, num(rbi?.value ?? 6.5), fx.EURCZK, fx.EURINR)
     const fcnr = compareFCNRvsNRE(5_000_000, 3, { eurCzk: fx.EURCZK, eurInr: fx.EURINR })
     res.json({
       success: true,
@@ -521,6 +555,7 @@ if (process.env.NODE_ENV !== 'test') {
     const { seedLibraryWithTopETFs } = await import('../lib/instrumentLibrary')
     const { seedNREFDRates } = await import('../lib/indiaIntelligence')
     const { startScheduler } = await import('../lib/scheduler')
+    const { startTelegramBot } = await import('../lib/telegram/bot')
     const { ensureFreshRatesIfStale } = await import('../lib/currency')
     try {
       await ensureFreshRatesIfStale(24).catch((e) => {
@@ -535,6 +570,7 @@ if (process.env.NODE_ENV !== 'test') {
         await fetchRBIRate()
       }
       startScheduler()
+      await startTelegramBot()
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('[ARTHA] Startup init failed', e)

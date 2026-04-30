@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { prisma } from './prisma'
+import { num } from './money'
 import { ensureFreshRatesIfStale } from './currency'
 
 const FALLBACK_RATES = { EURCZK: 24.5, EURINR: 89.0 }
@@ -48,8 +49,9 @@ export async function getFXRates(): Promise<{
     return { ...FALLBACK_RATES, source: 'fallback', ageHours: 999 }
   }
 
-  const EURCZK = eur.rate
-  const EURINR = inr.rate > 0 && eur.rate > 0 ? eur.rate / inr.rate : FALLBACK_RATES.EURINR
+  const EURCZK = num(eur.rate)
+  const EURINR =
+    num(inr.rate) > 0 && num(eur.rate) > 0 ? num(eur.rate) / num(inr.rate) : FALLBACK_RATES.EURINR
   const oldestMs = Math.min(eur.fetchedAt.getTime(), inr.fetchedAt.getTime())
   const ageHours = (Date.now() - oldestMs) / 3600000
 
@@ -90,5 +92,5 @@ export async function getHoldingPrice(isin: string, ticker?: string): Promise<nu
     where: { isin },
     orderBy: { date: 'desc' }
   })
-  return cached?.price ?? null
+  return cached?.price != null ? num(cached.price) : null
 }

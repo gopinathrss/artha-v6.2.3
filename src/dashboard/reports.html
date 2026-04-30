@@ -16,6 +16,10 @@
         </div>
         <nav class="nav">
           <a href="/this-month">This month</a>
+          <a href="/onboarding" data-artha-setup-nav
+            ><span class="artha-setup-label">✨ Complete Setup</span
+            ><span class="artha-setup-dot" aria-hidden="true"></span
+          ></a>
           <a href="/">Overview</a>
           <a href="/portfolio">Portfolio</a>
           <a href="/india">India</a>
@@ -35,19 +39,26 @@
           <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
           <div class="actions">
             <button class="btn" id="btnTheme" type="button">Theme</button>
-            <button class="btn btn-gold" id="btnGen" type="button">Generate report now</button>
+            <button class="btn btn-gold" id="btnGenInt" type="button">Internal report</button>
+            <button class="btn" id="btnGenClient" type="button">Client report</button>
           </div>
         </header>
         <main class="content">
           <div class="card">
             <div class="h2">Reports</div>
-            <div class="muted" id="empty">No reports yet. Click Generate to create a snapshot and open a printable view.</div>
+            <p class="muted" style="margin: 0 0 8px 0; max-width: 70ch; line-height: 1.45">
+              10-section CFO snapshot. <strong>Internal</strong> includes full position names and exact amounts.
+              <strong>Client</strong> uses rounded figures and generic labels — safe to share.
+            </p>
+            <div class="muted" id="empty">No reports yet. Generate an internal or client report to open a printable A4 view.</div>
             <table class="table" style="margin-top: 12px; display: none" id="tbl">
               <thead>
                 <tr>
                   <th>Date</th>
                   <th>Type</th>
+                  <th>Audience</th>
                   <th>Period</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody id="body"></tbody>
@@ -76,10 +87,20 @@
         for (const rep of items || []) {
           const tr = document.createElement('tr')
           const d = new Date(rep.createdAt)
+          const aud = rep.audience === 'CLIENT' ? 'Client' : 'Internal'
+          const base = rep.id
+            ? '/reports/view/' + rep.id + '?token=' + encodeURIComponent(rep.token || '')
+            : '#'
+          const v = (base + '').indexOf('?') >= 0 ? base + '&' : base + '?'
+          const down = v + 'print=1'
           tr.innerHTML = `<td>${d.toLocaleString()}</td><td>${(rep.type || '').replace(
             /</g,
             ''
-          )}</td><td>${(rep.periodLabel || '').replace(/</g, '')}</td>`
+          )}</td><td>${aud}</td><td>${(rep.periodLabel || '').replace(/</g, '')}</td>
+          <td class="right" style="white-space:nowrap">
+            <a class="btn btn-gold" style="font-size:12px;padding:6px 10px" href="${base}">View</a>
+            <a class="btn" style="font-size:12px;padding:6px 10px;margin-left:4px" href="${down}">Download</a>
+          </td>`
           tb.appendChild(tr)
         }
       }
@@ -92,12 +113,20 @@
         const items = (j.data && j.data.reports) || []
         renderList(items)
       })().catch(() => {})
-      document.getElementById('btnGen').addEventListener('click', async () => {
-        const b = document.getElementById('btnGen')
-        b.disabled = true
-        b.textContent = 'Generating…'
+      async function doGenerate(audience) {
+        const b1 = document.getElementById('btnGenInt')
+        const b2 = document.getElementById('btnGenClient')
+        b1.disabled = true
+        b2.disabled = true
+        const lab = audience === 'CLIENT' ? 'Client report' : 'Internal report'
+        b1.textContent = audience === 'INTERNAL' ? 'Generating…' : 'Internal report'
+        b2.textContent = audience === 'CLIENT' ? 'Generating…' : 'Client report'
         try {
-          const r = await fetch('/api/reports/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'SNAPSHOT' }) })
+          const r = await fetch('/api/reports/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'CFO_10', audience: audience })
+          })
           const j = await r.json()
           if (j.demo) {
             ArthaUI.showToast('Demo: report not persisted', 'error')
@@ -115,10 +144,14 @@
         } catch (e) {
           ArthaUI.showToast('Generate failed', 'error')
         } finally {
-          b.disabled = false
-          b.textContent = 'Generate report now'
+          b1.disabled = false
+          b2.disabled = false
+          b1.textContent = 'Internal report'
+          b2.textContent = 'Client report'
         }
-      })
+      }
+      document.getElementById('btnGenInt').addEventListener('click', () => doGenerate('INTERNAL'))
+      document.getElementById('btnGenClient').addEventListener('click', () => doGenerate('CLIENT'))
     </script>
   </body>
 </html>

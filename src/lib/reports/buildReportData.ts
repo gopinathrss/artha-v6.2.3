@@ -6,6 +6,7 @@ import { computeAdherenceStats } from '../adherence'
 import { loadAllLibrary, findBestAlternative, compareFundToETF } from '../instrumentLibrary'
 import { calculateTaxStatus } from '../calculations'
 import { indiaMfTaxBadge } from '../indiaTax'
+import { num } from '../money'
 
 export type ReportAudience = 'INTERNAL' | 'CLIENT'
 
@@ -152,7 +153,10 @@ export async function buildReportData(
   const p = portfolio.success && portfolio.data ? portfolio.data : null
   const settings = p?.settings
   const fxRates = p?.fxRates as { EURCZK?: number; EURINR?: number } | undefined
-  const snaps = (p?.snapshots || []) as { date: Date | string; netWorthCzk: number }[]
+  const snaps = (p?.snapshots || []).map((s: { date: Date | string; netWorthCzk: unknown }) => ({
+    date: s.date,
+    netWorthCzk: num(s.netWorthCzk as never)
+  }))
   const now = new Date()
   const periodStart = new Date(my + '-01T12:00:00.000Z')
   const periodEnd = new Date(periodStart)
@@ -187,9 +191,9 @@ export async function buildReportData(
     { name: 'End', value: Math.round(total), isTotal: true }
   ]
 
-  const tEq = settings?.targetEquityPct ?? 65
-  const tB = settings?.targetBondsPct ?? 25
-  const tC = settings?.targetCashPct ?? 10
+  const tEq = num(settings?.targetEquityPct ?? 65)
+  const tB = num(settings?.targetBondsPct ?? 25)
+  const tC = num(settings?.targetCashPct ?? 10)
   const a = p?.allocation || { equityPct: 0, bondsPct: 0, cashPct: 0, equityGap: 0 }
   const allocDrift = Math.abs(a.equityGap || 0)
 
@@ -221,32 +225,22 @@ export async function buildReportData(
   const holdCzech = (p?.holdings || []).filter(
     (h: { country?: string }) => String((h as { country?: string }).country || 'CZ').toUpperCase() !== 'IN'
   )
-  const czechHoldings: PremiumReportData['czechHoldings'] = holdCzech.slice(0, 24).map(
-    (h: {
-      name: string
-      isin: string
-      units: number
-      nav: number
-      currentValueCzk: number
-      country?: string
-      taxFreeDate?: Date
-    }) => {
+  const czechHoldings: PremiumReportData['czechHoldings'] = holdCzech.slice(0, 24).map((h: Record<string, unknown>) => {
       const t = calculateTaxStatus(h, now)
       const days = t?.daysUntilTaxFree
       const th: 'ok' | 'near' | 'na' = days == null ? 'na' : days <= 0 ? 'ok' : days < 90 ? 'near' : 'na'
       return {
         fund: client ? 'Czech position' : String(h.name || h.isin || '—'),
         isin: client ? '—' : String(h.isin || '—'),
-        units: Number(h.units) || 0,
-        nav: Number(h.nav) || 0,
-        valueCzk: Number(h.currentValueCzk) || 0,
+        units: num(h.units as never) || 0,
+        nav: num(h.nav as never) || 0,
+        valueCzk: num(h.currentValueCzk as never) || 0,
         gainCzk: 0,
         xirr: xirrV,
         taxFreeDate: t?.taxFreeDate ? new Date(t.taxFreeDate).toLocaleDateString('en-GB') : '—',
         taxHighlight: th
       }
-    }
-  )
+    })
 
   const nreA = accounts.find((x) => x.type === 'NRE')
   const nroA = accounts.find((x) => x.type === 'NRO')
@@ -261,13 +255,13 @@ export async function buildReportData(
     purchaseDate: Date
     category: string
   }>).map((m) => {
-    const nav = m.currentNavInr ?? 0
-    const vinr = m.units * nav
+    const nav = num(m.currentNavInr ?? 0)
+    const vinr = num(m.units) * nav
     const badge = indiaMfTaxBadge({ category: m.category, purchaseDate: new Date(m.purchaseDate) })
     return {
       scheme: escClient(m.schemeName, client),
       amc: m.amc,
-      units: m.units,
+      units: num(m.units),
       nav: nav,
       valueInr: Math.round(vinr),
       valueCzk: Math.round(vinr / inrPerCzk),
@@ -284,20 +278,15 @@ export async function buildReportData(
     maturityDate: Date
   }>).map((f) => ({
     bank: f.bank,
-    principalInr: f.principalInr,
-    rate: f.interestRatePct,
+    principalInr: num(f.principalInr),
+    rate: num(f.interestRatePct),
     maturity: new Date(f.maturityDate).toLocaleDateString('en-GB'),
     daysLeft: Math.max(0, Math.ceil((new Date(f.maturityDate).getTime() - nowT) / 86400000))
   }))
 
   const feeRows: PremiumReportData['feeAnalysis']['rows'] = []
   let totSave = 0
-  const holdList = (p?.holdings || []) as {
-    isin: string
-    name: string
-    category: string
-    currentValueCzk: number
-  }[]
+  const holdList = (p?.holdings || []) as Array<Record<string, unknown>>
   const libFx = {
     EURCZK: p?.fxRates?.EURCZK ?? 25,
     EURINR: p?.fxRates?.EURINR ?? 90
@@ -308,7 +297,7 @@ export async function buildReportData(
       const c = compareFundToETF(h as never, best.instrument, libFx, lib)
       totSave += c.annualSavingCzk
       feeRows.push({
-        yourFund: client ? 'Holding' : h.name,
+        yourFund: client ? 'Holding' : String(h.name),
         bestEtf: c.alternative.name,
         terDiff: c.feeDiffPct,
         annualSavingCzk: c.annualSavingCzk
@@ -321,9 +310,12 @@ export async function buildReportData(
   const horizonY = prof?.retirementAge
     ? Math.max(0, prof.retirementAge - (new Date().getFullYear() - 1990))
     : 15
-  const targetW = settings?.targetWealthCzk
+  const targetW =
+    settings?.targetWealthCzk != null && settings.targetWealthCzk !== undefined
+      ? num(settings.targetWealthCzk)
+      : null
   const monthsToFF =
-    prof && targetW
+    prof && targetW != null && targetW > 0
       ? Math.max(
           0,
           Math.round(
@@ -377,10 +369,10 @@ export async function buildReportData(
   }
 
   const cashflow = {
-    income: plan?.totalAvailableCzk ?? 0,
-    fixed: plan?.fixedExpensesCzk ?? 0,
-    events: plan?.reservedEventsCzk ?? 0,
-    investable: plan?.investableCzk ?? 0
+    income: num(plan?.totalAvailableCzk ?? 0),
+    fixed: num(plan?.fixedExpensesCzk ?? 0),
+    events: num(plan?.reservedEventsCzk ?? 0),
+    investable: num(plan?.investableCzk ?? 0)
   }
 
   const jRows = (journals as Array<{ date: Date; category: string; content: string }>).map((j) => ({
@@ -441,10 +433,10 @@ export async function buildReportData(
     czechHoldings,
     india: {
       nre: nreA
-        ? { inr: nreA.balanceLocal, czk: nreA.balanceCzk }
+        ? { inr: num(nreA.balanceLocal), czk: num(nreA.balanceCzk) }
         : null,
       nro: nroA
-        ? { inr: nroA.balanceLocal, czk: nroA.balanceCzk }
+        ? { inr: num(nroA.balanceLocal), czk: num(nroA.balanceCzk) }
         : null,
       mfs: mfsData,
       fds: fdsData

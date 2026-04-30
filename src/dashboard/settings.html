@@ -18,6 +18,10 @@
         </div>
         <nav class="nav">
           <a href="/this-month">This month</a>
+          <a href="/onboarding" data-artha-setup-nav
+            ><span class="artha-setup-label">✨ Complete Setup</span
+            ><span class="artha-setup-dot" aria-hidden="true"></span
+          ></a>
           <a href="/">Overview</a>
           <a href="/portfolio">Portfolio</a>
           <a href="/india">India</a>
@@ -158,6 +162,16 @@
             <div class="card col-6" id="cardInt">
               <div class="h2">F — Integrations (masked on load)</div>
               <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 8px 0">
+                <strong>Telegram bot (V4):</strong> in Telegram, talk to
+                <span class="mono">@BotFather</span> →
+                <span class="mono">/newbot</span> → name your bot and copy the token into the field below (or
+                <span class="mono">TELEGRAM_BOT_TOKEN</span> in server env). Send
+                <span class="mono">/start</span> to your bot, then return here: chat id is saved. Use
+                <span class="mono">/summary</span>, <span class="mono">/plan</span>, <span class="mono">/done
+                  &lt;n&gt;</span>, <span class="mono">/alert</span>, <span class="mono">/ai &lt;question&gt;</span>.
+                Daily digest runs at 08:00 (Europe/Prague) to Telegram and alert email when configured.
+              </p>
+              <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 8px 0">
                 Best Q&amp;A: set <span class="mono">ANTHROPIC_API_KEY</span> (Claude Sonnet) on the server. OpenAI key
                 below powers <span class="mono">GPT-4o</span> as fallback.
               </p>
@@ -182,8 +196,31 @@
               <div style="margin-top: 10px"><button class="btn btn-gold" type="button" id="btnSaveInt" disabled>Save integrations</button></div>
             </div>
 
+            <div class="card col-12" id="cardHealth">
+              <div class="h2">G — System health</div>
+              <p class="sub" style="margin: 0 0 4px 0" id="healthSub">Trust score: <span class="mono" id="healthScore2">—</span></p>
+              <p class="sub muted" style="margin: 0 0 8px 0; font-size: 12px" id="healthStamp">Last checked: —</p>
+              <div style="margin-bottom: 8px">
+                <button class="btn btn-gold" type="button" id="btnRunHealth" disabled>Run all checks now</button>
+              </div>
+              <div style="overflow: auto; margin-bottom: 12px">
+                <table class="table" id="healthTbl" style="font-size: 12px; display: none">
+                  <thead>
+                    <tr>
+                      <th>Check</th>
+                      <th>Status</th>
+                      <th>Last success</th>
+                      <th>Message</th>
+                    </tr>
+                  </thead>
+                  <tbody id="healthBody"></tbody>
+                </table>
+              </div>
+            </div>
             <div class="card col-12" id="sys">
-              <div class="h2">G — System</div>
+              <div class="h2">H — System debug</div>
+              <p class="sub" style="margin: 0 0 8px 0">Raw <span class="mono">/api/system/status</span> payload (diagnostics).</p>
+              <div class="h2" style="font-size: 15px; margin: 8px 0 6px 0">Raw status</div>
               <div class="mono" id="sysOut">Loading…</div>
             </div>
           </div>
@@ -221,6 +258,7 @@
           'tgTok',
           'openai',
           'btnSaveInt',
+          'btnRunHealth',
           'a_isin',
           'a_name',
           'a_cat',
@@ -334,7 +372,50 @@
         const st = await (await fetch('/api/system/status')).json()
         const d = (st && st.data) || { dbConnected: false }
         document.getElementById('sysOut').textContent = JSON.stringify(d, null, 2)
+
+        await loadHealth()
       }
+
+      async function loadHealth() {
+        const hRes = await fetch('/api/health')
+        const hJ = await hRes.json()
+        if (hJ && hJ.data && hJ.data.checks) {
+          const tr = hJ.data.trustScore
+          const el2 = document.getElementById('healthScore2')
+          if (el2) el2.textContent = tr != null ? tr + '%' : '—'
+          const stamp = document.getElementById('healthStamp')
+          if (stamp) stamp.textContent = 'Last checked: ' + new Date().toLocaleString('en-GB') + ' (this device)'
+          const rows = hJ.data.checks || []
+          const tb = document.getElementById('healthTbl')
+          const hb = document.getElementById('healthBody')
+          if (rows.length) {
+            tb.style.display = 'table'
+            hb.innerHTML = rows
+              .map((c) => {
+                const stc = c.status || ''
+                const col =
+                  stc === 'PASS' ? 'var(--green, #1a6)' : stc === 'WARN' ? 'var(--amber, #a60)' : 'var(--red, #a00)'
+                return (
+                  '<tr><td class="mono">' +
+                  String(c.name || '').replace(/</g, '') +
+                  '</td><td style="color:' +
+                  col +
+                  '">' +
+                  String(stc) +
+                  '</td><td class="muted">—</td><td class="muted">' +
+                  String(c.message || '').replace(/</g, '') +
+                  '</td></tr>'
+                )
+              })
+              .join('')
+          } else {
+            tb.style.display = 'none'
+          }
+        }
+      }
+      document.getElementById('btnRunHealth').addEventListener('click', () => {
+        void loadHealth().then(() => ArthaUI.showToast('Health refreshed', 'ok'))
+      })
       load().catch(() => ArthaUI.showToast('Settings load failed', 'error'))
 
       document.getElementById('btnDemoApply').addEventListener('click', async () => {
@@ -424,8 +505,22 @@
         ArthaUI.showToast('Marked exited', 'ok')
         load()
       })
-      document.getElementById('btnTestEmail').addEventListener('click', () => ArthaUI.showToast('Email not wired in this build', 'error'))
-      document.getElementById('btnTestTg').addEventListener('click', () => ArthaUI.showToast('Telegram not wired in this build', 'error'))
+      document.getElementById('btnTestEmail').addEventListener('click', async () => {
+        if (document.getElementById('btnTestEmail').disabled) return
+        try {
+          const r = await fetch('/api/settings/test-email', { method: 'POST' })
+          const j = await r.json()
+          if (!r.ok || !j.success) {
+            return ArthaUI.showToast((j && j.error) || 'Test email failed', 'error')
+          }
+          ArthaUI.showToast('Test email sent', 'ok')
+        } catch {
+          ArthaUI.showToast('Test email request failed', 'error')
+        }
+      })
+      document.getElementById('btnTestTg').addEventListener('click', () =>
+        ArthaUI.showToast('Telegram test not implemented yet', 'error')
+      )
 
       document.getElementById('btnImport').addEventListener('click', () => {
         if (document.getElementById('btnImport').disabled) return

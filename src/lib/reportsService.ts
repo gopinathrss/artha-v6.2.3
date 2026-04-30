@@ -1,6 +1,9 @@
 import crypto from 'crypto'
+import fs from 'fs'
+import path from 'path'
 import { prisma } from './prisma'
-import { getPortfolioSummary } from './portfolio'
+import { buildReportData, type ReportAudience as PremAudience } from './reports/buildReportData'
+import { renderTenSectionReportHtml, type ReportAudience } from './reportDocument'
 
 function esc(s: string) {
   return String(s)
@@ -9,35 +12,13 @@ function esc(s: string) {
     .replace(/>/g, '&gt;')
 }
 
-export async function createReport(type: string, monthYear?: string | null) {
-  const token = crypto.randomBytes(24).toString('hex')
-  const portfolio = await getPortfolioSummary()
-  const my = monthYear || new Date().toISOString().slice(0, 7)
-  const dataSnapshot = {
-    type: type || 'SNAPSHOT',
-    monthYear: monthYear || null,
-    periodLabel: my,
-    portfolio: portfolio.success ? portfolio.data : null,
-    generatedAt: new Date().toISOString()
-  }
-  const r = await prisma.generatedReport.create({
-    data: {
-      type: type || 'SNAPSHOT',
-      periodLabel: String(dataSnapshot.periodLabel),
-      monthYear: monthYear || null,
-      dataSnapshot: dataSnapshot as object,
-      token
-    }
-  })
-  return { id: r.id, viewUrl: `/reports/view/${r.id}?token=${token}` }
+function reportTemplatePath(): string {
+  const fromCwd = path.join(process.cwd(), 'src', 'dashboard', 'report-template.html')
+  if (fs.existsSync(fromCwd)) return fromCwd
+  return path.join(__dirname, '../dashboard/report-template.html')
 }
 
-export function renderReportViewHtml(row: {
-  periodLabel: string
-  type: string
-  dataSnapshot: unknown
-  createdAt: Date
-}): string {
+function legacyJsonHtml(row: { periodLabel: string; type: string; dataSnapshot: unknown; createdAt: Date }): string {
   const d = row.dataSnapshot
   return `<!doctype html>
 <html lang="en">
@@ -59,10 +40,70 @@ export function renderReportViewHtml(row: {
 <body>
   <div class="wrap">
     <p class="no-print"><a href="javascript:window.print()">Print / PDF</a></p>
-    <h1>ARTHA — ${esc(row.type)}</h1>
+    <h1>ARTHA — ${esc(row.type)} (legacy)</h1>
     <p class="muted">${esc(String(row.periodLabel))} · Generated ${esc(new Date(row.createdAt).toISOString())}</p>
     <pre>${esc(typeof d === 'object' && d !== null ? JSON.stringify(d, null, 2) : String(d))}</pre>
   </div>
 </body>
 </html>`
+}
+
+export async function createReport(
+  type: string,
+  monthYear: string | null | undefined,
+  audience: ReportAudience
+) {
+  const token = crypto.randomBytes(24).toString('hex')
+  const my = monthYear || new Date().toISOString().slice(0, 7)
+  const reportType = type || 'CFO_10'
+  const data = await buildReportData(reportType, my, audience as PremAudience)
+  const dataSnapshot = {
+    ...data,
+    periodLabel: data.monthYear,
+    generatedAt: data.generatedAtIso
+  }
+
+  const r = await prisma.generatedReport.create({
+    data: {
+      type: reportType,
+      periodLabel: String(dataSnapshot.periodLabel),
+      monthYear: my,
+      dataSnapshot: dataSnapshot as object,
+      token,
+      audience
+    }
+  })
+  return { id: r.id, viewUrl: `/reports/view/${r.id}?token=${token}` }
+}
+
+function renderPremiumReportHtml(snap: unknown): string {
+  const raw = JSON.stringify(snap).replace(/</g, '\\u003c')
+  const tpl = fs.readFileSync(reportTemplatePath(), 'utf8')
+  if (!tpl.includes('__REPORT_JSON__')) {
+    throw new Error('report-template.html: missing __REPORT_JSON__ placeholder')
+  }
+  return tpl.replace('__REPORT_JSON__', raw)
+}
+
+export function renderReportViewHtml(row: {
+  periodLabel: string
+  type: string
+  dataSnapshot: unknown
+  audience?: string | null
+  createdAt: Date
+}): string {
+  const snap = row.dataSnapshot as { version?: number; sections?: { id: string; title: string; html: string }[] } | null
+  if (snap && snap.version === 3) {
+    return renderPremiumReportHtml(snap)
+  }
+  if (snap && snap.version === 2 && Array.isArray(snap.sections) && snap.sections.length) {
+    return renderTenSectionReportHtml({
+      type: row.type,
+      periodLabel: row.periodLabel,
+      audience: row.audience || (snap as { audience?: string }).audience || 'INTERNAL',
+      createdAt: row.createdAt,
+      sections: snap.sections
+    })
+  }
+  return legacyJsonHtml(row as { periodLabel: string; type: string; dataSnapshot: unknown; createdAt: Date })
 }

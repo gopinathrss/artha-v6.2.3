@@ -1,7 +1,9 @@
 import type { AllocationPlan, ExpenseCommitment, IncomeEvent, UpcomingEvent, UserProfile } from '@prisma/client'
 import { prisma } from './prisma'
+import { num } from './money'
 import { calculateTaxStatus } from './calculations'
 import { loadAllLibrary, scoreInstrument } from './instrumentLibrary'
+import type { InstrumentLibrary } from '@prisma/client'
 
 export type PlanAllocation = {
   destination: string
@@ -24,13 +26,13 @@ export function monthlyIncomeCzk(events: IncomeEvent[], y: number, m: number, pr
   let oneOff = 0
   for (const e of events) {
     const d = new Date(e.date)
-    if (!e.recurring && d.getFullYear() === y && d.getMonth() + 1 === m) oneOff += e.amountCzk
+    if (!e.recurring && d.getFullYear() === y && d.getMonth() + 1 === m) oneOff += num(e.amountCzk)
   }
   let recurring = 0
   for (const e of events) {
-    if (e.recurring) recurring += e.amountCzk
+    if (e.recurring) recurring += num(e.amountCzk)
   }
-  if (recurring === 0) recurring = profile.monthlyNetIncomeCzk
+  if (recurring === 0) recurring = num(profile.monthlyNetIncomeCzk)
   return recurring + oneOff
 }
 
@@ -41,9 +43,9 @@ export function monthlyFixedCzk(commitments: ExpenseCommitment[], ref: Date): nu
     if (c.endDate && ref > c.endDate) continue
     if (c.startDate > ref) continue
     const f = c.frequency.toUpperCase()
-    if (f === 'MONTHLY') s += c.amountCzk
-    else if (f === 'QUARTERLY') s += c.amountCzk / 3
-    else if (f === 'YEARLY') s += c.amountCzk / 12
+    if (f === 'MONTHLY') s += num(c.amountCzk)
+    else if (f === 'QUARTERLY') s += num(c.amountCzk) / 3
+    else if (f === 'YEARLY') s += num(c.amountCzk) / 12
     else if (f === 'ONE_TIME') s += 0
   }
   return s
@@ -59,21 +61,36 @@ export function reservedForEventsCzk(events: UpcomingEvent[], ref: Date): number
     if (ed < ref || ed > end) continue
     const days = Math.max(1, Math.ceil((ed.getTime() - ref.getTime()) / 86400000))
     const months = Math.max(1, days / 30)
-    const left = Math.max(0, ev.budgetCzk - ev.reservedCzk)
+    const left = Math.max(0, num(ev.budgetCzk) - num(ev.reservedCzk))
     reserve += left / months
   }
   return Math.round(reserve)
 }
 
-export async function generateMonthlyPlan(
-  monthYear: string,
-  planSource: 'MANUAL' | 'AUTO_CRON' = 'MANUAL'
-): Promise<AllocationPlan> {
+export type MonthlyPlanPayload = {
+  monthYear: string
+  totalAvailableCzk: number
+  fixedExpensesCzk: number
+  reservedEventsCzk: number
+  investableCzk: number
+  emergencyTopupCzk: number
+  allocations: PlanAllocation[]
+}
+
+/** Compute next month’s YYYY-MM (for report draft preview, no DB write). */
+export function nextMonthYearString(): string {
+  const d = new Date()
+  const n = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  return monthYearFrom(n)
+}
+
+export async function buildMonthlyPlanPayload(monthYear: string): Promise<MonthlyPlanPayload> {
   const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
   if (!profile) {
     throw new Error('Complete your profile in the onboarding wizard (Settings) first.')
   }
-  const [y, mo] = monthYear.split('-').map((x) => parseInt(x, 10))
+  const my = monthYear
+  const [y, mo] = my.split('-').map((x) => parseInt(x, 10))
   const ref = new Date(y, mo - 1, 15)
 
   const [incomeRows, expRows, evRows, settings, holdings, lib, accounts] = await Promise.all([
@@ -92,16 +109,16 @@ export async function generateMonthlyPlan(
 
   const cashCzk = accounts
     .filter((a) => a.type === 'SAVINGS' || a.type === 'NRE')
-    .reduce((s, a) => s + a.balanceCzk, 0)
-  const targetEmerg = profile.emergencyFundTarget || fixed * 6
+    .reduce((s, a) => s + num(a.balanceCzk), 0)
+  const targetEmerg = num(profile.emergencyFundTarget) || fixed * 6
   const gap = Math.max(0, targetEmerg - cashCzk)
   const emergencyTopup = gap > 0 ? Math.min(gap / 12, totalIncome * 0.15) : 0
 
   const investable = totalIncome - fixed - reservedEvents - emergencyTopup
 
-  const tgtEq = settings?.targetEquityPct ?? 65
-  const tgtBd = settings?.targetBondsPct ?? 25
-  const tgtCa = settings?.targetCashPct ?? 10
+  const tgtEq = num(settings?.targetEquityPct ?? 65)
+  const tgtBd = num(settings?.targetBondsPct ?? 25)
+  const tgtCa = num(settings?.targetCashPct ?? 10)
 
   const now = new Date()
   const allocations: PlanAllocation[] = []
@@ -123,18 +140,21 @@ export async function generateMonthlyPlan(
       reason: `Deficit: income ${totalIncome.toFixed(0)} vs obligations ${(fixed + reservedEvents + emergencyTopup).toFixed(0)} CZK. Cut subscriptions or delay events.`
     })
   } else {
+    const libScore = (i: InstrumentLibrary) => (i.score != null ? num(i.score) : scoreInstrument(i))
     const eqShare = (investable * tgtEq) / 100
     const bdShare = (investable * tgtBd) / 100
     const caShare = (investable * tgtCa) / 100
 
     const eqH = holdings.find((h) => h.category === 'EQUITY' && h.status === 'ACTIVE')
     const topEq = lib
-      .filter((i) => i.category === 'EQUITY' && (i.score ?? scoreInstrument(i)) > 0)
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
+      .filter((i) => i.category === 'EQUITY' && libScore(i) > 0)
+      .sort((a, b) => libScore(b) - libScore(a))[0]
     if (eqH && topEq) {
-      const t = eqH ? calculateTaxStatus(eqH, now) : null
-      const nearTax = t && t.daysUntilTaxFree > 0 && t.daysUntilTaxFree < 90
-      if (!nearTax) {
+      const t = calculateTaxStatus(eqH, now)
+      const nearTax = t.daysUntilTaxFree > 0 && t.daysUntilTaxFree < 90
+      if (t.isTaxFree) {
+        // CZ fund already past 3y tax window — do not add new library equity buys as targets
+      } else if (!nearTax) {
         add({
           destination: topEq.name,
           isin: topEq.isin,
@@ -161,7 +181,7 @@ export async function generateMonthlyPlan(
     const bdH = holdings.find((h) => h.category === 'BONDS' && h.status === 'ACTIVE')
     const topBd = lib
       .filter((i) => i.category === 'BONDS')
-      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0]
+      .sort((a, b) => libScore(b) - libScore(a))[0]
     if (bdH) {
       add({
         destination: bdH.name,
@@ -194,20 +214,35 @@ export async function generateMonthlyPlan(
     }
   }
 
-  const plan = await prisma.allocationPlan.create({
+  return {
+    monthYear: my,
+    totalAvailableCzk: totalIncome,
+    fixedExpensesCzk: fixed,
+    reservedEventsCzk: reservedEvents,
+    investableCzk: investable,
+    emergencyTopupCzk: emergencyTopup,
+    allocations
+  }
+}
+
+export async function generateMonthlyPlan(
+  monthYear: string,
+  planSource: 'MANUAL' | 'AUTO_CRON' = 'MANUAL'
+): Promise<AllocationPlan> {
+  const p = await buildMonthlyPlanPayload(monthYear)
+  return prisma.allocationPlan.create({
     data: {
-      monthYear,
-      totalAvailableCzk: totalIncome,
-      fixedExpensesCzk: fixed,
-      reservedEventsCzk: reservedEvents,
-      investableCzk: investable,
-      emergencyTopupCzk: emergencyTopup,
-      allocations: allocations as any,
+      monthYear: p.monthYear,
+      totalAvailableCzk: p.totalAvailableCzk,
+      fixedExpensesCzk: p.fixedExpensesCzk,
+      reservedEventsCzk: p.reservedEventsCzk,
+      investableCzk: p.investableCzk,
+      emergencyTopupCzk: p.emergencyTopupCzk,
+      allocations: p.allocations as any,
       status: 'PROPOSED',
       planSource
     }
   })
-  return plan
 }
 
 export function currentMonthYear(): string {

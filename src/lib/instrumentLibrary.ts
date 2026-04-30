@@ -1,20 +1,21 @@
-import type { Holding, InstrumentLibrary } from '@prisma/client'
+import { Prisma, type Holding, type InstrumentLibrary } from '@prisma/client'
 import { prisma } from './prisma'
+import { num } from './money'
 
 export function scoreInstrument(instrument: {
-  return1yr?: number | null
-  return3yr?: number | null
-  return5yr?: number | null
-  return10yr?: number | null
-  terPct?: number | null
-  fundSizeM?: number | null
-  trackingError?: number | null
+  return1yr?: number | string | null | Prisma.Decimal
+  return3yr?: number | string | null | Prisma.Decimal
+  return5yr?: number | string | null | Prisma.Decimal
+  return10yr?: number | string | null | Prisma.Decimal
+  terPct?: number | string | null | Prisma.Decimal
+  fundSizeM?: number | string | null | Prisma.Decimal
+  trackingError?: number | string | null | Prisma.Decimal
 }): number {
-  const r3 = instrument.return3yr ?? instrument.return1yr ?? 0
+  const r3 = num(instrument.return3yr ?? instrument.return1yr ?? 0)
   const returnScore = Math.min(30, (r3 / 15) * 30)
-  const ter = instrument.terPct ?? 2.5
+  const ter = num(instrument.terPct ?? 2.5)
   const terScore = Math.max(0, 25 - (ter / 2.5) * 25)
-  const aum = instrument.fundSizeM
+  const aum = num(instrument.fundSizeM)
   const aumScore = !aum
     ? 5
     : aum < 100
@@ -26,7 +27,7 @@ export function scoreInstrument(instrument: {
           : aum < 5000
             ? 18
             : 20
-  const te = instrument.trackingError
+  const te = instrument.trackingError == null ? null : num(instrument.trackingError)
   const trackingScore = te == null
     ? 10
     : te < 0.1
@@ -36,7 +37,7 @@ export function scoreInstrument(instrument: {
         : te < 1.0
           ? 8
           : 3
-  const r10 = instrument.return10yr
+  const r10 = instrument.return10yr == null ? null : num(instrument.return10yr)
   const consistencyScore =
     r10 == null ? 5 : r10 > 8 ? 10 : r10 > 4 ? 7 : 3
   return Math.round(returnScore + terScore + aumScore + trackingScore + consistencyScore)
@@ -44,9 +45,9 @@ export function scoreInstrument(instrument: {
 
 function currentHoldingScore(holding: Holding, library: InstrumentLibrary[]): number {
   const m = library.find((l) => l.isin === holding.isin)
-  if (m != null) return m.score ?? scoreInstrument(m)
+  if (m != null) return m.score != null ? num(m.score) : scoreInstrument(m)
   if (holding.interestRatePct != null) {
-    return Math.max(0, 50 - (holding.interestRatePct * 2))
+    return Math.max(0, 50 - num(holding.interestRatePct) * 2)
   }
   return 45
 }
@@ -65,16 +66,16 @@ export function findBestAlternative(
         l.availableInGeorge &&
         l.isin !== holding.isin
     )
-    .map((i) => ({ i, s: i.score ?? scoreInstrument(i) }))
+    .map((i) => ({ i, s: i.score != null ? num(i.score) : scoreInstrument(i) }))
     .sort((a, b) => b.s - a.s)
   if (alts.length === 0) return null
   const best = alts[0]!.i
   const bestScore = alts[0]!.s
   const base = currentHoldingScore(holding, library)
   if (bestScore < base + 10) return null
-  const terH = (library.find((l) => l.isin === holding.isin)?.terPct ?? 1.5) / 100
-  const terA = (best.terPct ?? 0) / 100
-  const annualSavingCzk = Math.max(0, (terH - terA) * holding.currentValueCzk)
+  const terH = num(library.find((l) => l.isin === holding.isin)?.terPct ?? 1.5) / 100
+  const terA = num(best.terPct ?? 0) / 100
+  const annualSavingCzk = Math.max(0, (terH - terA) * num(holding.currentValueCzk))
   return {
     instrument: best,
     scoreDiff: bestScore - base,
@@ -106,27 +107,27 @@ export function compareFundToETF(
   library: InstrumentLibrary[] = []
 ): ComparisonResult {
   const fromLib = library.find((l) => l.isin === holding.isin)
-  const yourTer = fromLib?.terPct ?? 1.4
+  const yourTer = num(fromLib?.terPct ?? 1.4)
   const yScore = currentHoldingScore(holding, [...library, alternative])
-  const aScore = alternative.score ?? scoreInstrument(alternative)
-  const annualCostYourCzk = (yourTer / 100) * holding.currentValueCzk
-  const annualCostAltCzk = ((alternative.terPct ?? 0) / 100) * holding.currentValueCzk
+  const aScore = alternative.score != null ? num(alternative.score) : scoreInstrument(alternative)
+  const annualCostYourCzk = (yourTer / 100) * num(holding.currentValueCzk)
+  const annualCostAltCzk = (num(alternative.terPct ?? 0) / 100) * num(holding.currentValueCzk)
   return {
     yourFund: {
       isin: holding.isin,
       name: holding.name,
       terPct: yourTer,
       score: yScore,
-      valueCzk: holding.currentValueCzk
+      valueCzk: num(holding.currentValueCzk)
     },
     alternative: {
       isin: alternative.isin,
       name: alternative.name,
-      terPct: alternative.terPct,
+      terPct: num(alternative.terPct),
       score: aScore
     },
-    feeDiffPct: yourTer - (alternative.terPct ?? 0),
-    return3yrDiff: (alternative.return3yr ?? 0) - (fromLib?.return3yr ?? 0),
+    feeDiffPct: yourTer - num(alternative.terPct ?? 0),
+    return3yrDiff: num(alternative.return3yr ?? 0) - num(fromLib?.return3yr ?? 0),
     scoreDiff: aScore - yScore,
     annualCostYourCzk: Math.round(annualCostYourCzk),
     annualCostAltCzk: Math.round(annualCostAltCzk),
@@ -146,8 +147,8 @@ export async function getTopETFsByCategory(
   })
 }
 
-/** Curated 30 — unique ISINs (duplicates in source spec resolved). */
-export const TOP_ETF_SEED: Omit<InstrumentLibrary, 'id' | 'createdAt' | 'updatedAt' | 'score' | 'scoreUpdatedAt' | 'lastPrice' | 'lastPriceDate'>[] =
+/** Curated 30 — unique ISINs (duplicates in source spec resolved). Literals are numbers; Prisma coerces to `Decimal` on insert. */
+export const TOP_ETF_SEED: Prisma.InstrumentLibraryCreateManyInput[] =
   [
     { isin: 'IE00B4L5Y983', name: 'iShares Core MSCI World', ticker: 'SWDA.DE', type: 'ETF', category: 'EQUITY', subcategory: 'Global Equity', terPct: 0.2, currency: 'EUR', domicile: 'IE', fundSizeM: 85000, trackingError: 0.03, benchmark: 'MSCI World', availableInGeorge: true, return1yr: 22.4, return3yr: 11.8, return5yr: 13.2, return10yr: 11.9 },
     { isin: 'IE00BKM4GZ66', name: 'iShares Core MSCI EM IMI', ticker: 'EIMI.DE', type: 'ETF', category: 'EQUITY', subcategory: 'Emerging Markets', terPct: 0.18, currency: 'EUR', domicile: 'IE', fundSizeM: 22000, trackingError: 0.12, benchmark: 'MSCI EM IMI', availableInGeorge: true, return1yr: 11.2, return3yr: 4.8, return5yr: 6.1, return10yr: 5.4 },
@@ -185,7 +186,7 @@ export async function seedLibraryWithTopETFs(): Promise<void> {
   const n = await prisma.instrumentLibrary.count()
   if (n > 0) return
   for (const row of TOP_ETF_SEED) {
-    const sc = scoreInstrument(row)
+    const sc = scoreInstrument(row as never)
     await prisma.instrumentLibrary.create({
       data: {
         ...row,

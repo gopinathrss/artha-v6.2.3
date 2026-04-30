@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { num } from './money'
 
 export interface DTAAResult {
   withoutDTAA: number
@@ -21,13 +22,13 @@ export async function fetchRBIRate(): Promise<void> {
     orderBy: { validFrom: 'desc' }
   })
   const newVal = 6.5
-  const prevVal = prev?.value
+  const prevVal = prev?.value != null ? num(prev.value) : null
   const dir =
     prevVal == null
       ? 'STABLE'
-      : newVal > (prevVal ?? 0)
+      : newVal > prevVal
         ? 'UP'
-        : newVal < (prevVal ?? 0)
+        : newVal < prevVal
           ? 'DOWN'
           : 'STABLE'
   await prisma.indiaIntelligence.create({

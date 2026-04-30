@@ -81,6 +81,38 @@ export function startScheduler() {
   )
 
   cron.schedule(
+    '0 9 1 * *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Month-end review reminder (EOM)...')
+      try {
+        const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
+        if (!profile) {
+          // eslint-disable-next-line no-console
+          console.log('[Scheduler] No profile. Skipping EOM journal.')
+          return
+        }
+        const tzPrague = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Prague' }))
+        const prev = new Date(tzPrague.getFullYear(), tzPrague.getMonth() - 1, 1)
+        const prevLabel = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
+        await prisma.advisorJournal.create({
+          data: {
+            category: 'OBSERVATION',
+            content: `Month closed for ${prevLabel} — review allocation follow-through and adherence on /this-month.`,
+            metadata: { kind: 'EOM_REVIEW', monthYear: prevLabel } as object
+          }
+        })
+        // eslint-disable-next-line no-console
+        console.log('[Scheduler] EOM journal entry created for', prevLabel)
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[Scheduler] EOM job failed:', err?.message || err)
+      }
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
     '0 6 * * *',
     async () => {
       // eslint-disable-next-line no-console
@@ -144,6 +176,61 @@ export function startScheduler() {
     { timezone: 'Europe/Prague' }
   )
 
+  cron.schedule(
+    '0 8 * * *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Daily digest (08:00 Europe/Prague)…')
+      try {
+        const { buildDailyDigest, getTelegramBot } = await import('./telegram/bot')
+        const text = await buildDailyDigest()
+        const settings = await prisma.settings.findFirst()
+        const bot = getTelegramBot()
+        if (settings?.telegramChatId && bot) {
+          await bot.sendMessage(settings.telegramChatId, text, { parse_mode: 'Markdown' })
+        }
+        if (settings?.alertEmail && settings?.smtpUser) {
+          const safe = String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/\r\n/g, '\n')
+          await sendEmail(
+            settings.alertEmail,
+            'ARTHA daily digest',
+            '<pre style="font-family:system-ui,sans-serif;white-space:pre-wrap">' + safe + '</pre>'
+          )
+        }
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[Scheduler] Daily digest failed:', err?.message || err)
+      }
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
+    '30 14 * * *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] AMFI NAVAll (India)…')
+      try {
+        const { ingestAmfiNavAll } = await import('./amfiIngest')
+        const r = await ingestAmfiNavAll()
+        if (!r.ok) {
+          // eslint-disable-next-line no-console
+          console.error('[Scheduler] AMFI ingest failed:', r.error)
+        } else {
+          // eslint-disable-next-line no-console
+          console.log('[Scheduler] AMFI OK inserted=', r.inserted, 'parsed=', r.parsed)
+        }
+      } catch (err: any) {
+        // eslint-disable-next-line no-console
+        console.error('[Scheduler] AMFI error:', err?.message || err)
+      }
+    },
+    { timezone: 'Asia/Kolkata' }
+  )
+
   // eslint-disable-next-line no-console
-  console.log('[Scheduler] All jobs scheduled. Timezone: Europe/Prague')
+  console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
 }

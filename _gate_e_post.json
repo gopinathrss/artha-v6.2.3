@@ -1,0 +1,10 @@
+{
+  "schemeName": "TEST FUND",
+  "amfiCode": "999999",
+  "category": "EQUITY_LARGE",
+  "units": 1000,
+  "avgNavInr": 100,
+  "currentNavInr": 110,
+  "purchaseDate": "2024-01-01",
+  "amc": "TEST"
+}

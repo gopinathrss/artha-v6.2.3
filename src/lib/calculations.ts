@@ -1,3 +1,6 @@
+import { Prisma } from '@prisma/client'
+import { d, num } from './money'
+
 // XIRR
 export interface CashflowPoint {
   date: Date
@@ -10,8 +13,8 @@ export interface XIRRResult {
   cashflowCount: number
 }
 
-function safeNum(n: number): number {
-  return Number.isFinite(n) ? n : 0
+function safeNum(n: number | Prisma.Decimal | null | undefined): number {
+  return num(n)
 }
 
 function yFracYears(date: Date, base: Date): number {
@@ -216,6 +219,8 @@ export interface NetWorthResult {
   indiaFDCzk: number
   /** India mutual funds (INR positions) converted to CZK via fxRatesUsed. */
   indiaMfCzk: number
+  /** Same as `indiaMfCzk` (alias for API consumers / audit checklists). */
+  indiaCzk: number
   indiaTotal: number
   czechTotal: number
   gainCzk: number
@@ -224,24 +229,28 @@ export interface NetWorthResult {
   calculatedAt: Date
 }
 
+type MoneyScalar = number | Prisma.Decimal | null | undefined
+
 function accountToCzk(
-  a: { type: string; balanceLocal: number; balanceCzk: number; currency: string },
+  a: { type: string; balanceLocal: MoneyScalar; balanceCzk: MoneyScalar; currency: string },
   fx: FXRates
-): number {
+): Prisma.Decimal {
   const cur = (a.currency || 'CZK').toUpperCase()
-  const local = safeNum(a.balanceLocal)
+  const local = d(a.balanceLocal)
   if (cur === 'CZK') return local
-  if (cur === 'EUR') return local * safeNum(fx.EURCZK)
-  if (cur === 'INR') return local * (safeNum(fx.EURCZK) / safeNum(fx.EURINR))
+  if (cur === 'EUR') return local.mul(d(fx.EURCZK))
+  if (cur === 'INR') return local.mul(d(fx.EURCZK).div(d(fx.EURINR)))
   return local
 }
 
-function mfValueInr(m: { units?: number; currentNavInr?: number | null; avgNavInr?: number | null }): number {
+function mfValueInr(m: {
+  units?: MoneyScalar
+  currentNavInr?: MoneyScalar
+  avgNavInr?: MoneyScalar | null
+}): Prisma.Decimal {
   const nav =
-    m.currentNavInr != null && m.currentNavInr > 0
-      ? safeNum(m.currentNavInr)
-      : safeNum(m.avgNavInr ?? 0)
-  return safeNum(m.units ?? 0) * nav
+    m.currentNavInr != null && d(m.currentNavInr).gt(0) ? d(m.currentNavInr) : d(m.avgNavInr ?? 0)
+  return d(m.units ?? 0).mul(nav)
 }
 
 /** India AMFI-style categories → allocation buckets (F3.3). */
@@ -284,23 +293,23 @@ export function indiaMfAllocationPieces(funds: any[], fx: FXRates): {
   bondsCzk: number
   cashCzk: number
 } {
-  const eczk = safeNum(fx.EURCZK) || 0
-  const einr = safeNum(fx.EURINR) || 0
-  const czkPerInr = einr > 0 && eczk > 0 ? eczk / einr : 0
-  let equityCzk = 0
-  let bondsCzk = 0
-  let cashCzk = 0
+  const eczk = d(fx.EURCZK)
+  const einr = d(fx.EURINR)
+  const czkPerInr = einr.gt(0) && eczk.gt(0) ? eczk.div(einr) : d(0)
+  let equityCzk = d(0)
+  let bondsCzk = d(0)
+  let cashCzk = d(0)
   for (const m of funds || []) {
     if (!m) continue
     const inr = mfValueInr(m)
-    if (inr <= 0 || czkPerInr <= 0) continue
-    const czk = inr * czkPerInr
+    if (!inr.gt(0) || !czkPerInr.gt(0)) continue
+    const czk = inr.mul(czkPerInr)
     const w = mapIndiaMfCategoryToBuckets(String(m.category))
-    equityCzk += czk * w.eq
-    bondsCzk += czk * w.bd
-    cashCzk += czk * w.ca
+    equityCzk = equityCzk.plus(czk.mul(d(w.eq)))
+    bondsCzk = bondsCzk.plus(czk.mul(d(w.bd)))
+    cashCzk = cashCzk.plus(czk.mul(d(w.ca)))
   }
-  return { equityCzk, bondsCzk, cashCzk }
+  return { equityCzk: num(equityCzk), bondsCzk: num(bondsCzk), cashCzk: num(cashCzk) }
 }
 
 export function calculateNetWorth(
@@ -310,23 +319,23 @@ export function calculateNetWorth(
   fxRates: FXRates,
   indiaMutualFunds: any[] = []
 ): NetWorthResult {
-  const eczk = safeNum(fxRates.EURCZK) || 0
-  const einr = safeNum(fxRates.EURINR) || 0
-  const fx: FXRates = { EURCZK: eczk || 0, EURINR: einr || 0 }
+  const eczk = d(fxRates.EURCZK)
+  const einr = d(fxRates.EURINR)
+  const fx: FXRates = { EURCZK: num(eczk), EURINR: num(einr) }
   const now = new Date()
-  const czkPerInr = einr > 0 && eczk > 0 ? eczk / einr : 0
+  const czkPerInr = einr.gt(0) && eczk.gt(0) ? eczk.div(einr) : d(0)
 
-  let czechFundsCzk = 0
+  let czechFundsCzk = d(0)
   for (const h of holdings) {
     if (h?.status === 'EXITED') continue
-    czechFundsCzk += safeNum(h?.currentValueCzk)
+    czechFundsCzk = czechFundsCzk.plus(d(h?.currentValueCzk))
   }
 
-  let czechSavingsCzk = 0
-  let czechPensionCzk = 0
-  let indiaNRECzk = 0
-  let indiaNROCzk = 0
-  let indiaFDCzk = 0
+  let czechSavingsCzk = d(0)
+  let czechPensionCzk = d(0)
+  let indiaNRECzk = d(0)
+  let indiaNROCzk = d(0)
+  let indiaFDCzk = d(0)
 
   for (const a of accounts || []) {
     if (a?.isActive === false) continue
@@ -334,50 +343,51 @@ export function calculateNetWorth(
     const czk = accountToCzk(
       {
         type: t,
-        balanceLocal: safeNum(a?.balanceLocal),
-        balanceCzk: safeNum(a?.balanceCzk),
+        balanceLocal: a?.balanceLocal,
+        balanceCzk: a?.balanceCzk,
         currency: (a?.currency || 'CZK') as string
       },
       fx
     )
-    if (t === 'SAVINGS') czechSavingsCzk += czk
-    else if (t === 'PENSION') czechPensionCzk += czk
-    else if (t === 'NRE') indiaNRECzk += czk
-    else if (t === 'NRO') indiaNROCzk += czk
-    else if (t === 'FIXED_DEPOSIT') indiaFDCzk += czk
+    if (t === 'SAVINGS') czechSavingsCzk = czechSavingsCzk.plus(czk)
+    else if (t === 'PENSION') czechPensionCzk = czechPensionCzk.plus(czk)
+    else if (t === 'NRE') indiaNRECzk = indiaNRECzk.plus(czk)
+    else if (t === 'NRO') indiaNROCzk = indiaNROCzk.plus(czk)
+    else if (t === 'FIXED_DEPOSIT') indiaFDCzk = indiaFDCzk.plus(czk)
   }
 
-  let indiaMfCzk = 0
+  let indiaMfCzk = d(0)
   for (const m of indiaMutualFunds || []) {
     if (!m) continue
     const inr = mfValueInr(m)
-    if (inr <= 0 || czkPerInr <= 0) continue
-    indiaMfCzk += inr * czkPerInr
+    if (!inr.gt(0) || !czkPerInr.gt(0)) continue
+    indiaMfCzk = indiaMfCzk.plus(inr.mul(czkPerInr))
   }
 
-  const czechTotal = czechFundsCzk + czechSavingsCzk + czechPensionCzk
-  const indiaTotal = indiaNRECzk + indiaNROCzk + indiaFDCzk + indiaMfCzk
-  const totalCzk = czechTotal + indiaTotal
-  const totalEur = eczk > 0 ? totalCzk / eczk : 0
-  const inv = safeNum(totalInvested)
-  const gainCzk = totalCzk - inv
-  const gainPct = inv === 0 ? 0 : (gainCzk / inv) * 100
+  const czechTotal = czechFundsCzk.plus(czechSavingsCzk).plus(czechPensionCzk)
+  const indiaTotal = indiaNRECzk.plus(indiaNROCzk).plus(indiaFDCzk).plus(indiaMfCzk)
+  const totalCzk = czechTotal.plus(indiaTotal)
+  const totalEur = eczk.gt(0) ? totalCzk.div(eczk) : d(0)
+  const inv = d(totalInvested)
+  const gainCzk = totalCzk.minus(inv)
+  const gainPct = inv.isZero() ? d(0) : gainCzk.div(inv).mul(d(100))
 
   return {
-    totalCzk: safeNum(totalCzk),
-    totalEur: safeNum(totalEur),
-    czechFundsCzk: safeNum(czechFundsCzk),
-    czechSavingsCzk: safeNum(czechSavingsCzk),
-    czechPensionCzk: safeNum(czechPensionCzk),
-    indiaNRECzk: safeNum(indiaNRECzk),
-    indiaNROCzk: safeNum(indiaNROCzk),
-    indiaFDCzk: safeNum(indiaFDCzk),
-    indiaMfCzk: safeNum(indiaMfCzk),
-    indiaTotal: safeNum(indiaTotal),
-    czechTotal: safeNum(czechTotal),
-    gainCzk: safeNum(gainCzk),
-    gainPct: safeNum(gainPct),
-    fxRatesUsed: { EURCZK: eczk, EURINR: einr },
+    totalCzk: num(totalCzk),
+    totalEur: num(totalEur),
+    czechFundsCzk: num(czechFundsCzk),
+    czechSavingsCzk: num(czechSavingsCzk),
+    czechPensionCzk: num(czechPensionCzk),
+    indiaNRECzk: num(indiaNRECzk),
+    indiaNROCzk: num(indiaNROCzk),
+    indiaFDCzk: num(indiaFDCzk),
+    indiaMfCzk: num(indiaMfCzk),
+    indiaCzk: num(indiaMfCzk),
+    indiaTotal: num(indiaTotal),
+    czechTotal: num(czechTotal),
+    gainCzk: num(gainCzk),
+    gainPct: num(gainPct),
+    fxRatesUsed: { EURCZK: num(eczk), EURINR: num(einr) },
     calculatedAt: now
   }
 }
@@ -428,23 +438,23 @@ export function calculateAllocation(
   const te = safeNum(targetEquity)
   const tb = safeNum(targetBonds)
   const tc = safeNum(targetCash)
-  let equityCzk = 0
-  let bondsCzk = 0
-  let cashCzk = 0
+  let equityCzk = d(0)
+  let bondsCzk = d(0)
+  let cashCzk = d(0)
   for (const h of holdings || []) {
     if (h?.status !== 'ACTIVE') continue
-    const v = safeNum(h?.currentValueCzk)
+    const v = d(h?.currentValueCzk)
     const w = mapCategoryToBuckets(h?.category)
-    equityCzk += v * w.eq
-    bondsCzk += v * w.bd
-    cashCzk += v * w.ca
+    equityCzk = equityCzk.plus(v.mul(d(w.eq)))
+    bondsCzk = bondsCzk.plus(v.mul(d(w.bd)))
+    cashCzk = cashCzk.plus(v.mul(d(w.ca)))
   }
   if (indiaFundSlices) {
-    equityCzk += safeNum(indiaFundSlices.equityCzk)
-    bondsCzk += safeNum(indiaFundSlices.bondsCzk)
-    cashCzk += safeNum(indiaFundSlices.cashCzk)
+    equityCzk = equityCzk.plus(d(indiaFundSlices.equityCzk))
+    bondsCzk = bondsCzk.plus(d(indiaFundSlices.bondsCzk))
+    cashCzk = cashCzk.plus(d(indiaFundSlices.cashCzk))
   }
-  const tval = equityCzk + bondsCzk + cashCzk
+  const tval = num(equityCzk.plus(bondsCzk).plus(cashCzk))
   if (tval <= 0) {
     return {
       equityPct: 0,
@@ -458,14 +468,14 @@ export function calculateAllocation(
       cashGap: tc
     }
   }
-  const n = normalize3(equityCzk, bondsCzk, cashCzk)
+  const n = normalize3(num(equityCzk), num(bondsCzk), num(cashCzk))
   return {
     equityPct: n.eq,
     bondsPct: n.bd,
     cashPct: n.ca,
-    equityCzk: safeNum(equityCzk),
-    bondsCzk: safeNum(bondsCzk),
-    cashCzk: safeNum(cashCzk),
+    equityCzk: num(equityCzk),
+    bondsCzk: num(bondsCzk),
+    cashCzk: num(cashCzk),
     equityGap: safeNum(te - n.eq),
     bondsGap: safeNum(tb - n.bd),
     cashGap: safeNum(tc - n.ca)

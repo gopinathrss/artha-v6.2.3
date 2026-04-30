@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { num } from './money'
 import { getPortfolioSummary } from './portfolio'
 import { calculateTaxStatus } from './calculations'
 
@@ -108,7 +109,7 @@ export async function runMorningJob(): Promise<{
         if (price != null && price > 0) {
           await prisma.holding.update({
             where: { id: h.id },
-            data: { nav: price, currentValueCzk: Math.round(h.units * price) }
+            data: { nav: price, currentValueCzk: Math.round(num(h.units) * price) }
           })
         }
       }

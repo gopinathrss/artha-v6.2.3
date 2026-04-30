@@ -5,6 +5,7 @@ import { prisma } from './prisma'
 import { projectFutureValue, calculateRequiredSIP } from './calculations'
 import { findBestAlternative, loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import { getBestNREFDRate } from './indiaIntelligence'
+import { num } from './money'
 
 function calculateBlendedReturn(portfolio: any): number {
   const a = portfolio?.allocation
@@ -52,7 +53,7 @@ export function analyzeRetirement(portfolio: any) {
   const blended = calculateBlendedReturn(portfolio)
   const total = portfolio?.netWorth?.totalCzk ?? 0
   const sip = Array.isArray(portfolio?.holdings)
-    ? (portfolio.holdings as any[]).reduce((s, h) => s + (h?.monthlySipCzk || 0), 0) || 32000
+    ? (portfolio.holdings as any[]).reduce((s, h) => s + num(h?.monthlySipCzk || 0), 0) || 32000
     : 32000
   const projected = projectFutureValue(total, blended, yearsLeft, sip)
   const monthlyPassive = (projected * 0.04) / 12
@@ -73,7 +74,7 @@ export function analyzeProperty(portfolio: any) {
   const downPaymentPct = 0.2
   const downPaymentNeeded = propertyPriceCzk * downPaymentPct
   const nw = portfolio?.netWorth || {}
-  const liquidSavings = (nw.czechSavingsCzk || 0) + (nw.czechPensionCzk || 0)
+  const liquidSavings = num(nw.czechSavingsCzk || 0) + num(nw.czechPensionCzk || 0)
   const monthlyTowardDown = 15000
   const monthsToDown = Math.max(0, Math.round((downPaymentNeeded - liquidSavings) / monthlyTowardDown))
   const mortgageMonthly = Math.round(((propertyPriceCzk - downPaymentNeeded) * 0.055) / 12)
@@ -144,7 +145,7 @@ export async function askArtha(question: string, portfolio: any, keys: AskKeys):
   const { anthropicKey, openaiKey } = keys
   const library = await loadAllLibrary()
   const rbi = 6.5
-  const best1 = (await getBestNREFDRate('1yr'))?.value ?? 7.1
+  const best1 = num((await getBestNREFDRate('1yr'))?.value ?? 7.1)
   const dtaa = { note: '15% NRO WHT under India–Czech Republic DTAA vs 30% default' }
   const type = detectQuestionType(question)
   const context = buildFullContext(
@@ -167,7 +168,7 @@ CRITICAL RULES:
   const userPrompt = `PORTFOLIO CONTEXT:\n${context}\n\nPRE-COMPUTED:\n${JSON.stringify(pre)}\n\nQUESTION: ${question}\n\nRespond as raw JSON: {"answer":"","keyNumbers":[],"topAction":"","confidence":70,"followUp":[]}`
 
   const noKeyMsg =
-    'Set ANTHROPIC_API_KEY (recommended) or OpenAI API key in Settings → Integrations (or env OPENAI_API_KEY).'
+    'Set ANTHROPIC_API_KEY (recommended) or OpenAI API key in Settings -> Integrations (or env OPENAI_API_KEY).'
   if (!anthropicKey && !openaiKey) {
     return prisma.aIMemory.create({
       data: {

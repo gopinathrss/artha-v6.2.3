@@ -56,6 +56,13 @@
   --info: var(--teal);
 }
 
+/* Overview: ECharts mounts here (replaces legacy SVG chart) */
+.chart-echarts {
+  width: 100%;
+  min-height: 240px;
+  height: 280px;
+}
+
 [data-theme='dark'] {
   --bg-page: #080d18;
   --bg-card: #0c1220;
@@ -115,6 +122,59 @@ body {
 
 body.demo-active {
   border: 2px solid var(--gold);
+}
+
+/* Persistent “Complete setup” (until Settings.onboardingComplete) */
+.setup-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(196, 122, 10, 0.18), rgba(184, 146, 42, 0.12));
+  border-bottom: 1px solid var(--border-gold);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.setup-banner__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.setup-banner .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.link-gold {
+  color: var(--gold);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.link-gold:hover {
+  color: var(--gold-light);
+}
+
+/* Sidebar: onboarding / profile nav (labels from artha-ui.js + /api/setup-status) */
+.nav a[data-artha-setup-nav] {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.artha-setup-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px rgba(184, 146, 42, 0.45);
+}
+a[data-artha-setup-nav].artha-setup-nav--complete .artha-setup-dot {
+  display: none !important;
 }
 
 .mono {
@@ -984,4 +1044,52 @@ body.demo-active {
   background: var(--green-bg);
   color: var(--green);
   border: 1px solid rgba(10, 122, 88, 0.2);
+}
+
+/* Overview: adherence card stacks on small viewports */
+.adhere-widget-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: 20px;
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .adhere-widget-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* This month: horizontal month chips — touch scroll + snap */
+.artha-history-strip {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding-bottom: 2px;
+  margin: 0 -4px;
+  scrollbar-width: thin;
+}
+.artha-history-strip::-webkit-scrollbar {
+  height: 4px;
+}
+.artha-history-strip::-webkit-scrollbar-thumb {
+  background: var(--border-mid);
+  border-radius: 4px;
+}
+.artha-history-strip-inner {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  min-width: min-content;
+  padding: 2px 4px 6px 4px;
+}
+.artha-history-strip-inner .btn {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  touch-action: manipulation;
+  white-space: nowrap;
 }

@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { num } from './money'
 import {
   calculateXIRR,
   calculateNetWorth,
@@ -30,11 +31,11 @@ export async function getPortfolioSummary() {
 
     const allCashflows = holdings.flatMap((h) => h.cashflows)
     const totalInvested = allCashflows
-      .filter((c) => c.amountCzk < 0)
-      .reduce((s, c) => s + Math.abs(c.amountCzk), 0)
+      .filter((c) => num(c.amountCzk) < 0)
+      .reduce((s, c) => s + Math.abs(num(c.amountCzk)), 0)
 
-    const xCashflows = allCashflows.map((c) => ({ date: c.date, amount: c.amountCzk }))
-    const totalValue = holdings.reduce((s, h) => s + h.currentValueCzk, 0)
+    const xCashflows = allCashflows.map((c) => ({ date: c.date, amount: num(c.amountCzk) }))
+    const totalValue = holdings.reduce((s, h) => s + num(h.currentValueCzk), 0)
     const xirr = calculateXIRR(xCashflows, new Date(), totalValue)
 
     const netWorth = calculateNetWorth(holdings, accounts, totalInvested, fxRates, indiaMutualFunds)
@@ -45,7 +46,13 @@ export async function getPortfolioSummary() {
       cash: settings?.targetCashPct ?? 10
     }
     const indiaSlices = indiaMfAllocationPieces(indiaMutualFunds, fxRates)
-    const allocation = calculateAllocation(holdings, tgt.equity, tgt.bonds, tgt.cash, indiaSlices)
+    const allocation = calculateAllocation(
+      holdings,
+      num(tgt.equity),
+      num(tgt.bonds),
+      num(tgt.cash),
+      indiaSlices
+    )
 
     const priceAgeHours = computeHoldingsPriceAgeHours(holdings)
     const confidence = calculateConfidence(
@@ -91,11 +98,13 @@ export async function getPortfolioSummary() {
     })
     const momChange = monthAgoSnapshot
       ? {
-          czk: netWorth.totalCzk - monthAgoSnapshot.netWorthCzk,
+          czk: netWorth.totalCzk - num(monthAgoSnapshot.netWorthCzk),
           pct:
-            monthAgoSnapshot.netWorthCzk === 0
+            num(monthAgoSnapshot.netWorthCzk) === 0
               ? null
-              : ((netWorth.totalCzk - monthAgoSnapshot.netWorthCzk) / monthAgoSnapshot.netWorthCzk) * 100,
+              : ((netWorth.totalCzk - num(monthAgoSnapshot.netWorthCzk)) /
+                  num(monthAgoSnapshot.netWorthCzk)) *
+                100,
           label: `vs ${monthAgoSnapshot.date.toISOString().slice(0, 10)}`
         }
       : {

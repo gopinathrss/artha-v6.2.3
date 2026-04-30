@@ -1,9 +1,47 @@
 import { prisma } from './prisma'
+import { num } from './money'
 
 export type HealthRow = { name: string; status: 'PASS' | 'WARN' | 'FAIL'; message?: string }
 
+/** Spec target: 12 named checks (trust score divides by this count). */
+export const HEALTH_CHECK_COUNT = 12
+
+/** When the DB is unreachable, return 12 named rows so `/api/health` stays JSON 200 (observability). */
+function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trustScore: number } {
+  const rest: HealthRow['name'][] = [
+    'FX_FRESHNESS',
+    'NAV_FRESHNESS',
+    'EMAIL_CONFIGURED',
+    'AI_REACHABLE',
+    'PROFILE_COMPLETE',
+    'LIBRARY',
+    'SNAPSHOT_FRESHNESS',
+    'PLAN_COVERAGE',
+    'ADHERENCE_KNOWN',
+    'BACKUP_RECENT',
+    'MEMORY_HEALTHY'
+  ]
+  const checks: HealthRow[] = [
+    { name: 'DB_HEALTH', status: 'FAIL', message: dbMessage },
+    ...rest.map((name) => ({
+      name,
+      status: 'WARN' as const,
+      message: 'Skipped — database unavailable'
+    }))
+  ]
+  return { checks, trustScore: 0 }
+}
+
 export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustScore: number }> {
   const checks: HealthRow[] = []
+
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    checks.push({ name: 'DB_HEALTH', status: 'PASS' })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Database unreachable'
+    return healthChecksWhenDbDown(msg)
+  }
 
   const fx = await prisma.fXRate.findFirst({
     where: { base: 'CZK', quote: 'EUR' },
@@ -28,13 +66,6 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     checks.push({ name: 'NAV_FRESHNESS', status: 'WARN', message: 'Skip' })
   }
 
-  try {
-    await prisma.$queryRaw`SELECT 1`
-    checks.push({ name: 'DB_HEALTH', status: 'PASS' })
-  } catch (e: any) {
-    checks.push({ name: 'DB_HEALTH', status: 'FAIL', message: e?.message })
-  }
-
   const s = await prisma.settings.findFirst()
   checks.push({
     name: 'EMAIL_CONFIGURED',
@@ -51,7 +82,7 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
   const prof = await prisma.userProfile.findUnique({ where: { id: 'default' } })
   checks.push({
     name: 'PROFILE_COMPLETE',
-    status: prof && prof.monthlyNetIncomeCzk > 0 ? 'PASS' : 'WARN',
+    status: prof && num(prof.monthlyNetIncomeCzk) > 0 ? 'PASS' : 'WARN',
     message: prof ? 'Profile exists' : 'Run onboarding'
   })
 
@@ -62,10 +93,141 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     message: `${libN} instruments`
   })
 
+  try {
+    const lastSnap = await prisma.snapshot.findFirst({ orderBy: { date: 'desc' } })
+    const snapAgeD = lastSnap
+      ? (Date.now() - new Date(lastSnap.date).getTime()) / 86400000
+      : 999
+    checks.push({
+      name: 'SNAPSHOT_FRESHNESS',
+      status: lastSnap
+        ? snapAgeD < 2
+          ? 'PASS'
+          : snapAgeD < 7
+            ? 'WARN'
+            : 'FAIL'
+        : 'WARN',
+      message: lastSnap
+        ? `Last snapshot ${snapAgeD.toFixed(1)}d ago`
+        : 'No snapshots yet (run morning job or refresh portfolio)'
+    })
+  } catch {
+    checks.push({ name: 'SNAPSHOT_FRESHNESS', status: 'WARN', message: 'Skip' })
+  }
+
+  // —— 9–12: sprint 2B CFO checks (fixed 12 total; trust /12) ——
+  try {
+    const tz = 'Europe/Prague'
+    const d = new Date()
+    const monthYear = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const plan = await prisma.allocationPlan.findFirst({
+      where: { monthYear, status: { in: ['PROPOSED', 'CONFIRMED', 'EXECUTED'] } },
+      orderBy: { generatedAt: 'desc' }
+    })
+    const prof = await prisma.userProfile.findUnique({ where: { id: 'default' } })
+    const sal = prof?.salaryDayOfMonth ?? 15
+    const pragueNow = new Date(d.toLocaleString('en-US', { timeZone: tz }))
+    const day = pragueNow.getDate()
+    const pastSalary = day > sal
+
+    let st: HealthRow['status'] = 'FAIL'
+    let msg = 'No plan for ' + monthYear
+    if (plan) {
+      st = 'PASS'
+      if (plan.status === 'PROPOSED') {
+        const ageD = (Date.now() - plan.generatedAt.getTime()) / 86400000
+        if (ageD > 5) st = 'WARN'
+        msg = 'PROPOSED for ' + ageD.toFixed(0) + 'd'
+      } else {
+        msg = plan.status
+      }
+    } else if (!pastSalary) {
+      st = 'WARN'
+      msg = 'No plan yet; before salary+1 window'
+    } else {
+      st = 'FAIL'
+      msg = 'No plan and past salary+1'
+    }
+    checks.push({ name: 'PLAN_COVERAGE', status: st, message: msg })
+  } catch (e) {
+    checks.push({ name: 'PLAN_COVERAGE', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const d = new Date()
+    const monthYear = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const pragueNow = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Prague' }))
+    const day = pragueNow.getDate()
+    const plan = await prisma.allocationPlan.findFirst({
+      where: { monthYear, status: { in: ['PROPOSED', 'CONFIRMED', 'EXECUTED'] } },
+      orderBy: { generatedAt: 'desc' }
+    })
+    const rows = (plan?.allocations as unknown) as Array<{ executionStatus?: string }> | null
+    if (!plan || !Array.isArray(rows) || rows.length === 0) {
+      checks.push({ name: 'ADHERENCE_KNOWN', status: 'PASS', message: 'No rows / no plan' })
+    } else if (day < 15) {
+      checks.push({ name: 'ADHERENCE_KNOWN', status: 'PASS', message: 'Before mid-month' })
+    } else {
+      let n = 0
+      let closed = 0
+      for (const r of rows) {
+        n += 1
+        const st = (r.executionStatus || 'PENDING').toUpperCase()
+        if (st !== 'PENDING') closed += 1
+      }
+      const pct = n > 0 ? (closed / n) * 100 : 0
+      let st: HealthRow['status'] = 'FAIL'
+      if (pct > 50) st = 'PASS'
+      else if (pct >= 25) st = 'WARN'
+      checks.push({
+        name: 'ADHERENCE_KNOWN',
+        status: st,
+        message: `${closed}/${n} rows not pending (${pct.toFixed(0)}%)`
+      })
+    }
+  } catch {
+    checks.push({ name: 'ADHERENCE_KNOWN', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const sh = await prisma.systemHealth.findFirst({
+      where: { OR: [{ checkName: 'WEEKLY_BACKUP' }, { checkName: { contains: 'BACKUP' } }] },
+      orderBy: { checkedAt: 'desc' }
+    })
+    const journal = await prisma.advisorJournal.findFirst({
+      where: { content: { contains: 'backup', mode: 'insensitive' } },
+      orderBy: { date: 'desc' }
+    })
+    const tSh = sh?.lastSuccessful || sh?.checkedAt
+    const tJ = journal?.date
+    const best = tSh && tJ ? (tSh > tJ ? tSh : tJ) : tSh || tJ
+    if (!best) {
+      checks.push({ name: 'BACKUP_RECENT', status: 'FAIL', message: 'No backup log' })
+    } else {
+      const ageD = (Date.now() - new Date(best).getTime()) / 86400000
+      const st: HealthRow['status'] = ageD < 7 ? 'PASS' : ageD < 14 ? 'WARN' : 'FAIL'
+      checks.push({ name: 'BACKUP_RECENT', status: st, message: `${ageD.toFixed(0)}d since last` })
+    }
+  } catch {
+    checks.push({ name: 'BACKUP_RECENT', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const u = process.memoryUsage()
+    const ratio = u.heapTotal > 0 ? u.heapUsed / u.heapTotal : 0
+    const st: HealthRow['status'] = ratio < 0.8 ? 'PASS' : ratio < 0.9 ? 'WARN' : 'FAIL'
+    checks.push({
+      name: 'MEMORY_HEALTHY',
+      status: st,
+      message: `heap ${(ratio * 100).toFixed(0)}%`
+    })
+  } catch {
+    checks.push({ name: 'MEMORY_HEALTHY', status: 'WARN', message: 'Skip' })
+  }
+
   const pass = checks.filter((c) => c.status === 'PASS').length
   const warn = checks.filter((c) => c.status === 'WARN').length
-  const n = Math.max(1, checks.length)
-  const trustPct = Math.min(100, Math.round((pass * 100 + warn * 50) / n))
+  const trustPct = Math.min(100, Math.round((pass * 100 + warn * 50) / 12))
 
   return { checks, trustScore: trustPct }
 }

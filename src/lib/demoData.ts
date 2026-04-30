@@ -130,6 +130,7 @@ export function getDemoPortfolio(persona = 'engineer') {
       indiaNROCzk: j(88_300),
       indiaFDCzk: j(110_400),
       indiaMfCzk: 0,
+      indiaCzk: 0,
       fxRatesUsed: { EURCZK: 24.5, EURINR: 89.5 },
       calculatedAt: new Date()
     },

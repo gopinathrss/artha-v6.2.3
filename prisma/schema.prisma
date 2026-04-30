@@ -12,18 +12,18 @@ model Holding {
   isin              String
   name              String
   type              String      @default("MUTUAL_FUND")
-  category          String      // EQUITY | BONDS | CASH | COMMODITY | MIXED
-  units             Float       @default(0)
-  nav               Float       @default(0)
+  category          String // EQUITY | BONDS | CASH | COMMODITY | MIXED
+  units             Decimal     @default(0) @db.Decimal(20, 8)
+  nav               Decimal     @default(0) @db.Decimal(14, 4)
   currency          String      @default("CZK")
-  currentValueCzk   Float       @default(0)
-  monthlySipCzk     Float       @default(0)
+  currentValueCzk   Decimal     @default(0) @db.Decimal(14, 2)
+  monthlySipCzk     Decimal     @default(0) @db.Decimal(14, 2)
   status            String      @default("ACTIVE") // ACTIVE | INACTIVE | EXITED
   purchaseStartDate DateTime
   taxFreeDate       DateTime
   country           String      @default("CZ")
   institution       String?
-  interestRatePct   Float?
+  interestRatePct   Decimal?    @db.Decimal(7, 4)
   maturityDate      DateTime?
   notes             String?
   createdAt         DateTime    @default(now())
@@ -36,7 +36,7 @@ model Cashflow {
   holdingId   String
   holding     Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
   date        DateTime
-  amountCzk   Float
+  amountCzk   Decimal  @db.Decimal(14, 2)
   type        String   @default("SIP") // SIP | LUMP_SUM | WITHDRAWAL | DIVIDEND
   notes       String?
   createdAt   DateTime @default(now())
@@ -44,13 +44,13 @@ model Cashflow {
 
 model Account {
   id              String   @id @default(cuid())
-  type            String   // SAVINGS | PENSION | NRE | NRO | FIXED_DEPOSIT
+  type            String // SAVINGS | PENSION | NRE | NRO | FIXED_DEPOSIT
   name            String
   institution     String?
-  balanceLocal    Float    @default(0)
+  balanceLocal    Decimal  @default(0) @db.Decimal(14, 2)
   currency        String   @default("CZK")
-  balanceCzk      Float    @default(0)
-  interestRatePct Float?
+  balanceCzk      Decimal  @default(0) @db.Decimal(14, 2)
+  interestRatePct Decimal? @db.Decimal(7, 4)
   maturityDate    DateTime?
   country         String   @default("CZ")
   isActive        Boolean  @default(true)
@@ -60,29 +60,29 @@ model Account {
 }
 
 model Instrument {
-  id                String   @id @default(cuid())
-  isin              String   @unique
+  id                String    @id @default(cuid())
+  isin              String    @unique
   name              String
   ticker            String?
-  type              String   // ETF | MUTUAL_FUND | BOND | CASH_FUND
+  type              String // ETF | MUTUAL_FUND | BOND | CASH_FUND
   category          String
-  terPct            Float?
-  currency          String   @default("EUR")
-  availableInGeorge Boolean  @default(false)
-  lastPrice         Float?
+  terPct            Decimal?  @db.Decimal(7, 4)
+  currency          String    @default("EUR")
+  availableInGeorge Boolean   @default(false)
+  lastPrice         Decimal?  @db.Decimal(14, 4)
   lastPriceDate     DateTime?
-  return1yr         Float?
-  return3yr         Float?
-  return5yr         Float?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  return1yr         Decimal?  @db.Decimal(10, 6)
+  return3yr         Decimal?  @db.Decimal(10, 6)
+  return5yr         Decimal?  @db.Decimal(10, 6)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model PriceHistory {
   id        String   @id @default(cuid())
   isin      String
   date      DateTime
-  price     Float
+  price     Decimal  @db.Decimal(14, 4)
   currency  String
   source    String
   createdAt DateTime @default(now())
@@ -92,16 +92,16 @@ model PriceHistory {
 model Snapshot {
   id              String   @id @default(cuid())
   date            DateTime @unique
-  netWorthCzk     Float
-  netWorthEur     Float
-  investedCzk     Float
-  gainCzk         Float
-  gainPct         Float
-  xirr            Float?
+  netWorthCzk     Decimal  @db.Decimal(14, 2)
+  netWorthEur     Decimal  @db.Decimal(14, 2)
+  investedCzk     Decimal  @db.Decimal(14, 2)
+  gainCzk         Decimal  @db.Decimal(14, 2)
+  gainPct         Decimal  @db.Decimal(7, 4)
+  xirr            Decimal? @db.Decimal(10, 6)
   xirrIsEstimate  Boolean  @default(true)
-  equityPct       Float    @default(0)
-  bondsPct        Float    @default(0)
-  cashPct         Float    @default(0)
+  equityPct       Decimal  @default(0) @db.Decimal(7, 4)
+  bondsPct        Decimal  @default(0) @db.Decimal(7, 4)
+  cashPct         Decimal  @default(0) @db.Decimal(7, 4)
   healthScore     Int      @default(0)
   confidenceScore Int      @default(0)
   createdAt       DateTime @default(now())
@@ -122,76 +122,78 @@ model AlertLog {
 }
 
 model MonthlyLetter {
-  id                String   @id @default(cuid())
-  monthYear         String   @unique
+  id                String    @id @default(cuid())
+  monthYear         String    @unique
   generatedAt       DateTime
   contentHtml       String
   contentText       String
   portfolioSnapshot Json
-  aiConfidenceScore Int      @default(0)
-  wasSent           Boolean  @default(false)
+  aiConfidenceScore Int       @default(0)
+  wasSent           Boolean   @default(false)
   sentAt            DateTime?
 }
 
 model Settings {
-  id                    String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   // Allocation targets
-  targetEquityPct       Float    @default(65)
-  targetBondsPct        Float    @default(25)
-  targetCashPct         Float    @default(10)
+  targetEquityPct      Decimal   @default(65) @db.Decimal(7, 4)
+  targetBondsPct       Decimal   @default(25) @db.Decimal(7, 4)
+  targetCashPct        Decimal   @default(10) @db.Decimal(7, 4)
   // Goals
-  targetWealthCzk       Float?
-  targetDate            DateTime?
-  riskProfile           String?
+  targetWealthCzk      Decimal?  @db.Decimal(14, 2)
+  targetDate           DateTime?
+  riskProfile          String?
   // Delivery
-  alertEmail            String?
-  telegramChatId        String?
-  smtpHost              String   @default("smtp.gmail.com")
-  smtpPort              Int      @default(587)
-  smtpUser              String?
-  smtpPass              String?
-  telegramBotToken      String?
+  alertEmail           String?
+  telegramChatId       String?
+  smtpHost             String    @default("smtp.gmail.com")
+  smtpPort             Int       @default(587)
+  smtpUser             String?
+  smtpPass             String?
+  telegramBotToken     String?
   // AI
-  openaiApiKey          String?
-  aiProvider            String   @default("openai")
+  openaiApiKey         String?
+  aiProvider           String    @default("openai")
   // Features
-  monthlyLetterEnabled  Boolean  @default(true)
-  confidenceEnabled     Boolean  @default(true)
-  alertsEnabled         Boolean  @default(true)
+  monthlyLetterEnabled Boolean @default(true)
+  confidenceEnabled    Boolean @default(true)
+  alertsEnabled        Boolean @default(true)
   // Demo mode
-  demoModeEnabled       Boolean  @default(false)
-  demoPersona           String   @default("engineer")
+  demoModeEnabled      Boolean @default(false)
+  demoPersona          String  @default("engineer")
   // Timezone
-  timezone              String   @default("Europe/Prague")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  timezone             String  @default("Europe/Prague")
+  // Onboarding: false until user finishes wizard (banner persists while false)
+  onboardingComplete   Boolean @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model InstrumentLibrary {
-  id                String   @id @default(cuid())
-  isin              String   @unique
+  id                String    @id @default(cuid())
+  isin              String    @unique
   name              String
   ticker            String?
-  type              String   // ETF | MUTUAL_FUND | BOND | CASH_FUND
-  category          String   // EQUITY | BONDS | CASH | COMMODITY | MIXED
+  type              String // ETF | MUTUAL_FUND | BOND | CASH_FUND
+  category          String // EQUITY | BONDS | CASH | COMMODITY | MIXED
   subcategory       String?
-  terPct            Float?
-  currency          String   @default("EUR")
+  terPct            Decimal?  @db.Decimal(7, 4)
+  currency          String    @default("EUR")
   domicile          String?
-  fundSizeM         Float?
-  trackingError     Float?
+  fundSizeM         Decimal?  @db.Decimal(14, 4)
+  trackingError     Decimal?  @db.Decimal(10, 6)
   benchmark         String?
-  availableInGeorge Boolean  @default(false)
-  lastPrice         Float?
+  availableInGeorge Boolean   @default(false)
+  lastPrice         Decimal?  @db.Decimal(14, 4)
   lastPriceDate     DateTime?
-  return1yr         Float?
-  return3yr         Float?
-  return5yr         Float?
-  return10yr        Float?
-  score             Float?
+  return1yr         Decimal?  @db.Decimal(10, 6)
+  return3yr         Decimal?  @db.Decimal(10, 6)
+  return5yr         Decimal?  @db.Decimal(10, 6)
+  return10yr        Decimal?  @db.Decimal(10, 6)
+  score             Decimal?  @db.Decimal(10, 6)
   scoreUpdatedAt    DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model AIMemory {
@@ -211,61 +213,61 @@ model AIMemory {
 }
 
 model IndiaIntelligence {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   dataType        String
   bankName        String?
   tenor           String?
-  value           Float
-  previousValue   Float?
+  value           Decimal   @db.Decimal(14, 4)
+  previousValue   Decimal?  @db.Decimal(14, 4)
   changeDirection String?
   notes           String?
-  validFrom       DateTime @default(now())
+  validFrom       DateTime  @default(now())
   validUntil      DateTime?
   source          String
-  createdAt       DateTime @default(now())
+  createdAt       DateTime  @default(now())
 }
 
 model RecommendationOutcome {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   date               DateTime
   type               String
   recommendedAction  String
-  estimatedImpactCzk Float?
+  estimatedImpactCzk Decimal?  @db.Decimal(14, 2)
   confidenceScore    Int
   relatedIsin        String?
-  userDecision       String   @default("UNKNOWN")
+  userDecision       String    @default("UNKNOWN")
   result30d          String?
   result90d          String?
-  actualImpactCzk    Float?
+  actualImpactCzk    Decimal?  @db.Decimal(14, 2)
   notes              String?
-  createdAt          DateTime @default(now())
+  createdAt          DateTime  @default(now())
 }
 
 // ——— ARTHA V4 — personal CFO (Session A foundation) ———
 
 model UserProfile {
-  id                        String   @id @default("default")
-  fullName                  String
-  dateOfBirth               DateTime
-  homeCurrency              String   @default("CZK")
-  taxResidency              String   @default("CZ")
-  riskProfile               String   @default("MODERATE")
-  monthlyNetIncomeCzk       Float
-  salaryDayOfMonth          Int      @default(15)
-  emergencyFundTarget       Float
-  retirementAge             Int      @default(50)
-  retirementMonthlyExpense  Float
-  notes                     String?
-  updatedAt                 DateTime @updatedAt
+  id                       String   @id @default("default")
+  fullName                 String
+  dateOfBirth              DateTime
+  homeCurrency             String   @default("CZK")
+  taxResidency             String   @default("CZ")
+  riskProfile              String   @default("MODERATE")
+  monthlyNetIncomeCzk      Decimal  @db.Decimal(14, 2)
+  salaryDayOfMonth         Int      @default(15)
+  emergencyFundTarget      Decimal  @db.Decimal(14, 2)
+  retirementAge            Int      @default(50)
+  retirementMonthlyExpense Decimal @db.Decimal(14, 2)
+  notes                    String?
+  updatedAt                DateTime @updatedAt
 }
 
 model IncomeEvent {
   id          String   @id @default(cuid())
   date        DateTime
   source      String
-  amountLocal Float
+  amountLocal Decimal  @db.Decimal(14, 2)
   currency    String
-  amountCzk   Float
+  amountCzk   Decimal  @db.Decimal(14, 2)
   recurring   Boolean  @default(false)
   notes       String?
   createdAt   DateTime @default(now())
@@ -275,7 +277,7 @@ model ExpenseCommitment {
   id            String    @id @default(cuid())
   category      String
   description   String
-  amountCzk     Float
+  amountCzk     Decimal   @db.Decimal(14, 2)
   frequency     String
   dueDayOfMonth Int?
   startDate     DateTime
@@ -290,47 +292,47 @@ model UpcomingEvent {
   eventDate   DateTime
   title       String
   category    String
-  budgetCzk   Float
-  reservedCzk Float    @default(0)
+  budgetCzk   Decimal  @db.Decimal(14, 2)
+  reservedCzk Decimal  @default(0) @db.Decimal(14, 2)
   status      String   @default("UPCOMING")
   notes       String?
   createdAt   DateTime @default(now())
 }
 
 model AllocationPlan {
-  id                String    @id @default(cuid())
-  monthYear         String
-  generatedAt       DateTime  @default(now())
-  totalAvailableCzk Float
-  fixedExpensesCzk  Float
-  reservedEventsCzk Float
-  investableCzk     Float
-  emergencyTopupCzk Float     @default(0)
-  allocations       Json
-  status            String    @default("PROPOSED")
-  userOverride      Json?
-  executedAt        DateTime?
-  planSource        String?   // MANUAL|AUTO_CRON
-  createdAt         DateTime  @default(now())
+  id                  String    @id @default(cuid())
+  monthYear           String
+  generatedAt         DateTime  @default(now())
+  totalAvailableCzk   Decimal   @db.Decimal(14, 2)
+  fixedExpensesCzk    Decimal   @db.Decimal(14, 2)
+  reservedEventsCzk   Decimal   @db.Decimal(14, 2)
+  investableCzk       Decimal   @db.Decimal(14, 2)
+  emergencyTopupCzk   Decimal   @default(0) @db.Decimal(14, 2)
+  allocations         Json
+  status              String    @default("PROPOSED")
+  userOverride        Json?
+  executedAt          DateTime?
+  planSource          String? // MANUAL|AUTO_CRON
+  createdAt           DateTime  @default(now())
   @@index([monthYear, status])
 }
 
 model SipExecution {
-  id              String   @id @default(cuid())
-  planId          String?
-  scheduledDate   DateTime
-  executedDate    DateTime?
-  isin            String
-  fundName        String
-  amountCzk       Float
-  amountLocal     Float?
-  currency        String
-  navAtExecution  Float?
-  unitsAcquired   Float?
-  status          String
-  confirmationMethod String?
-  notes           String?
-  createdAt       DateTime @default(now())
+  id                   String    @id @default(cuid())
+  planId               String?
+  scheduledDate        DateTime
+  executedDate         DateTime?
+  isin                 String
+  fundName             String
+  amountCzk            Decimal   @db.Decimal(14, 2)
+  amountLocal          Decimal?  @db.Decimal(14, 2)
+  currency             String
+  navAtExecution       Decimal?  @db.Decimal(14, 4)
+  unitsAcquired        Decimal?  @db.Decimal(20, 8)
+  status               String
+  confirmationMethod   String?
+  notes                String?
+  createdAt            DateTime  @default(now())
 }
 
 /// Stores CZK per 1 unit of `quote` currency (EUR, USD, INR)
@@ -338,7 +340,7 @@ model FXRate {
   id        String   @id @default(cuid())
   base      String
   quote     String
-  rate      Float
+  rate      Decimal  @db.Decimal(14, 6)
   source    String
   stale     Boolean  @default(false)
   fetchedAt DateTime @default(now())
@@ -346,31 +348,31 @@ model FXRate {
 }
 
 model NavHistory {
-  id        String   @id @default(cuid())
-  isin      String
-  date      DateTime
-  nav       Float
-  currency  String
-  source    String
+  id       String   @id @default(cuid())
+  isin     String
+  date     DateTime
+  nav      Decimal  @db.Decimal(14, 4)
+  currency String
+  source   String
   @@unique([isin, date])
   @@index([isin])
 }
 
 model HistoricalReturn {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   isin        String
   asOfDate    DateTime
-  return1m    Float?
-  return3m    Float?
-  return6m    Float?
-  return1y    Float?
-  return3y    Float?
-  return5y    Float?
-  return10y   Float?
-  volatility  Float?
-  sharpe      Float?
-  maxDrawdown Float?
-  refreshedAt DateTime @default(now())
+  return1m    Decimal?  @db.Decimal(10, 6)
+  return3m    Decimal?  @db.Decimal(10, 6)
+  return6m    Decimal?  @db.Decimal(10, 6)
+  return1y    Decimal?  @db.Decimal(10, 6)
+  return3y    Decimal?  @db.Decimal(10, 6)
+  return5y    Decimal?  @db.Decimal(10, 6)
+  return10y   Decimal?  @db.Decimal(10, 6)
+  volatility  Decimal?  @db.Decimal(10, 6)
+  sharpe      Decimal?  @db.Decimal(10, 6)
+  maxDrawdown Decimal?  @db.Decimal(10, 6)
+  refreshedAt DateTime  @default(now())
   @@unique([isin, asOfDate])
 }
 
@@ -385,13 +387,50 @@ model SystemHealth {
 }
 
 model AdvisorJournal {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
+  id          String    @id @default(cuid())
+  date        DateTime  @default(now())
   category    String
   content     String
   relatedIsin String?
-  impactCzk   Float?
+  impactCzk   Decimal?  @db.Decimal(14, 2)
   metadata    Json?
+}
+
+/// India lane: user-entered mutual fund line (NAV from AMFI `NavHistory` by `isin` when set)
+model IndiaMutualFund {
+  id            String    @id @default(cuid())
+  schemeName    String
+  amfiCode      String
+  isin          String?
+  amc           String?
+  category      String
+  units         Decimal   @db.Decimal(20, 8)
+  avgNavInr     Decimal?  @db.Decimal(14, 4)
+  currentNavInr Decimal?  @db.Decimal(14, 4)
+  lastNavUpdate DateTime?
+  purchaseDate  DateTime
+  folioNumber   String?
+  sipActive     Boolean   @default(false)
+  sipAmountInr  Decimal?  @db.Decimal(14, 2)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+/// India lane: fixed deposits for ladder + table
+model IndiaFixedDeposit {
+  id              String   @id @default(cuid())
+  bank            String
+  accountType     String
+  principalInr    Decimal  @db.Decimal(14, 2)
+  interestRatePct Decimal  @db.Decimal(7, 4)
+  startDate       DateTime
+  maturityDate    DateTime
+  interestType    String   @default("CUMULATIVE")
+  tdsApplicable   Boolean  @default(false)
+  autoRenew         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model GeneratedReport {
@@ -401,5 +440,6 @@ model GeneratedReport {
   monthYear    String?
   dataSnapshot Json
   token        String   @unique
+  audience     String   @default("INTERNAL") // INTERNAL | CLIENT
   createdAt    DateTime @default(now())
 }

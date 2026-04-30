@@ -2,11 +2,15 @@ import type { Application, Request, Response } from 'express'
 import { prisma } from '../lib/prisma'
 import { getDemoFinances } from '../lib/demoData'
 import { createReport, renderReportViewHtml } from '../lib/reportsService'
-import { runHealthChecks } from '../lib/health'
+import { HEALTH_CHECK_COUNT, runHealthChecks } from '../lib/health'
 import { currentMonthYear, generateMonthlyPlan, getPlanForMonth } from '../lib/allocationPlanner'
 import { sendEmail } from '../lib/emailService'
 import { buildPlanReadyEmail } from '../lib/planEmail'
 import { computeAdherenceStats } from '../lib/adherence'
+import { getMonthlyPlanOutcomes } from '../lib/planHistory'
+import { countPendingInPlan, markAllPendingRowsDone } from '../lib/followThrough'
+import { markPlanRowDone } from '../lib/planRowUpdate'
+import { num } from '../lib/money'
 
 async function demoState(): Promise<{ demo: boolean; persona: string }> {
   const s = await prisma.settings.findFirst()
@@ -28,10 +32,45 @@ const defaultProfileCreate = () => ({
 })
 
 export function registerCfoRoutes(app: Application) {
+  app.get('/api/setup-status', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) {
+      return res.json({
+        success: true,
+        data: { showBanner: false, onboardingComplete: true, demo: true }
+      })
+    }
+    let s = await prisma.settings.findFirst()
+    if (!s) s = await prisma.settings.create({ data: {} })
+    const complete = s.onboardingComplete === true
+    return res.json({
+      success: true,
+      data: { showBanner: !complete, onboardingComplete: complete }
+    })
+  })
+
+  app.post('/api/onboarding/complete', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) {
+      return res.status(403).json({ success: false, error: 'Finish setup in live mode (turn off demo).' })
+    }
+    let s = await prisma.settings.findFirst()
+    if (!s) s = await prisma.settings.create({ data: {} })
+    await prisma.settings.update({ where: { id: s.id }, data: { onboardingComplete: true } })
+    return res.json({ success: true })
+  })
+
   app.get('/api/health', async (_req: Request, res: Response) => {
     try {
       const h = await runHealthChecks()
-      res.json({ success: true, data: h })
+      res.json({
+        success: true,
+        data: {
+          ...h,
+          expectedCheckCount: HEALTH_CHECK_COUNT,
+          checkCount: h.checks.length
+        }
+      })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Health check failed'
       res.status(500).json({ success: false, error: m })
@@ -43,14 +82,43 @@ export function registerCfoRoutes(app: Application) {
     if (demo) {
       return res.json({ success: true, data: { profile: getDemoFinances().profile }, demo: true })
     }
-    let p = await prisma.userProfile.findUnique({ where: { id: 'default' } })
-    if (!p) {
-      p = await prisma.userProfile.create({ data: defaultProfileCreate() })
-    }
+    const p = await prisma.userProfile.findUnique({ where: { id: 'default' } })
     return res.json({ success: true, data: { profile: p } })
   })
 
-  app.put('/api/profile', async (req, res) => {
+  app.get('/api/profile/status', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) {
+      return res.json({
+        success: true,
+        data: { hasProfile: true, hasIncome: true, needsOnboarding: false },
+        demo: true
+      })
+    }
+    const hasProfile = !!(await prisma.userProfile.findUnique({ where: { id: 'default' } }))
+    const hasIncome = (await prisma.incomeEvent.count()) > 0
+    return res.json({
+      success: true,
+      data: { hasProfile, hasIncome, needsOnboarding: !hasProfile || !hasIncome }
+    })
+  })
+
+  app.post('/api/profile/onboarding-complete', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) {
+      return res.status(403).json({ success: false, error: 'Finish setup in live mode (turn off demo).' })
+    }
+    try {
+      const { runOnboardingCompleteFlow } = await import('../lib/onboardingRun')
+      const { planId } = await runOnboardingCompleteFlow(req.body)
+      return res.json({ success: true, data: { planId } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Onboarding failed'
+      return res.status(400).json({ success: false, error: m })
+    }
+  })
+
+  const putProfile = async (req: Request, res: Response) => {
     const { demo } = await demoState()
     if (demo) {
       return res.status(403).json({ success: false, error: 'Cannot edit profile in demo mode' })
@@ -77,7 +145,9 @@ export function registerCfoRoutes(app: Application) {
       update: data as any
     })
     return res.json({ success: true, data: { profile: p } })
-  })
+  }
+  app.put('/api/profile', putProfile)
+  app.patch('/api/profile', putProfile)
 
   app.get('/api/income', async (_req, res) => {
     const { demo } = await demoState()
@@ -92,13 +162,17 @@ export function registerCfoRoutes(app: Application) {
     const { demo } = await demoState()
     if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
     const b = req.body
+    const amountCzk = Number(b.amountCzk)
+    if (!Number.isFinite(amountCzk)) {
+      return res.status(400).json({ success: false, error: 'Invalid amount' })
+    }
     const row = await prisma.incomeEvent.create({
       data: {
         date: new Date(b.date),
         source: String(b.source || 'OTHER'),
         amountLocal: Number(b.amountLocal ?? b.amountCzk),
         currency: String(b.currency || 'CZK'),
-        amountCzk: Number(b.amountCzk),
+        amountCzk,
         recurring: Boolean(b.recurring),
         notes: b.notes ?? null
       }
@@ -106,7 +180,7 @@ export function registerCfoRoutes(app: Application) {
     return res.status(201).json({ success: true, data: { event: row } })
   })
 
-  app.put('/api/income/:id', async (req, res) => {
+  const putIncome = async (req: Request, res: Response) => {
     const { demo } = await demoState()
     if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
     const b = req.body
@@ -114,9 +188,11 @@ export function registerCfoRoutes(app: Application) {
     if (b.date) d.date = new Date(b.date)
     if (b.amountCzk != null) d.amountCzk = Number(b.amountCzk)
     if (b.amountLocal != null) d.amountLocal = Number(b.amountLocal)
-    const u = await prisma.incomeEvent.update({ where: { id: req.params.id }, data: d })
+    const u = await prisma.incomeEvent.update({ where: { id: String(req.params.id) }, data: d })
     return res.json({ success: true, data: { event: u } })
-  })
+  }
+  app.put('/api/income/:id', putIncome)
+  app.patch('/api/income/:id', putIncome)
 
   app.delete('/api/income/:id', async (req, res) => {
     const { demo } = await demoState()
@@ -154,7 +230,7 @@ export function registerCfoRoutes(app: Application) {
     return res.status(201).json({ success: true, data: { expense: e } })
   })
 
-  app.put('/api/expenses/:id', async (req, res) => {
+  const putExpense = async (req: Request, res: Response) => {
     const { demo } = await demoState()
     if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
     const b = req.body
@@ -162,9 +238,11 @@ export function registerCfoRoutes(app: Application) {
     if (b.startDate) d.startDate = new Date(b.startDate)
     if (b.endDate) d.endDate = new Date(b.endDate)
     if (b.amountCzk != null) d.amountCzk = Number(b.amountCzk)
-    const u = await prisma.expenseCommitment.update({ where: { id: req.params.id }, data: d })
+    const u = await prisma.expenseCommitment.update({ where: { id: String(req.params.id) }, data: d })
     return res.json({ success: true, data: { expense: u } })
-  })
+  }
+  app.put('/api/expenses/:id', putExpense)
+  app.patch('/api/expenses/:id', putExpense)
 
   app.delete('/api/expenses/:id', async (req, res) => {
     const { demo } = await demoState()
@@ -200,7 +278,7 @@ export function registerCfoRoutes(app: Application) {
     return res.status(201).json({ success: true, data: { event: ev } })
   })
 
-  app.put('/api/events/:id', async (req, res) => {
+  const putEvent = async (req: Request, res: Response) => {
     const { demo } = await demoState()
     if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
     const b = req.body
@@ -208,9 +286,11 @@ export function registerCfoRoutes(app: Application) {
     if (b.eventDate) d.eventDate = new Date(b.eventDate)
     if (b.budgetCzk != null) d.budgetCzk = Number(b.budgetCzk)
     if (b.reservedCzk != null) d.reservedCzk = Number(b.reservedCzk)
-    const u = await prisma.upcomingEvent.update({ where: { id: req.params.id }, data: d })
+    const u = await prisma.upcomingEvent.update({ where: { id: String(req.params.id) }, data: d })
     return res.json({ success: true, data: { event: u } })
-  })
+  }
+  app.put('/api/events/:id', putEvent)
+  app.patch('/api/events/:id', putEvent)
 
   app.delete('/api/events/:id', async (req, res) => {
     const { demo } = await demoState()
@@ -249,7 +329,16 @@ export function registerCfoRoutes(app: Application) {
     if (demo) {
       return res.json({
         success: true,
-        data: { months, totalRows: 0, doneRows: 0, skippedRows: 0, pendingRows: 0, adherencePct: 0 },
+        data: {
+          months,
+          totalRows: 0,
+          doneRows: 0,
+          skippedRows: 0,
+          pendingRows: 0,
+          adherencePct: 0,
+          onTrackStreakMonths: 0,
+          followThroughCzk6m: 0
+        },
         demo: true
       })
     }
@@ -258,6 +347,21 @@ export function registerCfoRoutes(app: Application) {
       return res.json({ success: true, data })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Adherence failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/this-month/history', async (req, res) => {
+    const { demo } = await demoState()
+    const months = Math.min(24, Math.max(1, parseInt(String(req.query.months || '12'), 10) || 12))
+    if (demo) {
+      return res.json({ success: true, data: { months, outcomes: [] as unknown[] }, demo: true })
+    }
+    try {
+      const outcomes = await getMonthlyPlanOutcomes(months)
+      return res.json({ success: true, data: { months, outcomes } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'History failed'
       return res.status(500).json({ success: false, error: m })
     }
   })
@@ -310,49 +414,13 @@ export function registerCfoRoutes(app: Application) {
       const baseRow = { ...(next[rowIndex] as Record<string, unknown>) }
 
       if (action === 'DONE') {
-        const executedAmountCzk = Number(
-          body.executedAmountCzk != null ? body.executedAmountCzk : (baseRow.amountCzk as number) || 0
-        )
-        const executedAt = body.executedAt
-          ? new Date(body.executedAt).toISOString()
-          : new Date().toISOString()
-        next[rowIndex] = {
-          ...baseRow,
-          executionStatus: 'DONE',
-          executedAt,
-          executedAmountCzk,
-          skipReason: null
-        }
-        const r = next[rowIndex] as Record<string, unknown>
-        const isin = r.isin != null ? String(r.isin) : ''
-        if (isin) {
-          await prisma.sipExecution.create({
-            data: {
-              planId,
-              scheduledDate: new Date(),
-              executedDate: new Date(executedAt),
-              isin,
-              fundName: String(r.destination || 'Fund'),
-              amountCzk: executedAmountCzk,
-              currency: String(r.currency || 'CZK'),
-              status: 'EXECUTED',
-              notes: 'From allocation plan row',
-              navAtExecution: null,
-              unitsAcquired: null,
-              amountLocal: null,
-              confirmationMethod: 'DASHBOARD'
-            }
-          })
-        }
-        await prisma.advisorJournal.create({
-          data: {
-            category: 'FOLLOWED',
-            content: `Executed ${executedAmountCzk} CZK to ${String(r.destination || 'destination')}`,
-            relatedIsin: isin || null,
-            impactCzk: executedAmountCzk,
-            metadata: { planId, rowIndex, action: 'DONE' } as object
-          }
+        await markPlanRowDone(planId, rowIndex, {
+          executedAmountCzk: body.executedAmountCzk != null ? Number(body.executedAmountCzk) : undefined,
+          executedAt: body.executedAt,
+          source: 'DASHBOARD'
         })
+        const updatedDone = await prisma.allocationPlan.findUnique({ where: { id: planId } })
+        return res.json({ success: true, data: { plan: updatedDone } })
       } else if (action === 'SKIPPED') {
         const reason = String(body.skipReason || '').trim()
         if (!reason) return res.status(400).json({ success: false, error: 'skipReason required' })
@@ -395,6 +463,28 @@ export function registerCfoRoutes(app: Application) {
     }
   })
 
+  app.post('/api/this-month/plan/:planId/mark-all-done', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const planId = String(req.params.planId || '')
+    const body = req.body as { executedAt?: string }
+    try {
+      const existing = await prisma.allocationPlan.findUnique({ where: { id: planId } })
+      if (!existing) return res.status(404).json({ success: false, error: 'Plan not found' })
+      const n = countPendingInPlan(existing.allocations as unknown)
+      if (n === 0) {
+        return res
+          .status(400)
+          .json({ success: false, error: 'NO_PENDING_ROWS', message: 'All rows are already done or skipped.' })
+      }
+      const plan = await markAllPendingRowsDone(planId, { executedAt: body.executedAt })
+      return res.json({ success: true, data: { plan, markedCount: n } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Mark all failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
   app.post('/api/this-month/generate-now', async (req, res) => {
     const { demo } = await demoState()
     const my = String((req.body as { monthYear?: string })?.monthYear || currentMonthYear())
@@ -408,16 +498,19 @@ export function registerCfoRoutes(app: Application) {
       })
       if (existing) {
         return res.status(409).json({
+          success: false,
           error: 'PLAN_ALREADY_EXISTS',
-          message: `Plan for ${my} already exists with status ${existing.status}.`,
+          message: `A plan for ${my} already exists${existing.status ? ` (${existing.status})` : ''}. Open it on /this-month, or delete a PROPOSED plan to run a new generate.`,
           existingPlanId: existing.id,
-          generatedAt: existing.generatedAt,
-          hint: 'Delete the existing plan first, or modify it.',
+          planStatus: existing.status,
+          generatedAt: existing.generatedAt.toISOString(),
+          canDelete: existing.status === 'PROPOSED',
+          hint: 'Delete a PROPOSED plan from this page, then use Generate again.',
           monthYear: my
         })
       }
       const plan = await generateMonthlyPlan(my, 'MANUAL')
-      return res.json({ success: true, data: { plan } })
+      return res.status(201).json({ success: true, data: { plan } })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Plan failed'
       return res.status(400).json({ success: false, error: m })
@@ -507,9 +600,10 @@ export function registerCfoRoutes(app: Application) {
       })
     }
     try {
-      const b = req.body as { type?: string; monthYear?: string }
-      const { id, viewUrl } = await createReport(b?.type || 'SNAPSHOT', b?.monthYear)
-      return res.json({ success: true, data: { id, viewUrl } })
+      const b = req.body as { type?: string; monthYear?: string; audience?: string }
+      const aud = b?.audience === 'CLIENT' ? 'CLIENT' : 'INTERNAL'
+      const { id, viewUrl } = await createReport(b?.type || 'CFO_10', b?.monthYear, aud)
+      return res.json({ success: true, data: { id, viewUrl, audience: aud } })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Report failed'
       return res.status(500).json({ success: false, error: m })
@@ -519,13 +613,195 @@ export function registerCfoRoutes(app: Application) {
   app.get('/reports/view/:id', async (req, res) => {
     const token = String((req.query as { token?: string }).token || '')
     try {
-      const r = await prisma.generatedReport.findUnique({ where: { id: req.params.id } })
+      const r = await prisma.generatedReport.findUnique({ where: { id: String(req.params.id) } })
       if (!r || r.token !== token) {
         return res.status(404).type('html').send('<!doctype html><html><body>Not found</body></html>')
       }
       return res.type('html').send(renderReportViewHtml(r))
     } catch {
       return res.status(500).type('text').send('Error')
+    }
+  })
+
+  app.get('/api/india/mf', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.json({ success: true, data: { funds: [] }, demo: true })
+    try {
+      const { getFXRates } = await import('../lib/fetchers')
+      const { indiaMfTaxBadge } = await import('../lib/indiaTax')
+      const fx = await getFXRates()
+      const czkPerInr = fx.EURINR > 0 ? fx.EURCZK / fx.EURINR : 0
+      const rows = await prisma.indiaMutualFund.findMany({ orderBy: { createdAt: 'desc' } })
+      const funds = rows.map((r) => {
+        const nav =
+          r.currentNavInr != null && num(r.currentNavInr) > 0
+            ? num(r.currentNavInr)
+            : num(r.avgNavInr || 0)
+        const valueInr = num(r.units || 0) * nav
+        const valueCzk = valueInr * czkPerInr
+        const b = indiaMfTaxBadge({ category: r.category, purchaseDate: r.purchaseDate })
+        return {
+          ...r,
+          valueInr,
+          valueCzk,
+          taxLabel: b.label,
+          taxTone: b.tone
+        }
+      })
+      return res.json({ success: true, data: { funds, czkPerInr, fx } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'MF list failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.post('/api/india/mf', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const b = req.body as Record<string, unknown>
+    const row = await prisma.indiaMutualFund.create({
+      data: {
+        schemeName: String(b.schemeName),
+        amfiCode: String(b.amfiCode),
+        isin: b.isin != null ? String(b.isin) : null,
+        amc: b.amc != null ? String(b.amc) : null,
+        category: String(b.category || 'EQUITY'),
+        units: Number(b.units) || 0,
+        avgNavInr: b.avgNavInr != null ? Number(b.avgNavInr) : null,
+        currentNavInr: b.currentNavInr != null ? Number(b.currentNavInr) : null,
+        purchaseDate: new Date(String(b.purchaseDate)),
+        folioNumber: b.folioNumber != null ? String(b.folioNumber) : null,
+        sipActive: Boolean(b.sipActive),
+        sipAmountInr: b.sipAmountInr != null ? Number(b.sipAmountInr) : null,
+        notes: b.notes != null ? String(b.notes) : null
+      }
+    })
+    return res.status(201).json({ success: true, data: { fund: row } })
+  })
+
+  app.patch('/api/india/mf/:id', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const b = req.body as Record<string, unknown>
+    const d: any = {}
+    if (b.schemeName !== undefined) d.schemeName = String(b.schemeName)
+    if (b.units != undefined) d.units = Number(b.units)
+    if (b.avgNavInr !== undefined) d.avgNavInr = b.avgNavInr != null ? Number(b.avgNavInr) : null
+    if (b.currentNavInr !== undefined) d.currentNavInr = b.currentNavInr != null ? Number(b.currentNavInr) : null
+    if (b.sipActive !== undefined) d.sipActive = Boolean(b.sipActive)
+    if (b.isin !== undefined) d.isin = b.isin ? String(b.isin) : null
+    const row = await prisma.indiaMutualFund.update({ where: { id: String(req.params.id) }, data: d })
+    return res.json({ success: true, data: { fund: row } })
+  })
+
+  app.delete('/api/india/mf/:id', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    await prisma.indiaMutualFund.delete({ where: { id: String(req.params.id) } })
+    return res.json({ success: true })
+  })
+
+  app.get('/api/india/fd', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.json({ success: true, data: { fds: [] }, demo: true })
+    const fds = await prisma.indiaFixedDeposit.findMany({ orderBy: { maturityDate: 'asc' } })
+    return res.json({ success: true, data: { fds } })
+  })
+
+  app.post('/api/india/fd', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const b = req.body as Record<string, unknown>
+    const row = await prisma.indiaFixedDeposit.create({
+      data: {
+        bank: String(b.bank),
+        accountType: String(b.accountType || 'NRE'),
+        principalInr: Number(b.principalInr) || 0,
+        interestRatePct: Number(b.interestRatePct) || 0,
+        startDate: new Date(String(b.startDate)),
+        maturityDate: new Date(String(b.maturityDate)),
+        interestType: String(b.interestType || 'CUMULATIVE'),
+        tdsApplicable: Boolean(b.tdsApplicable),
+        autoRenew: Boolean(b.autoRenew)
+      }
+    })
+    return res.status(201).json({ success: true, data: { fd: row } })
+  })
+
+  app.patch('/api/india/fd/:id', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const b = req.body as Record<string, unknown>
+    const d: any = { ...b }
+    if (b.startDate) d.startDate = new Date(String(b.startDate))
+    if (b.maturityDate) d.maturityDate = new Date(String(b.maturityDate))
+    if (b.principalInr != null) d.principalInr = Number(b.principalInr)
+    if (b.interestRatePct != null) d.interestRatePct = Number(b.interestRatePct)
+    const row = await prisma.indiaFixedDeposit.update({ where: { id: String(req.params.id) }, data: d })
+    return res.json({ success: true, data: { fd: row } })
+  })
+
+  app.delete('/api/india/fd/:id', async (req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    await prisma.indiaFixedDeposit.delete({ where: { id: String(req.params.id) } })
+    return res.json({ success: true })
+  })
+
+  app.post('/api/india/refresh-nav', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
+    const funds = await prisma.indiaMutualFund.findMany()
+    const now = new Date()
+    let updated = 0
+    for (const f of funds) {
+      if (!f.isin) continue
+      const nav = await prisma.navHistory.findFirst({
+        where: { isin: f.isin },
+        orderBy: { date: 'desc' }
+      })
+      if (nav) {
+        await prisma.indiaMutualFund.update({
+          where: { id: f.id },
+          data: { currentNavInr: nav.nav, lastNavUpdate: now }
+        })
+        updated += 1
+      }
+    }
+    return res.json({ success: true, data: { updated } })
+  })
+
+  app.get('/api/india/amfi/status', async (_req, res) => {
+    try {
+      const [lastIngest, navRowsAmfi] = await Promise.all([
+        prisma.systemHealth.findFirst({
+          where: { checkName: 'AMFI_NAV_INGEST' },
+          orderBy: { checkedAt: 'desc' }
+        }),
+        prisma.navHistory.count({ where: { source: 'AMFI_NAVAll' } })
+      ])
+      return res.json({ success: true, data: { lastIngest, navRowsAmfi } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'AMFI status failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.post('/api/india/amfi/ingest', async (_req, res) => {
+    const { demo } = await demoState()
+    if (demo) {
+      return res.status(403).json({ success: false, error: 'AMFI ingest requires live mode (turn off demo).' })
+    }
+    try {
+      const { ingestAmfiNavAll } = await import('../lib/amfiIngest')
+      const r = await ingestAmfiNavAll()
+      if (!r.ok) {
+        return res.status(502).json({ success: false, error: r.error || 'Ingest failed', data: r })
+      }
+      return res.json({ success: true, data: r })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Ingest error'
+      return res.status(502).json({ success: false, error: m })
     }
   })
 }

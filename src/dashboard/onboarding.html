@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Get started</title>
+    <link rel="stylesheet" href="/artha-ui.css" />
+    <style>
+      .onb-wrap {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 16px 48px;
+        box-sizing: border-box;
+        background: var(--bg-page);
+      }
+      .onb-inner {
+        width: 100%;
+        max-width: 720px;
+      }
+      .onb-dots {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin: 0 0 20px 0;
+      }
+      .onb-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--border-mid);
+      }
+      .onb-dot.on {
+        background: var(--gold);
+      }
+      .onb-title {
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 1.35rem;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+        color: var(--text-primary);
+      }
+      .onb-sub {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin: 0 0 16px 0;
+        line-height: 1.45;
+        max-width: 56ch;
+      }
+      .onb-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 20px;
+      }
+      .exp-row {
+        display: grid;
+        grid-template-columns: 1.1fr 1.4fr 0.7fr 0.55fr auto;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 12px;
+      }
+      @media (max-width: 700px) {
+        .exp-row {
+          grid-template-columns: 1fr;
+        }
+      }
+      .onb-wrap .inp {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border-mid);
+        background: var(--bg-input);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-family: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE — turn off in Settings to save</div>
+    <div class="onb-wrap">
+      <div class="onb-inner">
+        <div class="h1 onb-title" style="text-align: center; font-size: 1.5rem; margin-bottom: 4px">ARTHA</div>
+        <p class="sub muted" style="text-align: center; margin: 0 0 16px 0">Personal CFO — setup (5 steps)</p>
+        <div class="onb-dots" id="dots" aria-hidden="true"></div>
+
+        <div class="card" style="padding: 20px 18px" id="card">
+          <section class="onb-step" data-step="1">
+            <div class="h2 onb-title">1 — About you</div>
+            <p class="onb-sub">Basics for cashflow, tax context, and display.</p>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0">Full name<input class="inp" id="p_name" type="text" required /></label>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Date of birth <input class="inp" id="p_dob" type="date" required
+            /></label>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Tax residency
+              <select class="inp" id="p_tax">
+                <option value="CZ">Czech Republic</option>
+                <option value="DE">Germany</option>
+                <option value="NL">Netherlands</option>
+                <option value="OTHER">Other</option>
+              </select></label
+            >
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Home currency
+              <select class="inp" id="p_ccy">
+                <option value="CZK">CZK</option>
+                <option value="EUR">EUR</option>
+              </select></label
+            >
+            <div class="onb-bar">
+              <span></span
+              ><button type="button" class="btn btn-gold" data-goto="2">Continue</button>
+            </div>
+          </section>
+
+          <section class="onb-step" data-step="2" style="display: none">
+            <div class="h2 onb-title">2 — Income</div>
+            <p class="onb-sub">Monthly take-home in CZK and salary day.</p>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Monthly net income (CZK)<input class="inp" id="p_income" type="number" min="0" step="1000" required
+            /></label>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Salary day of month (1–31) <input class="inp" id="p_sal" type="number" min="1" max="31" value="15" required
+            /></label>
+            <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 10px 0"
+              ><input type="checkbox" id="p_otherinc" /> I have other recurring income (add later in Finances)</label
+            >
+            <div class="onb-bar">
+              <button type="button" class="btn" data-goto="1">Back</button
+              ><button type="button" class="btn btn-gold" data-goto="3">Continue</button>
+            </div>
+          </section>
+
+          <section class="onb-step" data-step="3" style="display: none">
+            <div class="h2 onb-title">3 — Fixed expenses</div>
+            <p class="onb-sub">Monthly costs. You need at least one line to continue.</p>
+            <div style="margin: 0 0 8px 0">
+              <button type="button" class="btn" id="btnCzech">Use typical Czech expat profile</button>
+            </div>
+            <div class="sub mono" id="fixTotal" style="margin: 6px 0 10px 0">Fixed costs: 0 CZK/mo (—% of income)</div>
+            <div id="expRoot"></div>
+            <div style="margin: 8px 0 10px 0">
+              <button type="button" class="btn" id="btnAddExp">+ Add expense</button>
+            </div>
+            <div class="onb-bar">
+              <button type="button" class="btn" data-goto="2">Back</button
+              ><button type="button" class="btn btn-gold" data-goto="4">Continue</button>
+            </div>
+          </section>
+
+          <section class="onb-step" data-step="4" style="display: none">
+            <div class="h2 onb-title">4 — Goals &amp; risk</div>
+            <p class="onb-sub">Targets feed allocation and emergency sizing.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px 0" id="riskRow">
+              <button type="button" class="btn" data-risk="CONSERVATIVE">CONSERVATIVE</button>
+              <button type="button" class="btn btn-gold" data-risk="MODERATE">MODERATE</button>
+              <button type="button" class="btn" data-risk="GROWTH">GROWTH</button>
+            </div>
+            <input type="hidden" id="p_risk" value="MODERATE" />
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Retirement age <input class="inp" id="p_rtg" type="number" value="50" min="40" max="80"
+            /></label>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Monthly retirement expense (CZK) <input class="inp" id="p_rtm" type="number" value="35000" min="0" step="500"
+            /></label>
+            <label class="sub" style="display: grid; gap: 6px; margin: 10px 0"
+              >Emergency fund target (CZK) <input class="inp" id="p_emg" type="number" value="0" min="0" step="1000"
+            /></label>
+            <p class="muted" style="font-size: 12px; margin: 0">Default emergency target = 6× your fixed total (editable).</p>
+            <div class="onb-bar">
+              <button type="button" class="btn" data-goto="3">Back</button
+              ><button type="button" class="btn btn-gold" data-goto="5">Continue</button>
+            </div>
+          </section>
+
+          <section class="onb-step" data-step="5" style="display: none">
+            <div class="h2 onb-title">5 — Optional events</div>
+            <p class="onb-sub">Upcoming spends that reserve cash (90-day window in engine).</p>
+            <div id="evRoot"></div>
+            <div style="margin: 8px 0 10px 0; display: flex; flex-wrap: wrap; gap: 8px">
+              <button type="button" class="btn" id="btnAddEv">+ Add event</button
+              ><button type="button" class="btn btn-ghost" id="btnSkipEv">Skip this step</button>
+            </div>
+            <div class="onb-bar">
+              <button type="button" class="btn" data-goto="4">Back</button
+              ><button type="button" class="btn btn-gold" id="btnFinish">Finish setup</button>
+            </div>
+          </section>
+        </div>
+        <p class="muted" style="text-align: center; font-size: 12px; margin-top: 16px; max-width: 42ch; margin-left: auto; margin-right: auto">
+          <a href="/" style="color: var(--gold)">Back to Overview</a> (you can return after finishing).
+        </p>
+      </div>
+    </div>
+    <script src="/artha-ui.js"></script>
+    <script>
+      /* global ArthaUI */
+      ArthaUI.initTheme()
+      if (ArthaUI.prefetchFx) void ArthaUI.prefetchFx()
+
+      var step = 1
+      var risk = 'MODERATE'
+      var expenses = []
+      var events = []
+      const dotsEl = document.getElementById('dots')
+      const FIX_PRESET = [
+        { category: 'HOUSING', description: 'Rent', amountCzk: 18000, dueDay: 1 },
+        { category: 'UTIL', description: 'Utilities', amountCzk: 4000, dueDay: 5 },
+        { category: 'FOOD', description: 'Groceries', amountCzk: 8000, dueDay: 1 },
+        { category: 'TRANSPORT', description: 'Transport', amountCzk: 1500, dueDay: 1 },
+        { category: 'TEL', description: 'Phone', amountCzk: 1500, dueDay: 1 },
+        { category: 'INS', description: 'Insurance', amountCzk: 2000, dueDay: 1 },
+        { category: 'SUB', description: 'Subscriptions', amountCzk: 500, dueDay: 1 }
+      ]
+      const cats = [
+        'HOUSING',
+        'UTIL',
+        'FOOD',
+        'TRANSPORT',
+        'TEL',
+        'INS',
+        'SUB',
+        'OTHER'
+      ]
+
+      function paintDots() {
+        dotsEl.innerHTML = [1, 2, 3, 4, 5]
+          .map((n) => '<span class="onb-dot' + (n === step ? ' on' : '') + '"></span>')
+          .join('')
+      }
+      function show(n) {
+        step = n
+        document.querySelectorAll('.onb-step').forEach((s) => {
+          s.style.display = parseInt(s.getAttribute('data-step') || '0', 10) === n ? 'block' : 'none'
+        })
+        paintDots()
+        if (n === 3) {
+          if (!expenses.length) addExpenseRow()
+          renderExp()
+        }
+        if (n === 4) recomputeEmg()
+        if (n === 5) {
+          if (!events.length) {
+            /* empty */
+          }
+          renderEv()
+        }
+      }
+      function sumFixed() {
+        return expenses.reduce((s, e) => s + (Number(e.amountCzk) || 0), 0)
+      }
+      function recomputeEmg() {
+        const t = sumFixed()
+        const el = document.getElementById('p_emg')
+        if (!el.value || el.value === '0') el.value = String(Math.round(t * 6))
+      }
+      function colorPct(p) {
+        if (p < 50) return 'var(--green)'
+        if (p < 70) return 'var(--amber)'
+        return 'var(--red)'
+      }
+      function renderExp() {
+        const inc = Number(document.getElementById('p_income').value) || 0
+        const tot = sumFixed()
+        const pct = inc > 0 ? (tot / inc) * 100 : 0
+        const el = document.getElementById('fixTotal')
+        el.textContent = 'Fixed costs: ' + tot.toLocaleString('cs-CZ') + ' CZK/mo (' + pct.toFixed(0) + '% of income)'
+        el.style.color = colorPct(pct)
+        const root = document.getElementById('expRoot')
+        root.innerHTML = expenses
+          .map(
+            (e, i) =>
+              '<div class="exp-row">' +
+              '<select class="inp exp-c">' +
+              cats
+                .map(
+                  (c) =>
+                    '<option value="' +
+                    c +
+                    '" ' +
+                    (e.category === c ? 'selected' : '') +
+                    '>' +
+                    c +
+                    '</option>'
+                )
+                .join('') +
+              '</select>' +
+              '<input class="inp exp-d" placeholder="Description" value="' +
+              (e.description || '').replace(/"/g, '&quot;') +
+              '" />' +
+              '<input class="inp exp-a" type="number" min="0" value="' +
+              (e.amountCzk || 0) +
+              '" />' +
+              '<input class="inp exp-day" type="number" min="1" max="28" value="' +
+              (e.dueDay || 1) +
+              '" />' +
+              '<button type="button" class="btn" data-rm="' +
+              i +
+              '">×</button></div>'
+          )
+          .join('')
+        root.querySelectorAll('.exp-c').forEach((sel, i) => {
+          sel.addEventListener('change', function () {
+            expenses[i].category = sel.value
+          })
+        })
+        root.querySelectorAll('.exp-d').forEach((inp, i) => {
+          inp.addEventListener('input', function () {
+            expenses[i].description = inp.value
+          })
+        })
+        root.querySelectorAll('.exp-a').forEach((inp, i) => {
+          inp.addEventListener('input', function () {
+            expenses[i].amountCzk = Number(inp.value) || 0
+            const inc2 = Number(document.getElementById('p_income').value) || 0
+            const t2 = sumFixed()
+            const p2 = inc2 > 0 ? (t2 / inc2) * 100 : 0
+            const ft = document.getElementById('fixTotal')
+            ft.textContent =
+              'Fixed costs: ' + t2.toLocaleString('cs-CZ') + ' CZK/mo (' + p2.toFixed(0) + '% of income)'
+            ft.style.color = colorPct(p2)
+          })
+        })
+        root.querySelectorAll('.exp-day').forEach((inp, i) => {
+          inp.addEventListener('input', function () {
+            expenses[i].dueDay = Math.min(28, Math.max(1, parseInt(inp.value, 10) || 1))
+          })
+        })
+        root.querySelectorAll('[data-rm]').forEach((btn) => {
+          btn.addEventListener('click', function () {
+            const j = parseInt(btn.getAttribute('data-rm'), 10)
+            expenses.splice(j, 1)
+            renderExp()
+          })
+        })
+      }
+      function addExpenseRow() {
+        expenses.push({ category: 'OTHER', description: '', amountCzk: 0, dueDay: 1 })
+      }
+      function renderEv() {
+        const root = document.getElementById('evRoot')
+        if (!events.length) {
+          root.innerHTML = '<p class="muted" style="font-size:12px; margin:0">No events — optional.</p>'
+          return
+        }
+        root.innerHTML = events
+          .map(
+            (e, i) =>
+              '<div class="exp-row" style="grid-template-columns: 1fr 1.2fr 0.8fr 0.8fr auto">' +
+              '<input class="inp ev-d" type="date" value="' +
+              (e.eventDate || '') +
+              '" />' +
+              '<input class="inp ev-t" placeholder="Title" value="' +
+              (e.title || '').replace(/"/g, '&quot;') +
+              '" />' +
+              '<input class="inp ev-c" placeholder="Category" value="' +
+              (e.category || '').replace(/"/g, '&quot;') +
+              '" />' +
+              '<input class="inp ev-b" type="number" min="0" value="' +
+              (e.budgetCzk || 0) +
+              '" />' +
+              '<button type="button" class="btn" data-erm="' +
+              i +
+              '">×</button></div>'
+          )
+          .join('')
+        root.querySelectorAll('.ev-d').forEach((inp, i) => {
+          inp.addEventListener('change', function () {
+            events[i].eventDate = inp.value
+          })
+        })
+        root.querySelectorAll('.ev-t').forEach((inp, i) => {
+          inp.addEventListener('input', function () {
+            events[i].title = inp.value
+          })
+        })
+        root.querySelectorAll('.ev-c').forEach((inp, i) => {
+          inp.addEventListener('input', function () {
+            events[i].category = inp.value
+          })
+        })
+        root.querySelectorAll('.ev-b').forEach((inp, i) => {
+          inp.addEventListener('input', function () {
+            events[i].budgetCzk = Number(inp.value) || 0
+          })
+        })
+        root.querySelectorAll('[data-erm]').forEach((btn) => {
+          btn.addEventListener('click', function () {
+            const j = parseInt(btn.getAttribute('data-erm'), 10)
+            events.splice(j, 1)
+            renderEv()
+          })
+        })
+      }
+      function targetsForRisk() {
+        if (risk === 'CONSERVATIVE') return { e: 40, b: 50, c: 10 }
+        if (risk === 'GROWTH') return { e: 80, b: 15, c: 5 }
+        return { e: 65, b: 25, c: 10 }
+      }
+
+      document.getElementById('btnCzech').addEventListener('click', function () {
+        expenses = JSON.parse(JSON.stringify(FIX_PRESET))
+        renderExp()
+      })
+      document.getElementById('btnAddExp').addEventListener('click', function () {
+        addExpenseRow()
+        renderExp()
+      })
+      document.getElementById('btnAddEv').addEventListener('click', function () {
+        events.push({ eventDate: new Date().toISOString().slice(0, 10), title: '', category: 'TRIP', budgetCzk: 0 })
+        renderEv()
+      })
+      document.getElementById('btnSkipEv').addEventListener('click', function () {
+        events = []
+        renderEv()
+        finish()
+      })
+      document.querySelectorAll('[data-goto]').forEach((b) => {
+        b.addEventListener('click', function () {
+          const n = parseInt(b.getAttribute('data-goto'), 10)
+          if (n === 2) {
+            if (!document.getElementById('p_name').value.trim() || !document.getElementById('p_dob').value) {
+              return ArthaUI.showToast('Name and DOB required', 'error')
+            }
+          }
+          if (n === 3) {
+            const inc = Number(document.getElementById('p_income').value)
+            if (!isFinite(inc) || inc < 0) return ArthaUI.showToast('Enter valid income', 'error')
+          }
+          if (n === 4) {
+            if (sumFixed() <= 0 || !expenses.length) return ArthaUI.showToast('Add at least one fixed expense', 'error')
+            recomputeEmg()
+          }
+          show(n)
+        })
+      })
+      document.getElementById('riskRow').addEventListener('click', function (e) {
+        const t = e.target
+        if (t.getAttribute('data-risk')) {
+          risk = t.getAttribute('data-risk') || 'MODERATE'
+          document.getElementById('p_risk').value = risk
+          document.querySelectorAll('#riskRow [data-risk]').forEach((x) => {
+            x.classList.toggle('btn-gold', x.getAttribute('data-risk') === risk)
+          })
+        }
+      })
+      function finish() {
+        const btn = document.getElementById('btnFinish')
+        btn.setAttribute('disabled', 'true')
+        const t = targetsForRisk()
+        const out = {
+          profile: {
+            fullName: document.getElementById('p_name').value.trim() || 'User',
+            dateOfBirth: document.getElementById('p_dob').value,
+            taxResidency: document.getElementById('p_tax').value,
+            homeCurrency: document.getElementById('p_ccy').value,
+            monthlyNetIncomeCzk: Number(document.getElementById('p_income').value) || 0,
+            salaryDayOfMonth: Math.min(31, Math.max(1, parseInt(document.getElementById('p_sal').value, 10) || 15)),
+            riskProfile: document.getElementById('p_risk').value,
+            retirementAge: Math.min(80, Math.max(40, parseInt(document.getElementById('p_rtg').value, 10) || 50)),
+            retirementMonthlyExpense: Number(document.getElementById('p_rtm').value) || 0,
+            emergencyFundTarget: Number(document.getElementById('p_emg').value) || 0,
+            targetEquityPct: t.e,
+            targetBondsPct: t.b,
+            targetCashPct: t.c
+          },
+          expenses: expenses.map((e) => ({
+            category: e.category,
+            description: e.description || e.category,
+            amountCzk: Number(e.amountCzk) || 0,
+            dueDayOfMonth: e.dueDay != null ? e.dueDay : 1,
+            frequency: 'MONTHLY'
+          })),
+          events: events
+            .filter((x) => x.title && x.eventDate)
+            .map((x) => ({
+              eventDate: x.eventDate,
+              title: x.title,
+              category: x.category || 'OTHER',
+              budgetCzk: Number(x.budgetCzk) || 0
+            }))
+        }
+        fetch('/api/profile/onboarding-complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(out)
+        })
+          .then((r) => r.json())
+          .then((j) => {
+            if (!j.success) throw new Error(j.error || 'bad')
+            ArthaUI.showToast("ARTHA is ready. Here's your first plan.", 'ok')
+            window.location.href = '/this-month'
+          })
+          .catch(function () {
+            ArthaUI.showToast('Save failed — turn off demo in Settings or check server', 'error')
+            btn.removeAttribute('disabled')
+          })
+      }
+      document.getElementById('btnFinish').addEventListener('click', function () {
+        finish()
+      })
+      show(1)
+      paintDots()
+      document.getElementById('p_dob').value = '1990-01-15'
+    </script>
+  </body>
+</html>

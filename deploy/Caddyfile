@@ -1,0 +1,7 @@
+artha.yourdomain.com {
+    reverse_proxy localhost:3002
+    encode gzip
+    log {
+        output file /var/log/caddy/artha.log
+    }
+}

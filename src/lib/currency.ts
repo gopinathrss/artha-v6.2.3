@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { prisma } from './prisma'
+import { num } from './money'
 
 const TIMEOUT = 8000
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
@@ -136,10 +137,12 @@ export async function getLatestFXRate(
   const b = (base || 'CZK').toUpperCase()
   const q = (quote || '').toUpperCase()
   if (b !== 'CZK' || (q !== 'EUR' && q !== 'USD' && q !== 'INR')) return null
-  return prisma.fXRate.findFirst({
+  const row = await prisma.fXRate.findFirst({
     where: { base: 'CZK', quote: q as 'EUR' | 'USD' | 'INR' },
     orderBy: { fetchedAt: 'desc' }
   })
+  if (!row) return null
+  return { rate: num(row.rate), fetchedAt: row.fetchedAt, stale: row.stale, source: row.source }
 }
 
 function latestCzkPerUnit(quote: 'EUR' | 'USD' | 'INR') {
