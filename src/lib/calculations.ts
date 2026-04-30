@@ -214,6 +214,8 @@ export interface NetWorthResult {
   indiaNRECzk: number
   indiaNROCzk: number
   indiaFDCzk: number
+  /** India mutual funds (INR positions) converted to CZK via fxRatesUsed. */
+  indiaMfCzk: number
   indiaTotal: number
   czechTotal: number
   gainCzk: number
@@ -234,16 +236,85 @@ function accountToCzk(
   return local
 }
 
+function mfValueInr(m: { units?: number; currentNavInr?: number | null; avgNavInr?: number | null }): number {
+  const nav =
+    m.currentNavInr != null && m.currentNavInr > 0
+      ? safeNum(m.currentNavInr)
+      : safeNum(m.avgNavInr ?? 0)
+  return safeNum(m.units ?? 0) * nav
+}
+
+/** India AMFI-style categories → allocation buckets (F3.3). */
+export function mapIndiaMfCategoryToBuckets(category: string): { eq: number; bd: number; ca: number } {
+  const c = String(category || '')
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+  if (
+    c === 'EQUITY_LARGE' ||
+    c === 'EQUITY_LARGE_CAP' ||
+    c === 'EQUITY_FLEXI' ||
+    c === 'EQUITY_SMALL' ||
+    c === 'EQUITY_SMALL_CAP' ||
+    c === 'ELSS' ||
+    c === 'EQUITY_MID' ||
+    c === 'EQUITY_VALUE' ||
+    c === 'EQUITY'
+  ) {
+    return { eq: 1, bd: 0, ca: 0 }
+  }
+  if (c === 'DEBT_LIQUID' || c === 'LIQUID') return { eq: 0, bd: 0, ca: 1 }
+  if (
+    c === 'DEBT_SHORT' ||
+    c === 'GILT' ||
+    c === 'CORP_BOND' ||
+    c === 'DEBT_LONG' ||
+    c === 'BONDS' ||
+    c === 'DEBT'
+  ) {
+    return { eq: 0, bd: 1, ca: 0 }
+  }
+  if (c === 'HYBRID' || c === 'BALANCED' || c === 'AGGRESSIVE_HYBRID' || c === 'CONSERVATIVE_HYBRID') {
+    return { eq: 0.5, bd: 0.5, ca: 0 }
+  }
+  return { eq: 1, bd: 0, ca: 0 }
+}
+
+export function indiaMfAllocationPieces(funds: any[], fx: FXRates): {
+  equityCzk: number
+  bondsCzk: number
+  cashCzk: number
+} {
+  const eczk = safeNum(fx.EURCZK) || 0
+  const einr = safeNum(fx.EURINR) || 0
+  const czkPerInr = einr > 0 && eczk > 0 ? eczk / einr : 0
+  let equityCzk = 0
+  let bondsCzk = 0
+  let cashCzk = 0
+  for (const m of funds || []) {
+    if (!m) continue
+    const inr = mfValueInr(m)
+    if (inr <= 0 || czkPerInr <= 0) continue
+    const czk = inr * czkPerInr
+    const w = mapIndiaMfCategoryToBuckets(String(m.category))
+    equityCzk += czk * w.eq
+    bondsCzk += czk * w.bd
+    cashCzk += czk * w.ca
+  }
+  return { equityCzk, bondsCzk, cashCzk }
+}
+
 export function calculateNetWorth(
   holdings: any[],
   accounts: any[],
   totalInvested: number,
-  fxRates: FXRates
+  fxRates: FXRates,
+  indiaMutualFunds: any[] = []
 ): NetWorthResult {
   const eczk = safeNum(fxRates.EURCZK) || 0
   const einr = safeNum(fxRates.EURINR) || 0
   const fx: FXRates = { EURCZK: eczk || 0, EURINR: einr || 0 }
   const now = new Date()
+  const czkPerInr = einr > 0 && eczk > 0 ? eczk / einr : 0
 
   let czechFundsCzk = 0
   for (const h of holdings) {
@@ -276,8 +347,16 @@ export function calculateNetWorth(
     else if (t === 'FIXED_DEPOSIT') indiaFDCzk += czk
   }
 
+  let indiaMfCzk = 0
+  for (const m of indiaMutualFunds || []) {
+    if (!m) continue
+    const inr = mfValueInr(m)
+    if (inr <= 0 || czkPerInr <= 0) continue
+    indiaMfCzk += inr * czkPerInr
+  }
+
   const czechTotal = czechFundsCzk + czechSavingsCzk + czechPensionCzk
-  const indiaTotal = indiaNRECzk + indiaNROCzk + indiaFDCzk
+  const indiaTotal = indiaNRECzk + indiaNROCzk + indiaFDCzk + indiaMfCzk
   const totalCzk = czechTotal + indiaTotal
   const totalEur = eczk > 0 ? totalCzk / eczk : 0
   const inv = safeNum(totalInvested)
@@ -293,6 +372,7 @@ export function calculateNetWorth(
     indiaNRECzk: safeNum(indiaNRECzk),
     indiaNROCzk: safeNum(indiaNROCzk),
     indiaFDCzk: safeNum(indiaFDCzk),
+    indiaMfCzk: safeNum(indiaMfCzk),
     indiaTotal: safeNum(indiaTotal),
     czechTotal: safeNum(czechTotal),
     gainCzk: safeNum(gainCzk),
@@ -342,7 +422,8 @@ export function calculateAllocation(
   holdings: any[],
   targetEquity: number,
   targetBonds: number,
-  targetCash: number
+  targetCash: number,
+  indiaFundSlices?: { equityCzk: number; bondsCzk: number; cashCzk: number } | null
 ): AllocationResult {
   const te = safeNum(targetEquity)
   const tb = safeNum(targetBonds)
@@ -357,6 +438,11 @@ export function calculateAllocation(
     equityCzk += v * w.eq
     bondsCzk += v * w.bd
     cashCzk += v * w.ca
+  }
+  if (indiaFundSlices) {
+    equityCzk += safeNum(indiaFundSlices.equityCzk)
+    bondsCzk += safeNum(indiaFundSlices.bondsCzk)
+    cashCzk += safeNum(indiaFundSlices.cashCzk)
   }
   const tval = equityCzk + bondsCzk + cashCzk
   if (tval <= 0) {

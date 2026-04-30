@@ -129,7 +129,9 @@ export function getDemoPortfolio(persona = 'engineer') {
       indiaNRECzk: j(441_500),
       indiaNROCzk: j(88_300),
       indiaFDCzk: j(110_400),
-      fxRatesUsed: { EURCZK: 24.5, EURINR: 89.5 }
+      indiaMfCzk: 0,
+      fxRatesUsed: { EURCZK: 24.5, EURINR: 89.5 },
+      calculatedAt: new Date()
     },
     allocation: {
       equityPct: 48.2,

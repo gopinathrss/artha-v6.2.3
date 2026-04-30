@@ -296,7 +296,7 @@ crit.push({
   name: 'Empty portfolio: all zeros, finite',
   pass: (() => {
     const n = calculateNetWorth([], [], 0, { EURCZK: 25, EURINR: 90 })
-    return n.czechFundsCzk === 0 && n.gainCzk === 0 && n.gainPct === 0
+    return n.czechFundsCzk === 0 && n.indiaMfCzk === 0 && n.gainCzk === 0 && n.gainPct === 0
   })()
 })
 

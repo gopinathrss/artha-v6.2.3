@@ -6,6 +6,7 @@ import {
   calculateHealth,
   calculateConfidence,
   computeHoldingsPriceAgeHours,
+  indiaMfAllocationPieces,
   projectFutureValue,
   calculateTaxStatus
 } from './calculations'
@@ -13,14 +14,15 @@ import { getFXRates } from './fetchers'
 
 export async function getPortfolioSummary() {
   try {
-    const [holdings, accounts, settings, snapshots] = await Promise.all([
+    const [holdings, accounts, settings, snapshots, indiaMutualFunds] = await Promise.all([
       prisma.holding.findMany({
         where: { status: { not: 'EXITED' } },
         include: { cashflows: true }
       }),
       prisma.account.findMany({ where: { isActive: true } }),
       prisma.settings.findFirst(),
-      prisma.snapshot.findMany({ orderBy: { date: 'desc' }, take: 13 })
+      prisma.snapshot.findMany({ orderBy: { date: 'desc' }, take: 13 }),
+      prisma.indiaMutualFund.findMany()
     ])
 
     const fxResult = await getFXRates()
@@ -35,14 +37,15 @@ export async function getPortfolioSummary() {
     const totalValue = holdings.reduce((s, h) => s + h.currentValueCzk, 0)
     const xirr = calculateXIRR(xCashflows, new Date(), totalValue)
 
-    const netWorth = calculateNetWorth(holdings, accounts, totalInvested, fxRates)
+    const netWorth = calculateNetWorth(holdings, accounts, totalInvested, fxRates, indiaMutualFunds)
 
     const tgt = {
       equity: settings?.targetEquityPct ?? 65,
       bonds: settings?.targetBondsPct ?? 25,
       cash: settings?.targetCashPct ?? 10
     }
-    const allocation = calculateAllocation(holdings, tgt.equity, tgt.bonds, tgt.cash)
+    const indiaSlices = indiaMfAllocationPieces(indiaMutualFunds, fxRates)
+    const allocation = calculateAllocation(holdings, tgt.equity, tgt.bonds, tgt.cash, indiaSlices)
 
     const priceAgeHours = computeHoldingsPriceAgeHours(holdings)
     const confidence = calculateConfidence(

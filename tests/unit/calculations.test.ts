@@ -1,10 +1,19 @@
 import {
   calculateXIRR,
   calculateNetWorth,
-  calculateAllocation
+  calculateAllocation,
+  projectFutureValue,
+  calculateRequiredSIP,
+  calculateHealth,
+  calculateConfidence,
+  calculateTaxStatus
 } from '../../src/lib/calculations'
 
 describe('XIRR', () => {
+  test('no data — zero flows', () => {
+    const r = calculateXIRR([], new Date('2024-01-01'), 0)
+    expect(r.cashflowCount).toBe(0)
+  })
   test('Benchmark 1: profitable short history (annualized estimate path)', () => {
     const cashflows = [
       { date: new Date('2024-01-01'), amount: -4550 },
@@ -57,8 +66,51 @@ describe('calculateNetWorth', () => {
     expect(r.czechFundsCzk).toBeCloseTo(10397.89, 1)
     expect(r.indiaNRECzk).toBeGreaterThan(821229 - 5)
     expect(r.indiaNRECzk).toBeLessThan(821229 + 5)
+    expect(r.indiaMfCzk).toBe(0)
     const total = r.czechFundsCzk + r.indiaNRECzk
     expect(r.gainCzk).toBeCloseTo(total - totalInvested, 1)
+  })
+
+  test('India MF INR rolls into totalCzk and indiaTotal', () => {
+    const fxRates = { EURCZK: 25, EURINR: 100 }
+    const mfs = [{ units: 1000, currentNavInr: 110, avgNavInr: 100, category: 'EQUITY_LARGE' }]
+    const r = calculateNetWorth([], [], 0, fxRates, mfs)
+    const expectedMf = 110_000 * (25 / 100)
+    expect(r.indiaMfCzk).toBeCloseTo(expectedMf, 4)
+    expect(r.totalCzk).toBeCloseTo(expectedMf, 4)
+    expect(r.indiaTotal).toBeCloseTo(expectedMf, 4)
+  })
+})
+
+describe('projectFutureValue & calculateRequiredSIP', () => {
+  test('FV with zero rate uses linear', () => {
+    expect(projectFutureValue(100_000, 0, 5, 1000)).toBeGreaterThan(100_000)
+  })
+  test('required SIP positive toward goal', () => {
+    expect(calculateRequiredSIP(0, 1_000_000, 8, 10)).toBeGreaterThan(0)
+  })
+})
+
+describe('calculateHealth & confidence', () => {
+  test('returns graded health', () => {
+    const h = calculateHealth([], [], [], 12)
+    expect(h.score).toBeGreaterThanOrEqual(0)
+    expect(h.score).toBeLessThanOrEqual(100)
+    expect(['A', 'B', 'C', 'D']).toContain(h.grade)
+  })
+  test('confidence penalizes stale FX', () => {
+    const a = calculateConfidence(10, 10, 0, 12)
+    const b = calculateConfidence(10, 100, 0, 12)
+    expect(b).toBeLessThanOrEqual(a)
+  })
+})
+
+describe('calculateTaxStatus', () => {
+  test('isTaxFree when past date', () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const t = calculateTaxStatus({ taxFreeDate: d }, new Date())
+    expect(t.isTaxFree).toBe(true)
   })
 })
 
