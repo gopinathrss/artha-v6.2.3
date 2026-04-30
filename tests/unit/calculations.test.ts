@@ -67,8 +67,12 @@ describe('calculateNetWorth', () => {
     expect(r.indiaNRECzk).toBeGreaterThan(821229 - 5)
     expect(r.indiaNRECzk).toBeLessThan(821229 + 5)
     expect(r.indiaMfCzk).toBe(0)
+    expect(r.indiaCzk).toBeCloseTo(r.indiaNRECzk, 1)
+    expect(r.indiaCzk).toBeCloseTo(r.indiaTotal, 1)
+    expect(r.indiaCzk).not.toBeCloseTo(r.indiaMfCzk, 1)
     const total = r.czechFundsCzk + r.indiaNRECzk
     expect(r.gainCzk).toBeCloseTo(total - totalInvested, 1)
+    expect(r.totalCzk).toBeCloseTo(r.czechTotal + r.indiaTotal, 1)
   })
 
   test('India MF INR rolls into totalCzk and indiaTotal', () => {
@@ -79,6 +83,25 @@ describe('calculateNetWorth', () => {
     expect(r.indiaMfCzk).toBeCloseTo(expectedMf, 4)
     expect(r.totalCzk).toBeCloseTo(expectedMf, 4)
     expect(r.indiaTotal).toBeCloseTo(expectedMf, 4)
+    expect(r.indiaCzk).toBeCloseTo(expectedMf, 4)
+    expect(r.indiaCzk).toBeCloseTo(r.indiaMfCzk, 4)
+    expect(r.indiaCzk).toBeCloseTo(r.indiaTotal, 4)
+    expect(r.totalCzk).toBeCloseTo(r.czechTotal + r.indiaTotal, 4)
+  })
+
+  test('indiaCzk is full India aggregate: NRE + MF vs indiaMfCzk MF-only', () => {
+    const fx = { EURCZK: 25, EURINR: 100 }
+    const nreCzk = 100_000 * (25 / 100)
+    const mfCzk = 1000 * 110 * (25 / 100)
+    const accounts = [{ type: 'NRE', balanceLocal: 100_000, currency: 'INR', isActive: true }]
+    const mfs = [{ units: 1000, currentNavInr: 110, avgNavInr: 100, category: 'EQUITY_LARGE' }]
+    const r = calculateNetWorth([], accounts, 0, fx, mfs)
+    expect(r.indiaMfCzk).toBeCloseTo(mfCzk, 4)
+    expect(r.indiaNRECzk).toBeCloseTo(nreCzk, 4)
+    expect(r.indiaTotal).toBeCloseTo(nreCzk + mfCzk, 4)
+    expect(r.indiaCzk).toBeCloseTo(r.indiaTotal, 4)
+    expect(r.indiaCzk).not.toBeCloseTo(r.indiaMfCzk, 2)
+    expect(r.totalCzk).toBeCloseTo(r.czechTotal + r.indiaTotal, 4)
   })
 })
 

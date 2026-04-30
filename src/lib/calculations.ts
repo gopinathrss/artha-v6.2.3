@@ -219,7 +219,7 @@ export interface NetWorthResult {
   indiaFDCzk: number
   /** India mutual funds (INR positions) converted to CZK via fxRatesUsed. */
   indiaMfCzk: number
-  /** Same as `indiaMfCzk` (alias for API consumers / audit checklists). */
+  /** Full India book in CZK: NRE + NRO + FD + MF (`indiaTotal`). Same as `indiaMfCzk` only when other India buckets are zero. */
   indiaCzk: number
   indiaTotal: number
   czechTotal: number
@@ -382,7 +382,7 @@ export function calculateNetWorth(
     indiaNROCzk: num(indiaNROCzk),
     indiaFDCzk: num(indiaFDCzk),
     indiaMfCzk: num(indiaMfCzk),
-    indiaCzk: num(indiaMfCzk),
+    indiaCzk: num(indiaTotal),
     indiaTotal: num(indiaTotal),
     czechTotal: num(czechTotal),
     gainCzk: num(gainCzk),

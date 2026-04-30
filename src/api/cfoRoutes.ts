@@ -12,6 +12,28 @@ import { countPendingInPlan, markAllPendingRowsDone } from '../lib/followThrough
 import { markPlanRowDone } from '../lib/planRowUpdate'
 import { num } from '../lib/money'
 
+/** Request JSON uses `currentNav` / `avgNav`; DB columns are `currentNavInr` / `avgNavInr`. */
+function indiaMfNavFromBody(b: Record<string, unknown>): {
+  avgNavInr: number | null
+  currentNavInr: number | null
+} {
+  const avgRaw = b.avgNavInr ?? b.avgNav
+  const curRaw = b.currentNavInr ?? b.currentNav
+  return {
+    avgNavInr: avgRaw != null && avgRaw !== '' ? Number(avgRaw) : null,
+    currentNavInr: curRaw != null && curRaw !== '' ? Number(curRaw) : null
+  }
+}
+
+/** Add API-friendly NAV aliases alongside Prisma `*Inr` fields. */
+function indiaMfWithApiNavFields<T extends { currentNavInr: unknown; avgNavInr: unknown }>(row: T) {
+  return {
+    ...row,
+    currentNav: row.currentNavInr != null ? num(row.currentNavInr as never) : null,
+    avgNav: row.avgNavInr != null ? num(row.avgNavInr as never) : null
+  }
+}
+
 async function demoState(): Promise<{ demo: boolean; persona: string }> {
   const s = await prisma.settings.findFirst()
   return { demo: s?.demoModeEnabled ?? false, persona: s?.demoPersona ?? 'engineer' }
@@ -641,7 +663,7 @@ export function registerCfoRoutes(app: Application) {
         const valueCzk = valueInr * czkPerInr
         const b = indiaMfTaxBadge({ category: r.category, purchaseDate: r.purchaseDate })
         return {
-          ...r,
+          ...indiaMfWithApiNavFields(r),
           valueInr,
           valueCzk,
           taxLabel: b.label,
@@ -659,6 +681,7 @@ export function registerCfoRoutes(app: Application) {
     const { demo } = await demoState()
     if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
     const b = req.body as Record<string, unknown>
+    const nav = indiaMfNavFromBody(b)
     const row = await prisma.indiaMutualFund.create({
       data: {
         schemeName: String(b.schemeName),
@@ -667,8 +690,8 @@ export function registerCfoRoutes(app: Application) {
         amc: b.amc != null ? String(b.amc) : null,
         category: String(b.category || 'EQUITY'),
         units: Number(b.units) || 0,
-        avgNavInr: b.avgNavInr != null ? Number(b.avgNavInr) : null,
-        currentNavInr: b.currentNavInr != null ? Number(b.currentNavInr) : null,
+        avgNavInr: nav.avgNavInr,
+        currentNavInr: nav.currentNavInr,
         purchaseDate: new Date(String(b.purchaseDate)),
         folioNumber: b.folioNumber != null ? String(b.folioNumber) : null,
         sipActive: Boolean(b.sipActive),
@@ -676,22 +699,31 @@ export function registerCfoRoutes(app: Application) {
         notes: b.notes != null ? String(b.notes) : null
       }
     })
-    return res.status(201).json({ success: true, data: { fund: row } })
+    return res.status(201).json({ success: true, data: { fund: indiaMfWithApiNavFields(row) } })
   })
 
   app.patch('/api/india/mf/:id', async (req, res) => {
     const { demo } = await demoState()
     if (demo) return res.status(403).json({ success: false, error: 'Demo mode' })
     const b = req.body as Record<string, unknown>
-    const d: any = {}
-    if (b.schemeName !== undefined) d.schemeName = String(b.schemeName)
-    if (b.units != undefined) d.units = Number(b.units)
-    if (b.avgNavInr !== undefined) d.avgNavInr = b.avgNavInr != null ? Number(b.avgNavInr) : null
-    if (b.currentNavInr !== undefined) d.currentNavInr = b.currentNavInr != null ? Number(b.currentNavInr) : null
-    if (b.sipActive !== undefined) d.sipActive = Boolean(b.sipActive)
-    if (b.isin !== undefined) d.isin = b.isin ? String(b.isin) : null
-    const row = await prisma.indiaMutualFund.update({ where: { id: String(req.params.id) }, data: d })
-    return res.json({ success: true, data: { fund: row } })
+    const patch: Record<string, unknown> = {}
+    if (b.schemeName !== undefined) patch.schemeName = String(b.schemeName)
+    if (b.units !== undefined) patch.units = Number(b.units)
+    if (b.avgNav !== undefined || b.avgNavInr !== undefined) {
+      const v = b.avgNav !== undefined ? b.avgNav : b.avgNavInr
+      patch.avgNavInr = v != null && v !== '' ? Number(v) : null
+    }
+    if (b.currentNav !== undefined || b.currentNavInr !== undefined) {
+      const v = b.currentNav !== undefined ? b.currentNav : b.currentNavInr
+      patch.currentNavInr = v != null && v !== '' ? Number(v) : null
+    }
+    if (b.sipActive !== undefined) patch.sipActive = Boolean(b.sipActive)
+    if (b.isin !== undefined) patch.isin = b.isin ? String(b.isin) : null
+    const row = await prisma.indiaMutualFund.update({
+      where: { id: String(req.params.id) },
+      data: patch as never
+    })
+    return res.json({ success: true, data: { fund: indiaMfWithApiNavFields(row) } })
   })
 
   app.delete('/api/india/mf/:id', async (req, res) => {

@@ -95,10 +95,18 @@
 
 **F3.2 [MEDIUM] [LOGIC]** XIRR edge cases: `calculateXIRR` returns `null` with notes for no sign change, short history, etc. (`calculations.ts` 80–200). **Hand-checked golden vectors in this audit:** **UNVERIFIED** — unit tests may exist but were not re-run here (`npx` unavailable in agent shell).
 
-**F3.3 [CRITICAL] [LOGIC] [CLOSED 2026-05-01]** `getPortfolioSummary` → `calculateNetWorth` sums **Czech `Holding.currentValueCzk` + accounts** only (`calculations.ts` 237–281). **`IndiaMutualFund` is excluded** from `getPortfolioSummary` path.
+**F3.3 [CRITICAL] [LOGIC] [REOPENED 2026-05-01 — POST field mapping bug + indiaCzk alias bug; both fixed]** Earlier closure was premature. Two regressions were found and fixed:
 
-- **Contrast:** `buildReportData` loads `prisma.indiaMutualFund` and values MFs for the report (`buildReportData.ts` 132–148, 248–268).
-- **Impact:** Overview / tax / allocation / XIRR can **understate** wealth and mis-state allocation vs India lane — **data corruption class** for a user who holds primary equity in India MFs.
+1. **`POST /api/india/mf`** accepted JSON `currentNav` / `avgNav` but did not map them to Prisma `currentNavInr` / `avgNavInr`, so NAVs were stored as **NULL** (`cfoRoutes.ts`). **Fix:** `indiaMfNavFromBody` coalesces `currentNav`↔`currentNavInr` and `avgNav`↔`avgNavInr` on POST/PATCH; GET list and fund payloads expose **`currentNav` / `avgNav`** aliases alongside DB fields.
+2. **`indiaCzk` in `calculateNetWorth`** was incorrectly set to **`indiaMfCzk`** only. **`indiaCzk` must equal the full India CZK book** (`indiaTotal` = NRE + NRO + FD + MF). **Fix:** `indiaCzk: num(indiaTotal)` and comment update (`calculations.ts`).
+
+**Post-fix smoke** (`scripts/smoke-f3.3-overview.ts`, DB `127.0.0.1:5544/artha_v4`, `deleteMany` on `IndiaMutualFund` then Prisma insert 1000×₹110 @ live FX):
+
+- Baseline: `totalCzk` **0**, `indiaMfCzk` **0**, `indiaCzk` **0**, `indiaTotal` **0**.
+- DB row: `currentNavInr` **110**, `avgNavInr` **100**, `units` **1000**.
+- After insert: `totalCzk` **29126.13**, `indiaMfCzk` **29126.13**, `indiaCzk` **29126.13**, `indiaTotal` **29126.13** (all India buckets except MF were zero, so `indiaCzk === indiaTotal === indiaMfCzk` in this run).
+
+**Regression tests:** `tests/unit/calculations.test.ts` (MF-only vs NRE+MF vs `totalCzk === czechTotal + indiaTotal`); `tests/api/india_mf.test.ts` (POST `currentNav`/`avgNav` → DB `*Inr` columns) when `ARTHA_TEST_DB_LIVE=1`.
 
 **F3.4 [HIGH] [LOGIC]** `calculateAllocation` uses only `Holding` rows with `status === 'ACTIVE'` (`calculations.ts` 353–360). India wrapper / hybrid classification: `mapCategoryToBuckets` treats `MIXED` as 50/50 equity/bonds (318–324). **Wrapper holding one ETF** is still one `Holding` row — fine — but India MF exposure absent from holdings **breaks** bucket totals (coupled with F3.3).
 
