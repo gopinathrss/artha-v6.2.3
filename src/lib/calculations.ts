@@ -438,7 +438,12 @@ export function calculateHealth(
     )
   )
 
-  const conf = calculateConfidence(24, fxRatesAge, 0, (snapshots || []).length)
+  const conf = calculateConfidence(
+    computeHoldingsPriceAgeHours(holdings || []),
+    fxRatesAge,
+    0,
+    (snapshots || []).length
+  )
   return { score, grade: gradeFromScore(score), confidence: conf }
 }
 
@@ -483,6 +488,23 @@ export function calculateTaxStatus(holding: any, today: Date) {
     taxFreeDate: tax,
     urgency: days <= 0 ? 'FREE' : days <= 30 ? 'CRITICAL' : days <= 60 ? 'HIGH' : 'FUTURE'
   }
+}
+
+/** Hours since the stalest `updatedAt` among ACTIVE holdings (NAV/position refresh proxy). */
+export function computeHoldingsPriceAgeHours(
+  holdings: Array<{ status?: string | null; updatedAt?: Date | null }>
+): number {
+  const active = (holdings || []).filter(
+    (h) => h && h.status === 'ACTIVE' && h.updatedAt != null
+  ) as Array<{ updatedAt: Date }>
+  if (active.length === 0) return 0
+  let oldestMs = Infinity
+  for (const h of active) {
+    const t = new Date(h.updatedAt).getTime()
+    if (t < oldestMs) oldestMs = t
+  }
+  if (!Number.isFinite(oldestMs)) return 0
+  return Math.max(0, (Date.now() - oldestMs) / 3600000)
 }
 
 export function calculateConfidence(

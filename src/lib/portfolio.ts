@@ -5,6 +5,7 @@ import {
   calculateAllocation,
   calculateHealth,
   calculateConfidence,
+  computeHoldingsPriceAgeHours,
   projectFutureValue,
   calculateTaxStatus
 } from './calculations'
@@ -43,8 +44,9 @@ export async function getPortfolioSummary() {
     }
     const allocation = calculateAllocation(holdings, tgt.equity, tgt.bonds, tgt.cash)
 
+    const priceAgeHours = computeHoldingsPriceAgeHours(holdings)
     const confidence = calculateConfidence(
-      fxResult.ageHours,
+      priceAgeHours,
       fxResult.ageHours,
       holdings.filter((h) => !h.purchaseStartDate).length,
       snapshots.length
