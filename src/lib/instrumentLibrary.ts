@@ -182,6 +182,102 @@ export const TOP_ETF_SEED: Prisma.InstrumentLibraryCreateManyInput[] =
     { isin: 'IE00B1C1HY88', name: 'Xtrackers EUR Corp Bond Hdg', ticker: 'XBLC.DE', type: 'ETF', category: 'BONDS', subcategory: 'EUR Corp Hedged', terPct: 0.16, currency: 'EUR', domicile: 'IE', fundSizeM: 2400, trackingError: 0.06, benchmark: 'Bloomberg EUR Corp Hdg', availableInGeorge: true, return1yr: 4.1, return3yr: 0.4, return5yr: 1.6, return10yr: 2.9 }
   ]
 
+/** Rolling return % from `NavHistory` NAV points (null if insufficient history). */
+export async function computeReturnsFromNavHistory(isin: string): Promise<{
+  return1yr?: number | null
+  return3yr?: number | null
+  return5yr?: number | null
+  return10yr?: number | null
+}> {
+  const rows = await prisma.navHistory.findMany({
+    where: { isin },
+    orderBy: { date: 'asc' }
+  })
+  if (rows.length < 2) return {}
+
+  const navAt = (target: Date): number | null => {
+    let best: { t: number; v: number } | null = null
+    const tgt = target.getTime()
+    for (const r of rows) {
+      const t = new Date(r.date).getTime()
+      const v = num(r.nav)
+      if (!Number.isFinite(v) || v <= 0) continue
+      const d = Math.abs(t - tgt)
+      if (!best || d < best.t) best = { t: d, v }
+    }
+    return best?.v ?? null
+  }
+
+  const latest = rows[rows.length - 1]
+  const lastNav = num(latest.nav)
+  if (!Number.isFinite(lastNav) || lastNav <= 0) return {}
+
+  const pct = (past: number | null) =>
+    past != null && past > 0 && Number.isFinite(lastNav) ? ((lastNav / past - 1) * 100) : null
+
+  const now = new Date()
+  const y1 = new Date(now)
+  y1.setFullYear(y1.getFullYear() - 1)
+  const y3 = new Date(now)
+  y3.setFullYear(y3.getFullYear() - 3)
+  const y5 = new Date(now)
+  y5.setFullYear(y5.getFullYear() - 5)
+  const y10 = new Date(now)
+  y10.setFullYear(y10.getFullYear() - 10)
+
+  return {
+    return1yr: pct(navAt(y1)),
+    return3yr: pct(navAt(y3)),
+    return5yr: pct(navAt(y5)),
+    return10yr: pct(navAt(y10))
+  }
+}
+
+/** F2.7: Recompute returns from `NavHistory` where possible, re-score via `scoreInstrument`, update `score` + `scoreUpdatedAt`. Used by monthly cron and `POST /api/library/refresh-scores`. */
+export async function refreshAllLibraryScores(): Promise<{ updated: number; errors: number }> {
+  const instruments = await prisma.instrumentLibrary.findMany()
+  let updated = 0
+  let errors = 0
+  for (const inst of instruments) {
+    try {
+      const returns = await computeReturnsFromNavHistory(inst.isin)
+      const merged = {
+        return1yr: returns.return1yr ?? num(inst.return1yr),
+        return3yr: returns.return3yr ?? num(inst.return3yr),
+        return5yr: returns.return5yr ?? num(inst.return5yr),
+        return10yr: returns.return10yr ?? (inst.return10yr != null ? num(inst.return10yr) : null),
+        terPct: num(inst.terPct),
+        fundSizeM: inst.fundSizeM != null ? num(inst.fundSizeM) : null,
+        trackingError: inst.trackingError != null ? num(inst.trackingError) : null
+      }
+      const newScore = scoreInstrument({
+        return1yr: merged.return1yr,
+        return3yr: merged.return3yr,
+        return5yr: merged.return5yr,
+        return10yr: merged.return10yr,
+        terPct: merged.terPct,
+        fundSizeM: merged.fundSizeM,
+        trackingError: merged.trackingError
+      })
+      await prisma.instrumentLibrary.update({
+        where: { id: inst.id },
+        data: {
+          return1yr: merged.return1yr,
+          return3yr: merged.return3yr,
+          return5yr: merged.return5yr,
+          return10yr: merged.return10yr,
+          score: newScore,
+          scoreUpdatedAt: new Date()
+        }
+      })
+      updated++
+    } catch {
+      errors++
+    }
+  }
+  return { updated, errors }
+}
+
 export async function seedLibraryWithTopETFs(): Promise<void> {
   const n = await prisma.instrumentLibrary.count()
   if (n > 0) return
