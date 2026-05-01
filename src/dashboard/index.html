@@ -234,15 +234,139 @@
             </button>
             <h1 class="topbar-page-title" id="page-title">Overview</h1>
           </div>
-          <div class="topbar-actions" id="topbar-actions"></div>
+          <div class="topbar-actions" id="topbar-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="refresh-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path d="M14 8 A6 6 0 1 1 12 4 M14 4 V8 H10" />
+              </svg>
+              Refresh
+            </button>
+            <a href="/this-month" class="btn btn-primary btn-sm">This month →</a>
+          </div>
         </header>
 
         <div class="content" id="content">
-          <p class="body-sm text-secondary">Loading overview…</p>
+          <section class="overview-hero card" style="margin-bottom: var(--space-6); padding: var(--space-8)">
+            <div class="stat-block-label">Net worth · CZK</div>
+            <div class="stat-block-value stat-block-value-lg" style="margin-top: var(--space-2)" id="hero-networth">
+              <span class="shimmer" style="display: inline-block; width: 280px; height: 36px"></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); flex-wrap: wrap">
+              <span class="stat-block-meta" id="hero-eur">—</span>
+              <span class="badge badge-neutral" id="hero-mom">—</span>
+            </div>
+            <hr class="divider" />
+            <div class="overview-hero-grid">
+              <div class="stat-block">
+                <div class="stat-block-label">Czech funds</div>
+                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-czech-funds">—</div>
+              </div>
+              <div class="stat-block">
+                <div class="stat-block-label">CZ savings</div>
+                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-cz-savings">—</div>
+              </div>
+              <div class="stat-block">
+                <div class="stat-block-label">India NRE/NRO</div>
+                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-india-nre">—</div>
+              </div>
+              <div class="stat-block">
+                <div class="stat-block-label">India MF</div>
+                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-india-mf">—</div>
+              </div>
+            </div>
+          </section>
+
+          <div class="overview-two-col">
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Allocation</h2>
+                  <p class="card-subtitle">vs. target mix</p>
+                </div>
+                <span class="badge badge-warning" id="alloc-drift-status">drift</span>
+              </div>
+              <div class="alloc-bar" id="alloc-bar-current"></div>
+              <div class="alloc-legend">
+                <span><span class="alloc-legend-dot alloc-bar-equity"></span><span id="alloc-equity-pct">—</span> equity</span>
+                <span><span class="alloc-legend-dot alloc-bar-bonds"></span><span id="alloc-bonds-pct">—</span> bonds</span>
+                <span><span class="alloc-legend-dot alloc-bar-cash"></span><span id="alloc-cash-pct">—</span> cash</span>
+              </div>
+              <hr class="divider" />
+              <div id="alloc-drift-rows"></div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">This month</h2>
+                  <p class="card-subtitle" id="this-month-subtitle">—</p>
+                </div>
+                <a href="/this-month" class="btn btn-ghost btn-sm">View →</a>
+              </div>
+              <div id="this-month-summary">
+                <div class="shimmer" style="height: 80px; border-radius: var(--radius-md)"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="overview-split-2-1">
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Holdings</h2>
+                  <p class="card-subtitle"><span id="holdings-active-count">—</span> active · <span id="holdings-inactive-count">—</span> inactive</p>
+                </div>
+                <a href="/portfolio" class="btn btn-ghost btn-sm">All →</a>
+              </div>
+              <div class="table-responsive-wrap">
+                <table class="table table-responsive-stack">
+                  <thead>
+                    <tr>
+                      <th scope="col">Fund</th>
+                      <th scope="col">Status</th>
+                      <th class="num" scope="col">Units</th>
+                      <th class="num" scope="col">NAV</th>
+                      <th class="num" scope="col">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody id="holdings-tbody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Tax calendar</h2>
+                  <p class="card-subtitle">Next 90 days</p>
+                </div>
+                <a href="/tax-calendar" class="btn btn-ghost btn-sm">View →</a>
+              </div>
+              <div id="tax-calendar-list">
+                <div class="shimmer" style="height: 60px"></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">System health</h2>
+                <p class="card-subtitle">
+                  <span id="health-passing-count">—</span> of <span id="health-total-count">—</span> checks passing · trust
+                  <span id="health-trust">—</span>
+                </p>
+              </div>
+              <a href="/settings" class="btn btn-ghost btn-sm">Details →</a>
+            </div>
+            <div id="health-checks-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-2)"></div>
+          </section>
         </div>
       </main>
     </div>
 
     <script src="/scripts/shell.js"></script>
+    <script src="/artha-ui.js"></script>
+    <script src="/scripts/overview.js"></script>
   </body>
 </html>
