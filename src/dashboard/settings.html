@@ -4,800 +4,284 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — Settings</title>
-        <script src="/scripts/theme.js"></script>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/styles/components.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">
-      DEMO MODE ACTIVE — portfolio and plans use a separate demo database; Settings stay on your real DB
-    </div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a class="active" href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions">
-            <button class="btn" id="btnTheme" type="button">Theme</button>
-            <button class="btn btn-gold" id="btnLock" type="button" aria-pressed="true">LOCKED</button>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Settings</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-ghost btn-sm" id="refresh-btn" type="button">Refresh</button>
           </div>
         </header>
-        <main class="content">
-          <div class="grid" style="gap: 16px">
-            <section class="settings-section card col-12">
-              <h2 class="heading-lg" style="margin: 0 0 var(--space-3)">Appearance</h2>
-              <div class="theme-picker" role="radiogroup" aria-label="Theme">
-                <label>
-                  <input type="radio" name="theme" value="system" checked />
-                  <div class="theme-option">
-                    <div class="theme-preview-system"></div>
-                    <span>System</span>
-                    <small>Follow OS preference</small>
-                  </div>
-                </label>
-                <label>
-                  <input type="radio" name="theme" value="light" />
-                  <div class="theme-option">
-                    <div class="theme-preview-light"></div>
-                    <span>Light</span>
-                    <small>Always light</small>
-                  </div>
-                </label>
-                <label>
-                  <input type="radio" name="theme" value="dark" />
-                  <div class="theme-option">
-                    <div class="theme-preview-dark"></div>
-                    <span>Dark</span>
-                    <small>Always dark</small>
-                  </div>
-                </label>
-              </div>
-            </section>
 
-            <div class="card col-12">
-              <div class="h2">A — Demo mode</div>
-              <div class="row" style="align-items: center; border: 0">
-                <div>
-                  <div class="kicker">Simulated portfolio</div>
-                  <div class="sub">Uses isolated Postgres (<code>artha_v4_demo</code>). Toggling on wipes and reseeds demo data. Integrations and demo flag stay on your main DB.</div>
+        <div class="content settings-stack">
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Appearance</h2>
+                <p class="card-subtitle">Theme follows your OS by default.</p>
+              </div>
+            </div>
+            <div class="theme-picker" role="radiogroup" aria-label="Theme">
+              <label>
+                <input type="radio" name="theme" value="system" />
+                <div class="theme-option">
+                  <div class="theme-preview-system"></div>
+                  <span>System</span>
+                  <small>Follow OS preference</small>
                 </div>
-                <div class="sub">
-                  <label><input type="checkbox" id="demoOn" disabled /> <span>Enable</span></label>
+              </label>
+              <label>
+                <input type="radio" name="theme" value="light" />
+                <div class="theme-option">
+                  <div class="theme-preview-light"></div>
+                  <span>Light</span>
+                  <small>Always light</small>
                 </div>
-              </div>
-              <div class="row" style="align-items: center; border: 0">
-                <div class="sub">Persona</div>
-                <div>
-                  <select id="persona" class="btn" style="min-width: 200px" disabled>
-                    <option>engineer</option>
-                    <option>executive</option>
-                    <option>fire</option>
-                    <option>family</option>
-                    <option>starter</option>
-                  </select>
+              </label>
+              <label>
+                <input type="radio" name="theme" value="dark" />
+                <div class="theme-option">
+                  <div class="theme-preview-dark"></div>
+                  <span>Dark</span>
+                  <small>Always dark</small>
                 </div>
-              </div>
-              <div class="goldbox" id="demoWarn" style="display: none; margin-top: 12px">Demo mode may be active.</div>
-              <div style="margin-top: 10px">
-                <button class="btn btn-gold" id="btnDemoApply" type="button" disabled>Apply</button>
-              </div>
+              </label>
             </div>
+          </section>
 
-            <div class="card col-12" id="cardTargets">
-              <div class="h2">B — Portfolio targets</div>
-              <div class="sub" id="sumLine">Equity + Bonds + Cash = 100%</div>
-              <div class="row" style="border: 0; display: grid; grid-template-columns: 1fr; gap: 8px">
-                <label class="sub">Equity <span id="vE" class="mono">65</span>%<input data-k="E" class="rng" type="range" min="0" max="100" value="65" disabled /></label>
-                <label class="sub">Bonds <span id="vB" class="mono">25</span>%<input data-k="B" class="rng" type="range" min="0" max="100" value="25" disabled /></label>
-                <label class="sub">Cash <span id="vC" class="mono">10</span>%<input data-k="C" class="rng" type="range" min="0" max="100" value="10" disabled /></label>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Allocation targets</h2>
+                <p class="card-subtitle">Equity + Bonds + Cash must sum to 100%.</p>
               </div>
-              <div class="row" style="border: 0; margin-top: 8px; display: grid; grid-template-columns: 1fr; gap: 8px">
-                <label class="sub">Target wealth (CZK)<input id="tW" type="number" class="btn" style="width: 100%" disabled /></label>
-                <label class="sub">Target date (year) <input id="tY" type="number" class="btn" style="width: 100%" disabled placeholder="2040" /></label>
-                <label class="sub"
-                  >Risk
-                  <select id="risk" class="btn" style="width: 100%" disabled>
-                    <option>balanced</option>
-                    <option>conservative</option>
-                    <option>growth</option>
-                  </select></label
-                >
-              </div>
-              <div style="margin-top: 10px"><button class="btn btn-gold" id="btnSaveTargets" type="button" disabled>Save targets</button></div>
+              <button class="btn btn-primary btn-sm" id="save-targets" type="button">Save</button>
             </div>
-
-            <div class="card col-12">
-              <div class="h2">C — Czech holdings</div>
-              <div class="row" style="border: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
-                <div class="muted">In demo mode, edits apply to the demo database only.</div>
-                <div style="display: flex; gap: 8px">
-                  <input id="csv" type="file" accept=".csv" disabled style="display: none" />
-                  <button class="btn" id="btnImport" type="button" disabled>Import CSV</button>
-                </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-field-label" for="t_eq">Equity %</label>
+                <input id="t_eq" type="number" min="0" max="100" step="1" class="form-field-input" />
               </div>
-              <form id="add" style="display: none; margin-top: 8px" class="card" onsubmit="return false">
-                <div class="kicker">Add fund</div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px">
-                  <input class="btn" id="a_isin" placeholder="ISIN" required />
-                  <input class="btn" id="a_name" placeholder="Name" required />
-                  <select class="btn" id="a_cat">
-                    <option value="EQUITY">EQUITY</option>
-                    <option value="BONDS">BONDS</option>
-                    <option value="CASH">CASH</option>
-                    <option value="MIXED">MIXED</option>
-                  </select>
-                  <input class="btn" id="a_units" placeholder="Units" type="number" step="0.0001" />
-                  <input class="btn" id="a_nav" placeholder="NAV" type="number" step="0.0001" />
-                  <select class="btn" id="a_navSrc" title="Auto NAV source (optional)">
-                    <option value="">NAV source — none</option>
-                    <option value="ERSTE">ERSTE (notation ID)</option>
-                    <option value="YAHOO">YAHOO (ticker)</option>
-                    <option value="AMFI">AMFI</option>
-                    <option value="MANUAL">MANUAL</option>
-                  </select>
-                  <input class="btn" id="a_navSrcId" placeholder="Erste notation or Yahoo ticker" />
-                  <input class="btn" id="a_sip" placeholder="Monthly SIP (CZK)" type="number" step="1" value="0" />
-                  <input class="btn" id="a_start" placeholder="Start date (YYYY-MM-DD)" value="2023-01-15" />
-                </div>
-                <div style="margin-top: 10px"><button class="btn btn-gold" type="button" id="btnAddHolding">Create</button></div>
-              </form>
-              <div style="overflow: auto; margin-top: 12px">
-                <table class="table" id="tblH">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>ISIN</th>
-                      <th>Val</th>
-                      <th>SIP</th>
-                      <th>NAV src</th>
-                      <th>ID</th>
-                      <th></th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                    <tbody id="holdBody"></tbody>
-                </table>
+              <div class="form-field">
+                <label class="form-field-label" for="t_bd">Bonds %</label>
+                <input id="t_bd" type="number" min="0" max="100" step="1" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="t_cs">Cash %</label>
+                <input id="t_cs" type="number" min="0" max="100" step="1" class="form-field-input" />
               </div>
             </div>
+            <div class="form-field-help" id="targets-sum">—</div>
+          </section>
 
-            <div class="card col-12">
-              <div class="h2">D2 — India NRE FD reference rates</div>
-              <p class="muted" style="margin-bottom: 8px">
-                Card rates for intelligence. <span class="mono">NRE_FD_RATE_FRESHNESS</span> in health warns when stale. Save updates
-                <span class="mono">validFrom</span> to today.
-              </p>
-              <div style="overflow: auto">
-                <table class="table" id="tblNreFd">
-                  <thead>
-                    <tr>
-                      <th>Bank</th>
-                      <th>Tenor</th>
-                      <th>Age (d)</th>
-                      <th>Rate %</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="nreFdBody"></tbody>
-                </table>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Email ingestion</h2>
+                <p class="card-subtitle">IMAP poll for transaction emails (Path B).</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="save-imap" type="button">Save</button>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-row-text">
+                <div class="toggle-row-title">Auto-ingest emails</div>
+                <div class="toggle-row-desc">Hourly poll between 09:00 and 21:00 Europe/Prague.</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="i_auto" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="form-row" style="margin-top: var(--space-3);">
+              <div class="form-field">
+                <label class="form-field-label" for="i_host">IMAP host</label>
+                <input id="i_host" type="text" class="form-field-input" placeholder="imap.gmail.com" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="i_port">Port</label>
+                <input id="i_port" type="number" class="form-field-input" placeholder="993" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="i_user">User</label>
+                <input id="i_user" type="email" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="i_pwd">App password</label>
+                <input id="i_pwd" type="password" class="form-field-input" placeholder="••••••" />
               </div>
             </div>
-
-            <div class="card col-12">
-              <div class="h2">D — India accounts (via Accounts)</div>
-              <div class="muted" style="margin-bottom: 8px">Uses <span class="mono">/api/accounts</span>. Currency INR for NRE/NRO/FD.</div>
-              <div id="acctRoot"></div>
+            <div class="form-actions">
+              <button class="btn btn-ghost btn-sm" id="test-imap" type="button">Test connection</button>
+              <button class="btn btn-secondary btn-sm" id="run-imap" type="button">Run now</button>
             </div>
+          </section>
 
-            <div class="card col-6">
-              <div class="h2">E — Communication</div>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >Alert email<input id="alertEmail" class="btn" disabled type="email" />
-                <button class="btn" type="button" id="btnTestEmail" disabled>Test email</button></label
-              >
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >Telegram chat id<input id="tgId" class="btn" disabled />
-                <button class="btn" type="button" id="btnTestTg" disabled>Test Telegram</button></label
-              >
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Notifications</h2>
+                <p class="card-subtitle">Email + Telegram channels.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="save-notify" type="button">Save</button>
             </div>
-
-            <div class="card col-6" id="cardInt">
-              <div class="h2">F — Integrations (masked on load)</div>
-              <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 8px 0">
-                <strong>Telegram bot (V4):</strong> in Telegram, talk to
-                <span class="mono">@BotFather</span> →
-                <span class="mono">/newbot</span> → name your bot and copy the token into the field below (or
-                <span class="mono">TELEGRAM_BOT_TOKEN</span> in server env). Send
-                <span class="mono">/start</span> to your bot, then return here: chat id is saved. Use
-                <span class="mono">/summary</span>, <span class="mono">/plan</span>, <span class="mono">/done
-                  &lt;n&gt;</span>, <span class="mono">/alert</span>, <span class="mono">/ai &lt;question&gt;</span>.
-                Daily digest runs at 08:00 (Europe/Prague) to Telegram and alert email when configured.
-              </p>
-              <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 8px 0">
-                Best Q&amp;A: set <span class="mono">ANTHROPIC_API_KEY</span> (Claude Sonnet) on the server. OpenAI key
-                below powers <span class="mono">GPT-4o</span> as fallback.
-              </p>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >SMTP host<input id="smtpHost" class="btn" disabled
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >SMTP port<input id="smtpPort" class="btn" type="number" disabled
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >SMTP user<input id="smtpUser" class="btn" disabled
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >SMTP pass<input id="smtpPass" class="btn" disabled
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >Telegram token<input id="tgTok" class="btn" disabled
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >OpenAI key<input id="openai" class="btn" disabled
-              /></label>
-              <div style="margin-top: 10px"><button class="btn btn-gold" type="button" id="btnSaveInt" disabled>Save integrations</button></div>
-            </div>
-
-            <div class="card col-12" id="cardEmailIng">
-              <div class="h2">H — Email ingestion (Path B autonomy)</div>
-              <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 10px 0">
-                When <strong>Auto-ingest</strong> is off (default), ARTHA only writes to a preview queue — review on
-                <a href="/alerts">Alerts</a>. When on and parser confidence is high, SIP rows are created automatically.
-                See <span class="mono">docs/V5_EMAIL_INGESTION.md</span>.
-              </p>
-              <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 8px 0"
-                ><input type="checkbox" id="autoIngestEmails" disabled /> Auto-ingest emails (<span class="mono">autoIngestEmails</span>)</label
-              >
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >IMAP host<input id="imapHost" class="btn" disabled placeholder="imap.gmail.com"
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >IMAP port<input id="imapPort" class="btn" type="number" disabled placeholder="993"
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >IMAP user<input id="imapUser" class="btn" disabled placeholder="you@gmail.com"
-              /></label>
-              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
-                >App password
-                <span style="display: flex; gap: 8px; align-items: center"
-                  ><input id="imapPass" class="btn" type="password" disabled autocomplete="new-password" />
-                  <button type="button" class="btn" id="imapPassToggle" disabled>Show</button></span
-                ></label
-              >
-              <p class="sub muted" style="margin: 8px 0">
-                Pending previews: <strong id="ingPendingCount">—</strong> — review at
-                <a href="/alerts">/alerts</a>
-              </p>
-              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px">
-                <button class="btn" type="button" id="btnImapTest" disabled>Test connection</button>
-                <button class="btn" type="button" id="btnImapRun" disabled>Run now</button>
-                <button class="btn btn-gold" type="button" id="btnSaveEmailIng" disabled>Save email settings</button>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-field-label" for="n_email">Alert email</label>
+                <input id="n_email" type="email" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="n_tg">Telegram chat ID</label>
+                <input id="n_tg" type="text" class="form-field-input" />
               </div>
             </div>
-
-            <div class="card col-12" id="cardHealth">
-              <div class="h2">G — System health</div>
-              <p class="sub" style="margin: 0 0 4px 0" id="healthSub">Trust score: <span class="mono" id="healthScore2">—</span></p>
-              <p class="sub muted" style="margin: 0 0 8px 0; font-size: 12px" id="healthStamp">Last checked: —</p>
-              <div style="margin-bottom: 8px">
-                <button class="btn btn-gold" type="button" id="btnRunHealth" disabled>Run all checks now</button>
+            <div class="toggle-row">
+              <div class="toggle-row-text">
+                <div class="toggle-row-title">Monthly letter</div>
+                <div class="toggle-row-desc">CFO snapshot delivered on the 1st of each month.</div>
               </div>
-              <div style="overflow: auto; margin-bottom: 12px">
-                <table class="table" id="healthTbl" style="font-size: 12px; display: none">
-                  <thead>
-                    <tr>
-                      <th>Check</th>
-                      <th>Status</th>
-                      <th>Last success</th>
-                      <th>Message</th>
-                    </tr>
-                  </thead>
-                  <tbody id="healthBody"></tbody>
-                </table>
+              <label class="toggle">
+                <input type="checkbox" id="n_monthly" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-row-text">
+                <div class="toggle-row-title">Alerts enabled</div>
+                <div class="toggle-row-desc">Drift, tax window, FD maturity warnings.</div>
               </div>
+              <label class="toggle">
+                <input type="checkbox" id="n_alerts" />
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <div class="card col-12" id="sys">
-              <div class="h2">I — System debug</div>
-              <p class="sub" style="margin: 0 0 8px 0">Raw <span class="mono">/api/system/status</span> payload (diagnostics).</p>
-              <div class="h2" style="font-size: 15px; margin: 8px 0 6px 0">Raw status</div>
-              <div class="mono" id="sysOut">Loading…</div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Demo mode</h2>
+                <p class="card-subtitle">Switch the dashboard to a simulated portfolio.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="save-demo" type="button">Apply</button>
             </div>
-          </div>
-        </main>
-      </div>
-    </div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      if (window.ArthaTheme) {
-        document.querySelectorAll('input[name="theme"]').forEach((radio) => {
-          radio.addEventListener('change', () => {
-            window.ArthaTheme.setPreference(radio.value)
-          })
-        })
-        const cur = window.ArthaTheme.getPreference()
-        const r = document.querySelector(`input[name="theme"][value="${cur}"]`)
-        if (r) r.checked = true
-      }
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
-
-      const btnLock = document.getElementById('btnLock')
-      let locked = true
-      function reapplyLock() {
-        const isLocked = locked
-        const ids = [
-          'demoOn',
-          'persona',
-          'btnDemoApply',
-          'tW',
-          'tY',
-          'risk',
-          'btnSaveTargets',
-          'alertEmail',
-          'tgId',
-          'btnTestEmail',
-          'btnTestTg',
-          'smtpHost',
-          'smtpPort',
-          'smtpUser',
-          'smtpPass',
-          'tgTok',
-          'openai',
-          'btnSaveInt',
-          'autoIngestEmails',
-          'imapHost',
-          'imapPort',
-          'imapUser',
-          'imapPass',
-          'imapPassToggle',
-          'btnImapTest',
-          'btnImapRun',
-          'btnSaveEmailIng',
-          'btnRunHealth',
-          'a_isin',
-          'a_name',
-          'a_cat',
-          'a_units',
-          'a_nav',
-          'a_navSrc',
-          'a_navSrcId',
-          'a_sip',
-          'a_start',
-          'btnAddHolding',
-          'btnImport'
-        ]
-        for (const id of ids) {
-          const e = document.getElementById(id)
-          if (!e) continue
-          if (isLocked) e.setAttribute('disabled', 'true')
-          else e.removeAttribute('disabled')
-        }
-        for (const rr of document.querySelectorAll('.rng')) {
-          isLocked ? rr.setAttribute('disabled', 'true') : rr.removeAttribute('disabled')
-        }
-        for (const ex of document.querySelectorAll('.exit-b')) {
-          isLocked ? ex.setAttribute('disabled', 'true') : ex.removeAttribute('disabled')
-        }
-        for (const el of document.querySelectorAll('.hold-nav-src, .hold-nav-id, .hold-save, .nre-rate-in, .nre-save')) {
-          isLocked ? el.setAttribute('disabled', 'true') : el.removeAttribute('disabled')
-        }
-        if (isLocked) document.getElementById('add').style.display = 'none'
-        else document.getElementById('add').style.display = 'block'
-        document.getElementById('btnTheme').removeAttribute('disabled')
-        btnLock.textContent = isLocked ? 'LOCKED' : 'UNLOCKED'
-        btnLock.setAttribute('aria-pressed', String(!isLocked))
-      }
-      reapplyLock()
-      btnLock.addEventListener('click', () => {
-        locked = !locked
-        reapplyLock()
-      })
-      for (const r of document.querySelectorAll('.rng')) {
-        r.addEventListener('input', () => {
-          const e = r.getAttribute('data-k')
-          if (e === 'E') document.getElementById('vE').textContent = r.value
-          if (e === 'B') document.getElementById('vB').textContent = r.value
-          if (e === 'C') document.getElementById('vC').textContent = r.value
-        })
-      }
-
-      async function load() {
-        const sRes = await fetch('/api/settings')
-        const sJ = await sRes.json()
-        if (!sJ.success) throw new Error('settings')
-        const s = sJ.data.settings
-        if (s.demoModeEnabled) document.getElementById('demoWarn').style.display = 'block'
-        else document.getElementById('demoWarn').style.display = 'none'
-        document.getElementById('demoOn').checked = !!s.demoModeEnabled
-        document.getElementById('persona').value = s.demoPersona || 'engineer'
-        const e = document.querySelector('[data-k="E"]')
-        const b = document.querySelector('[data-k="B"]')
-        const c = document.querySelector('[data-k="C"]')
-        e.value = s.targetEquityPct ?? 65
-        b.value = s.targetBondsPct ?? 25
-        c.value = s.targetCashPct ?? 10
-        document.getElementById('vE').textContent = e.value
-        document.getElementById('vB').textContent = b.value
-        document.getElementById('vC').textContent = c.value
-        document.getElementById('tW').value = s.targetWealthCzk != null ? s.targetWealthCzk : ''
-        if (s.targetDate) {
-          const y = new Date(s.targetDate).getFullYear()
-          document.getElementById('tY').value = y
-        }
-        document.getElementById('risk').value = s.riskProfile || 'balanced'
-        document.getElementById('alertEmail').value = s.alertEmail || ''
-        document.getElementById('tgId').value = s.telegramChatId || ''
-        document.getElementById('smtpHost').value = s.smtpHost || ''
-        document.getElementById('smtpPort').value = s.smtpPort || 587
-        document.getElementById('smtpUser').value = s.smtpUser || ''
-        document.getElementById('smtpPass').value = s.smtpPass || ''
-        document.getElementById('tgTok').value = s.telegramBotToken || ''
-        document.getElementById('openai').value = s.openaiApiKey || ''
-        document.getElementById('autoIngestEmails').checked = !!s.autoIngestEmails
-        document.getElementById('imapHost').value = s.imapHost || 'imap.gmail.com'
-        document.getElementById('imapPort').value = s.imapPort || 993
-        document.getElementById('imapUser').value = s.imapUser || ''
-        document.getElementById('imapPass').value = s.imapPassword || ''
-
-        try {
-          const pc = await fetch('/api/ingestion/previews/count')
-          const pcJ = await pc.json()
-          document.getElementById('ingPendingCount').textContent =
-            pcJ.success && pcJ.data ? String(pcJ.data.pending) : '—'
-        } catch {
-          document.getElementById('ingPendingCount').textContent = '—'
-        }
-
-        const hRes = await fetch('/api/holdings')
-        const hJ = await hRes.json()
-        ArthaUI.applyDemoChrome(!!hJ.demo)
-        const hRows = (hJ.data && hJ.data.holdings) || []
-        document.getElementById('holdBody').innerHTML = hRows
-          .map((h) => {
-            const ns = (h.navSourceType || '').replace(/</g, '')
-            const nid = String(h.navSourceId || '')
-              .replace(/</g, '')
-              .replace(/"/g, '')
-            const age =
-              h.navLastFetchedAt != null
-                ? Math.floor((Date.now() - new Date(h.navLastFetchedAt).getTime()) / 86400000)
-                : '—'
-            return `
-          <tr>
-            <td>${(h.name || '').replace(/</g, '')}</td>
-            <td class="mono">${(h.isin || '').replace(/</g, '')}</td>
-            <td class="mono">${(h.currentValueCzk || 0).toLocaleString('cs-CZ')}</td>
-            <td class="mono">${(h.monthlySipCzk || 0).toLocaleString('cs-CZ')}</td>
-            <td>
-              <select class="btn hold-nav-src" data-id="${h.id}" style="min-width: 88px">
-                <option value="" ${!h.navSourceType ? 'selected' : ''}>—</option>
-                <option value="ERSTE" ${ns === 'ERSTE' ? 'selected' : ''}>ERSTE</option>
-                <option value="YAHOO" ${ns === 'YAHOO' ? 'selected' : ''}>YAHOO</option>
-                <option value="AMFI" ${ns === 'AMFI' ? 'selected' : ''}>AMFI</option>
-                <option value="MANUAL" ${ns === 'MANUAL' ? 'selected' : ''}>MANUAL</option>
+            <div class="callout callout-warning" style="margin-bottom: var(--space-4);">
+              Toggling demo on wipes and reseeds the demo database (<span style="font-family: var(--font-mono);">artha_v4_demo</span>).
+              Your real portfolio is unaffected. Integrations and the demo flag itself stay on the main DB.
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-row-text">
+                <div class="toggle-row-title">Enable demo mode</div>
+                <div class="toggle-row-desc">Routes portfolio + planning queries to the demo DB.</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="d_enabled" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="form-field" style="margin-top: var(--space-3);">
+              <label class="form-field-label" for="d_persona">Persona</label>
+              <select id="d_persona" class="form-field-select">
+                <option value="engineer">Engineer</option>
+                <option value="executive">Executive</option>
+                <option value="fire">FIRE</option>
+                <option value="family">Family</option>
+                <option value="starter">Starter</option>
               </select>
-            </td>
-            <td><input class="btn hold-nav-id" data-id="${h.id}" value="${nid}" placeholder="ID" style="min-width: 100px" /></td>
-            <td><button class="btn hold-save" data-id="${h.id}" type="button" title="Last fetch ${age}d">Save</button></td>
-            <td><button class="btn exit-b" data-id="${h.id}" type="button">Exit</button></td>
-          </tr>
-        `
-          })
-          .join('')
+            </div>
+          </section>
 
-        const nreRes = await fetch('/api/india/rates')
-        const nreJ = await nreRes.json().catch(() => ({}))
-        const nreRows = (nreJ.data && nreJ.data.rates) || []
-        const nreBody = document.getElementById('nreFdBody')
-        if (nreBody) {
-          nreBody.innerHTML = nreRows
-            .map((r) => {
-              const vf = r.validFrom ? new Date(r.validFrom).getTime() : 0
-              const age = vf ? Math.floor((Date.now() - vf) / 86400000) : '—'
-              const bank = String(r.bankName || '').replace(/</g, '')
-              const ten = String(r.tenor || '').replace(/</g, '')
-              const val = Number(r.value)
-              return `<tr><td>${bank}</td><td class="mono">${ten}</td><td class="mono">${age}</td><td><input type="number" step="0.01" class="btn nre-rate-in" data-id="${r.id}" value="${val}" /></td><td><button type="button" class="btn nre-save" data-id="${r.id}">Save</button></td></tr>`
-            })
-            .join('')
-        }
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">AI provider</h2>
+                <p class="card-subtitle">Claude Sonnet (server env) preferred; OpenAI as fallback.</p>
+              </div>
+              <button class="btn btn-primary btn-sm" id="save-ai" type="button">Save</button>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-field-label" for="ai_provider">Provider preference</label>
+                <select id="ai_provider" class="form-field-select">
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai">OpenAI (GPT-4o)</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="ai_openai_key">OpenAI API key</label>
+                <input id="ai_openai_key" type="password" class="form-field-input" placeholder="sk-…" />
+              </div>
+            </div>
+          </section>
 
-        reapplyLock()
+          <section class="card" id="health">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">System health</h2>
+                <p class="card-subtitle">
+                  <span id="h-passing">—</span> of <span id="h-total">—</span> checks · trust
+                  <span id="h-trust">—</span>
+                </p>
+              </div>
+              <button class="btn btn-ghost btn-sm" id="reload-health" type="button">Re-check</button>
+            </div>
+            <div id="health-grid" class="health-checks-grid"></div>
+          </section>
 
-        const aRes = await fetch('/api/accounts')
-        const aJ = await aRes.json()
-        const accs = (aJ.data && aJ.data.accounts) || []
-        const root = document.getElementById('acctRoot')
-        root.innerHTML = accs
-          .map(
-            (a) => `
-        <div class="row" style="border: 0; display: grid; grid-template-columns: 1fr; gap: 6px; margin: 10px 0; padding: 8px; border: 1px solid rgba(13,20,33,0.08)">
-          <div class="kicker">${(a.type || '').replace(/</g, '')}</div>
-          <div class="sub">${(a.name || '').replace(/</g, '')}</div>
-          <div class="mono">Local: ${(a.balanceLocal || 0).toLocaleString('en-IN')} ${a.currency} — CZK: ${(a.balanceCzk || 0).toLocaleString('cs-CZ')}</div>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Data &amp; backups</h2>
+                <p class="card-subtitle">Local-only snapshots; nothing leaves the box without your action.</p>
+              </div>
+            </div>
+            <div class="callout callout-info">
+              Backup/export endpoints are scoped to the server. Use
+              <span style="font-family: var(--font-mono);">pg_dump</span> manually or via the
+              <span style="font-family: var(--font-mono);">pre-v5-s3</span> script. The Czech-holdings
+              admin grid, India accounts grid, and NRE FD reference rate editor remain on the V4
+              page until Sprint 4.
+            </div>
+          </section>
         </div>
-      `
-          )
-          .join('') || '<div class="muted">No accounts in the database yet.</div>'
+      </main>
+    </div>
 
-        const st = await (await fetch('/api/system/status')).json()
-        const d = (st && st.data) || { dbConnected: false }
-        document.getElementById('sysOut').textContent = JSON.stringify(d, null, 2)
-
-        await loadHealth()
-      }
-
-      async function loadHealth() {
-        const hRes = await fetch('/api/health')
-        const hJ = await hRes.json()
-        if (hJ && hJ.data && hJ.data.checks) {
-          const tr = hJ.data.trustScore
-          const el2 = document.getElementById('healthScore2')
-          if (el2) el2.textContent = tr != null ? tr + '%' : '—'
-          const stamp = document.getElementById('healthStamp')
-          if (stamp) stamp.textContent = 'Last checked: ' + new Date().toLocaleString('en-GB') + ' (this device)'
-          const rows = hJ.data.checks || []
-          const tb = document.getElementById('healthTbl')
-          const hb = document.getElementById('healthBody')
-          if (rows.length) {
-            tb.style.display = 'table'
-            hb.innerHTML = rows
-              .map((c) => {
-                const stc = c.status || ''
-                const col =
-                  stc === 'PASS' ? 'var(--green, #1a6)' : stc === 'WARN' ? 'var(--amber, #a60)' : 'var(--red, #a00)'
-                return (
-                  '<tr><td class="mono">' +
-                  String(c.name || '').replace(/</g, '') +
-                  '</td><td style="color:' +
-                  col +
-                  '">' +
-                  String(stc) +
-                  '</td><td class="muted">—</td><td class="muted">' +
-                  String(c.message || '').replace(/</g, '') +
-                  '</td></tr>'
-                )
-              })
-              .join('')
-          } else {
-            tb.style.display = 'none'
-          }
-        }
-      }
-      document.getElementById('btnRunHealth').addEventListener('click', () => {
-        void loadHealth().then(() => ArthaUI.showToast('Health refreshed', 'ok'))
-      })
-      load().catch(() => ArthaUI.showToast('Settings load failed', 'error'))
-
-      document.getElementById('btnDemoApply').addEventListener('click', async () => {
-        const r = document.getElementById('risk').value
-        const body = {
-          demoModeEnabled: document.getElementById('demoOn').checked,
-          demoPersona: document.getElementById('persona').value,
-          targetEquityPct: Number(document.querySelector('[data-k="E"]').value),
-          targetBondsPct: Number(document.querySelector('[data-k="B"]').value),
-          targetCashPct: Number(document.querySelector('[data-k="C"]').value),
-          targetWealthCzk: document.getElementById('tW').value ? Number(document.getElementById('tW').value) : null,
-          targetDate: document.getElementById('tY').value
-            ? new Date(Number(document.getElementById('tY').value), 0, 1).toISOString()
-            : null,
-          riskProfile: r
-        }
-        const s = document.getElementById('tY').value
-        if (s) body.targetDate = new Date(Number(s), 0, 1).toISOString()
-        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-        if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
-        ArthaUI.showToast('Saved', 'ok')
-      })
-
-      document.getElementById('btnSaveTargets').addEventListener('click', async () => {
-        const E = Number(document.querySelector('[data-k="E"]').value)
-        const B = Number(document.querySelector('[data-k="B"]').value)
-        const C = Number(document.querySelector('[data-k="C"]').value)
-        if (Math.abs(E + B + C - 100) > 0.25) {
-          return ArthaUI.showToast('Targets must sum to 100%', 'error')
-        }
-        const body = {
-          targetEquityPct: E,
-          targetBondsPct: B,
-          targetCashPct: C,
-          targetWealthCzk: document.getElementById('tW').value ? Number(document.getElementById('tW').value) : null,
-          riskProfile: document.getElementById('risk').value
-        }
-        const sY = document.getElementById('tY').value
-        if (sY) body.targetDate = new Date(Number(sY), 0, 1).toISOString()
-        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-        if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
-        ArthaUI.showToast('Targets saved', 'ok')
-      })
-
-      document.getElementById('btnSaveInt').addEventListener('click', async () => {
-        const body = {
-          smtpHost: document.getElementById('smtpHost').value,
-          smtpPort: Number(document.getElementById('smtpPort').value),
-          smtpUser: document.getElementById('smtpUser').value,
-          smtpPass: document.getElementById('smtpPass').value,
-          telegramBotToken: document.getElementById('tgTok').value,
-          openaiApiKey: document.getElementById('openai').value,
-          alertEmail: document.getElementById('alertEmail').value,
-          telegramChatId: document.getElementById('tgId').value
-        }
-        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-        if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
-        ArthaUI.showToast('Integrations saved', 'ok')
-      })
-
-      document.getElementById('imapPassToggle').addEventListener('click', () => {
-        const el = document.getElementById('imapPass')
-        const btn = document.getElementById('imapPassToggle')
-        if (el.type === 'password') {
-          el.type = 'text'
-          btn.textContent = 'Hide'
-        } else {
-          el.type = 'password'
-          btn.textContent = 'Show'
-        }
-      })
-
-      document.getElementById('btnSaveEmailIng').addEventListener('click', async () => {
-        const body = {
-          autoIngestEmails: document.getElementById('autoIngestEmails').checked,
-          imapHost: document.getElementById('imapHost').value.trim() || null,
-          imapPort: Number(document.getElementById('imapPort').value) || 993,
-          imapUser: document.getElementById('imapUser').value.trim() || null,
-          imapPassword: document.getElementById('imapPass').value
-        }
-        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-        if (!res.ok) return ArthaUI.showToast('Email settings save failed', 'error')
-        ArthaUI.showToast('Email settings saved', 'ok')
-        load()
-      })
-
-      document.getElementById('btnImapTest').addEventListener('click', async () => {
-        const body = {
-          imapHost: document.getElementById('imapHost').value.trim(),
-          imapPort: Number(document.getElementById('imapPort').value) || 993,
-          imapUser: document.getElementById('imapUser').value.trim(),
-          imapPassword: document.getElementById('imapPass').value
-        }
-        const res = await fetch('/api/ingestion/test-connection', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(body)
-        })
-        const j = await res.json().catch(() => ({}))
-        if (!res.ok) return ArthaUI.showToast(j.error || 'IMAP test failed', 'error')
-        ArthaUI.showToast('IMAP connection OK', 'ok')
-      })
-
-      document.getElementById('btnImapRun').addEventListener('click', async () => {
-        const res = await fetch('/api/ingestion/run', { method: 'POST' })
-        const j = await res.json().catch(() => ({}))
-        if (!res.ok) return ArthaUI.showToast(j.error || 'Run failed', 'error')
-        ArthaUI.showToast('Ingestion run finished', 'ok')
-        load()
-      })
-
-      document.getElementById('btnAddHolding').addEventListener('click', async () => {
-        const body = {
-          isin: document.getElementById('a_isin').value.trim(),
-          name: document.getElementById('a_name').value.trim(),
-          type: 'MUTUAL_FUND',
-          category: document.getElementById('a_cat').value,
-          units: Number(document.getElementById('a_units').value || 0),
-          nav: Number(document.getElementById('a_nav').value || 0),
-          monthlySipCzk: Number(document.getElementById('a_sip').value || 0),
-          purchaseStartDate: document.getElementById('a_start').value,
-          navSourceType: document.getElementById('a_navSrc').value || null,
-          navSourceId: document.getElementById('a_navSrcId').value.trim() || null
-        }
-        const res = await fetch('/api/holdings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-        if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
-        if (!res.ok) return ArthaUI.showToast('Create failed', 'error')
-        ArthaUI.showToast('Holding created', 'ok')
-        load()
-      })
-
-      document.getElementById('holdBody').addEventListener('click', async (ev) => {
-        const t = ev.target
-        if (!(t instanceof HTMLButtonElement)) return
-        const id = t.getAttribute('data-id')
-        if (!id) return
-        if (t.classList.contains('hold-save')) {
-          const row = t.closest('tr')
-          const sel = row && row.querySelector('.hold-nav-src')
-          const inp = row && row.querySelector('.hold-nav-id')
-          const navSourceType = sel && sel.value ? String(sel.value) : null
-          const navSourceId = inp && inp.value.trim() ? String(inp.value.trim()) : null
-          const res = await fetch('/api/holdings/' + encodeURIComponent(id), {
-            method: 'PUT',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ navSourceType, navSourceId })
-          })
-          if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
-          if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
-          ArthaUI.showToast('NAV source saved', 'ok')
-          load()
-          return
-        }
-        if (!t.classList.contains('exit-b')) return
-        const res = await fetch('/api/holdings/' + encodeURIComponent(id), { method: 'DELETE' })
-        if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
-        if (!res.ok) return ArthaUI.showToast('Exit failed', 'error')
-        ArthaUI.showToast('Marked exited', 'ok')
-        load()
-      })
-
-      document.getElementById('nreFdBody').addEventListener('click', async (ev) => {
-        const t = ev.target
-        if (!(t instanceof HTMLButtonElement) || !t.classList.contains('nre-save')) return
-        const id = t.getAttribute('data-id')
-        if (!id) return
-        const row = t.closest('tr')
-        const inp = row && row.querySelector('.nre-rate-in')
-        const value = inp ? Number(inp.value) : NaN
-        if (!Number.isFinite(value)) return ArthaUI.showToast('Invalid rate', 'error')
-        const res = await fetch('/api/india/fd-rate/' + encodeURIComponent(id), {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ value })
-        })
-        if (res.status === 403) return ArthaUI.showToast('Demo mode: CRUD disabled', 'error')
-        if (!res.ok) return ArthaUI.showToast('NRE FD save failed', 'error')
-        ArthaUI.showToast('NRE FD rate updated', 'ok')
-        load()
-      })
-      document.getElementById('btnTestEmail').addEventListener('click', async () => {
-        if (document.getElementById('btnTestEmail').disabled) return
-        try {
-          const r = await fetch('/api/settings/test-email', { method: 'POST' })
-          const j = await r.json()
-          if (!r.ok || !j.success) {
-            return ArthaUI.showToast((j && j.error) || 'Test email failed', 'error')
-          }
-          ArthaUI.showToast('Test email sent', 'ok')
-        } catch {
-          ArthaUI.showToast('Test email request failed', 'error')
-        }
-      })
-      document.getElementById('btnTestTg').addEventListener('click', () =>
-        ArthaUI.showToast('Telegram test not implemented yet', 'error')
-      )
-
-      document.getElementById('btnImport').addEventListener('click', () => {
-        if (document.getElementById('btnImport').disabled) return
-        ArthaUI.showToast('Import not implemented', 'error')
-      })
-    </script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/settings.js"></script>
   </body>
 </html>
