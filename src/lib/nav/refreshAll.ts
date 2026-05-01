@@ -1,4 +1,4 @@
-import { prisma } from '../prisma'
+import { getPrisma } from '../prisma'
 import { d } from '../money'
 import { fetchErsteNav } from './erste'
 import { fetchYahooNav } from './yahoo'
@@ -12,6 +12,7 @@ export interface NavRefreshResult {
 }
 
 export async function refreshAllCzechNavs(holdingId?: string): Promise<NavRefreshResult> {
+  const prisma = await getPrisma()
   const holdings = await prisma.holding.findMany({
     where: {
       status: 'ACTIVE',

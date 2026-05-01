@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { num } from './money'
 import {
   ensureFreshRatesIfStale,
@@ -40,6 +40,7 @@ export async function getFXRates(): Promise<{
     // Use whatever FX rows already exist
   }
 
+  const prisma = await getPrisma()
   const eur = await prisma.fXRate.findFirst({
     where: { base: 'CZK', quote: 'EUR' },
     orderBy: { fetchedAt: 'desc' }
@@ -77,6 +78,7 @@ export async function getFXRates(): Promise<{
 export async function getHoldingPrice(isin: string, ticker?: string): Promise<number | null> {
   if (!ticker) return null
 
+  const prisma = await getPrisma()
   const price = await fetchYahooPrice(ticker)
   if (price) {
     const today = new Date()

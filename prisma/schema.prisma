@@ -231,19 +231,30 @@ model IndiaIntelligence {
 }
 
 model RecommendationOutcome {
-  id                 String    @id @default(cuid())
-  date               DateTime
-  type               String
-  recommendedAction  String
-  estimatedImpactCzk Decimal?  @db.Decimal(14, 2)
-  confidenceScore    Int
-  relatedIsin        String?
-  userDecision       String    @default("UNKNOWN")
-  result30d          String?
-  result90d          String?
-  actualImpactCzk    Decimal?  @db.Decimal(14, 2)
-  notes              String?
-  createdAt          DateTime  @default(now())
+  id                   String         @id @default(cuid())
+  planId               String
+  plan                 AllocationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  rowKey               String
+  rowType              String
+  isin                 String?
+  fundName             String
+  recommendedAmountCzk Decimal        @db.Decimal(14, 2)
+  recommendedAt        DateTime
+  status               String         @default("PENDING")
+  evaluatedAt30d       DateTime?
+  evaluatedAt90d       DateTime?
+  wasExecuted          Boolean?
+  executedAmountCzk    Decimal?       @db.Decimal(14, 2)
+  valueAt30dCzk        Decimal?       @db.Decimal(14, 2)
+  valueAt90dCzk        Decimal?       @db.Decimal(14, 2)
+  gainPctAt30d         Decimal?       @db.Decimal(8, 4)
+  gainPctAt90d         Decimal?       @db.Decimal(8, 4)
+  outcomeScore         Int?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([planId])
+  @@index([status])
 }
 
 // ——— ARTHA V4 — personal CFO (Session A foundation) ———
@@ -303,26 +314,29 @@ model UpcomingEvent {
 }
 
 model AllocationPlan {
-  id                  String    @id @default(cuid())
-  monthYear           String
-  generatedAt         DateTime  @default(now())
-  totalAvailableCzk   Decimal   @db.Decimal(14, 2)
-  fixedExpensesCzk    Decimal   @db.Decimal(14, 2)
-  reservedEventsCzk   Decimal   @db.Decimal(14, 2)
-  investableCzk       Decimal   @db.Decimal(14, 2)
-  emergencyTopupCzk   Decimal   @default(0) @db.Decimal(14, 2)
-  allocations         Json
-  status              String    @default("PROPOSED")
-  userOverride        Json?
-  executedAt          DateTime?
-  planSource          String? // MANUAL|AUTO_CRON
-  createdAt           DateTime  @default(now())
+  id                     String                  @id @default(cuid())
+  monthYear              String
+  generatedAt            DateTime                @default(now())
+  totalAvailableCzk      Decimal                 @db.Decimal(14, 2)
+  fixedExpensesCzk       Decimal                 @db.Decimal(14, 2)
+  reservedEventsCzk      Decimal                 @db.Decimal(14, 2)
+  investableCzk          Decimal                 @db.Decimal(14, 2)
+  emergencyTopupCzk      Decimal                 @default(0) @db.Decimal(14, 2)
+  allocations            Json
+  continuity             Json?
+  status                 String                  @default("PROPOSED")
+  userOverride           Json?
+  executedAt             DateTime?
+  planSource             String? // MANUAL|AUTO_CRON
+  createdAt              DateTime                @default(now())
+  recommendationOutcomes RecommendationOutcome[]
   @@index([monthYear, status])
 }
 
 model SipExecution {
   id                   String    @id @default(cuid())
   planId               String?
+  planRowKey           String?
   scheduledDate        DateTime
   executedDate         DateTime?
   isin                 String

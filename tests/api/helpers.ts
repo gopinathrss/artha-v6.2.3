@@ -1,4 +1,4 @@
-import { prisma } from '../../src/lib/prisma'
+import { realPrisma } from '../../src/lib/prisma'
 
 /**
  * API integration tests need a live Postgres matching `DATABASE_URL`.
@@ -9,10 +9,10 @@ export const hasTestDatabase = () =>
 
 export async function ensureLiveMode(): Promise<void> {
   if (!hasTestDatabase()) return
-  let s = await prisma.settings.findFirst()
-  if (!s) s = await prisma.settings.create({ data: { demoModeEnabled: false } })
+  let s = await realPrisma.settings.findFirst()
+  if (!s) s = await realPrisma.settings.create({ data: { demoModeEnabled: false } })
   else if (s.demoModeEnabled) {
-    await prisma.settings.update({ where: { id: s.id }, data: { demoModeEnabled: false } })
+    await realPrisma.settings.update({ where: { id: s.id }, data: { demoModeEnabled: false } })
   }
 }
 

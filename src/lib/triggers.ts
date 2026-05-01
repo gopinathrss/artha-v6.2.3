@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { getPortfolioSummary } from './portfolio'
 import { calculateTaxStatus } from './calculations'
@@ -45,6 +45,7 @@ export async function runAllTriggers(portfolioData: any): Promise<FiredTrigger[]
 export async function saveDailySnapshotFromPortfolio(data: any) {
   const nw = data?.netWorth
   if (!nw) return
+  const prisma = await getPrisma()
   const day = new Date()
   day.setHours(0, 0, 0, 0)
   const a = data.allocation || { equityPct: 0, bondsPct: 0, cashPct: 0 }
@@ -101,6 +102,7 @@ export async function runMorningJob(): Promise<{
     const { fetchYahooPrice, getFXRates } = await import('./fetchers')
     await getFXRates()
 
+    const prisma = await getPrisma()
     const holdings = await prisma.holding.findMany({ where: { status: { not: 'EXITED' } } })
     for (const h of holdings) {
       const instrument = await prisma.instrumentLibrary.findFirst({ where: { isin: h.isin } })
@@ -124,7 +126,7 @@ export async function runMorningJob(): Promise<{
     const triggers = await runAllTriggers(p)
     triggered = triggers.length
 
-    const settings = await prisma.settings.findFirst()
+    const settings = await realPrisma.settings.findFirst()
     for (const tr of triggers) {
       const log = await prisma.alertLog.create({
         data: {
@@ -162,6 +164,7 @@ export async function deliverAlert(
     `<p><strong>${trigger.title}</strong></p><p>${trigger.message}</p><p><small>${trigger.triggerType}</small></p>`
   ).catch(() => {})
   if (trigger.id) {
+    const prisma = await getPrisma()
     await prisma.alertLog
       .update({ where: { id: trigger.id }, data: { wasSent: true, sentAt: new Date(), sentViaEmail: true } })
       .catch(() => {})
@@ -186,6 +189,7 @@ export async function generateAndSendMonthlyLetter(portfolio: any, settings: any
     await sendEmail(settings.alertEmail, `ARTHA monthly — ${monthYear}`, html)
   }
   const key = new Date().toISOString().slice(0, 7)
+  const prisma = await getPrisma()
   await prisma.monthlyLetter.upsert({
     where: { monthYear: key },
     update: { contentHtml: html, contentText: html.replace(/<[^>]+>/g, ' '), portfolioSnapshot: portfolio, generatedAt: new Date() },

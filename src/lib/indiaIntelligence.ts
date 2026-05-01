@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { num } from './money'
 
 /**
@@ -45,6 +45,7 @@ export interface FCNRComparison {
 }
 
 export async function fetchRBIRate(): Promise<void> {
+  const prisma = await getPrisma()
   const prev = await prisma.indiaIntelligence.findFirst({
     where: { dataType: 'RBI_RATE' },
     orderBy: { validFrom: 'desc' }
@@ -90,6 +91,7 @@ const NRE_SEED: { bank: string; tenor: string; value: number }[] = [
 ]
 
 export async function seedNREFDRates(): Promise<void> {
+  const prisma = await getPrisma()
   const c = await prisma.indiaIntelligence.count({ where: { dataType: 'NRE_FD_RATE' } })
   if (c > 0) return
   const validFrom = new Date('2026-04-01')
@@ -111,6 +113,7 @@ export async function seedNREFDRates(): Promise<void> {
 
 /** Age in days of the oldest `NRE_FD_RATE` row by `validFrom` (staleness of the table). */
 export async function getStalestNreFdRateAgeDays(): Promise<number> {
+  const prisma = await getPrisma()
   const oldest = await prisma.indiaIntelligence.findFirst({
     where: { dataType: 'NRE_FD_RATE' },
     orderBy: { validFrom: 'asc' }
@@ -125,6 +128,7 @@ export async function getStalestNREFDAge(): Promise<number> {
 }
 
 export async function getBestNREFDRate(tenor: string) {
+  const prisma = await getPrisma()
   const rows = await prisma.indiaIntelligence.findMany({
     where: { dataType: 'NRE_FD_RATE', tenor },
     orderBy: { value: 'desc' },

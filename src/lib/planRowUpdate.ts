@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { ensureRowType } from './allocationRowTypes'
 
 /** Same behaviour as PATCH /api/this-month/plan/:planId/row/:rowIndex action=DONE */
@@ -12,6 +12,7 @@ export async function markPlanRowDone(
     source?: 'DASHBOARD' | 'TELEGRAM'
   }
 ): Promise<void> {
+  const prisma = await getPrisma()
   const src = opts?.source || 'DASHBOARD'
   const note = src === 'TELEGRAM' ? 'From Telegram /done' : 'From allocation plan row'
   const plan = await prisma.allocationPlan.findUnique({ where: { id: planId } })
@@ -42,11 +43,13 @@ export async function markPlanRowDone(
   const typed = ensureRowType(r)
   const isSell = typed.type === 'SELL'
   const isin = r.isin != null ? String(r.isin) : ''
+  const rowKey = typeof r.rowKey === 'string' && r.rowKey.length > 0 ? r.rowKey : null
   const fundLabel = isSell ? String(r.source || 'Fund') : String(r.destination || 'Fund')
   if (isin) {
     await prisma.sipExecution.create({
       data: {
         planId,
+        planRowKey: rowKey,
         scheduledDate: new Date(),
         executedDate: new Date(executedAt),
         isin,

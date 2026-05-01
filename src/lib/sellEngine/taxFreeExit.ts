@@ -1,5 +1,5 @@
 import type { SellRow } from '../allocationRowTypes'
-import { prisma } from '../prisma'
+import { getPrisma } from '../prisma'
 import { num, type MoneyInput } from '../money'
 
 export const CZECH_TAX_FREE_DAYS = 1095
@@ -21,6 +21,7 @@ export function costBasisCzk(holding: { cashflows?: { amountCzk: unknown; type: 
  * Does not emit before 1095 days from purchase (defer / rebalance use tax calendar elsewhere).
  */
 export async function detectTaxFreeExitOpportunities(): Promise<SellRow[]> {
+  const prisma = await getPrisma()
   const holdings = await prisma.holding.findMany({
     where: { status: 'ACTIVE', country: 'CZ' },
     include: { cashflows: true }

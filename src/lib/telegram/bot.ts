@@ -1,5 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api'
-import { prisma } from '../prisma'
+import { getPrisma, realPrisma } from '../prisma'
 import { getPortfolioSummary } from '../portfolio'
 import { computeAdherenceStats } from '../adherence'
 import { getPlanForMonth, currentMonthYear } from '../allocationPlanner'
@@ -29,7 +29,7 @@ export function stopTelegramBot() {
 }
 
 export async function buildDailyDigest(): Promise<string> {
-  const settings = await prisma.settings.findFirst()
+  const settings = await realPrisma.settings.findFirst()
   const s = await getPortfolioSummary()
   if (!s.success || !s.data) {
     return `*ARTHA — Daily digest*\n\nPortfolio unavailable. Check database / profile.`
@@ -52,6 +52,7 @@ export async function buildDailyDigest(): Promise<string> {
     : 'No pending lines in the current plan (or no plan).'
   const y = new Date()
   y.setDate(y.getDate() - 1)
+  const prisma = await getPrisma()
   const yAlerts = await prisma.alertLog
     .findMany({ where: { firedAt: { gte: y } }, orderBy: { firedAt: 'desc' }, take: 3 })
     .catch(() => [])
@@ -93,7 +94,7 @@ export async function buildDailyDigest(): Promise<string> {
 
 export async function startTelegramBot() {
   stopTelegramBot()
-  const settings = await prisma.settings.findFirst()
+  const settings = await realPrisma.settings.findFirst()
   const token = (process.env.TELEGRAM_BOT_TOKEN || settings?.telegramBotToken || '').trim()
   if (!token) {
     // eslint-disable-next-line no-console
@@ -110,8 +111,8 @@ export async function startTelegramBot() {
 
   botInstance.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id
-    const s0 = (await prisma.settings.findFirst()) || (await prisma.settings.create({ data: {} }))
-    await prisma.settings.update({
+    const s0 = (await realPrisma.settings.findFirst()) || (await realPrisma.settings.create({ data: {} }))
+    await realPrisma.settings.update({
       where: { id: s0.id },
       data: { telegramChatId: String(chatId) }
     })
@@ -211,6 +212,7 @@ export async function startTelegramBot() {
   })
 
   botInstance.onText(/\/alert/, async (msg) => {
+    const prisma = await getPrisma()
     const logs = await prisma.alertLog
       .findMany({ orderBy: { firedAt: 'desc' }, take: 5 })
       .catch(() => [])
@@ -235,7 +237,7 @@ export async function startTelegramBot() {
     }
     await botInstance!.sendMessage(msg.chat.id, '🤔 Thinking…')
     const s = await getPortfolioSummary()
-    const set = await prisma.settings.findFirst()
+    const set = await realPrisma.settings.findFirst()
     const mem = await askArtha(
       q,
       s.success && s.data ? s.data : {},

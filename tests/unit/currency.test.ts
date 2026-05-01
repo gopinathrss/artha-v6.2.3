@@ -8,14 +8,22 @@ import {
   needsFetchWithin
 } from '../../src/lib/currency'
 
-const findFirst = vi.fn()
-
-vi.mock('../../src/lib/prisma', () => ({
-  prisma: {
+const { findFirst, prismaCurrency } = vi.hoisted(() => {
+  const findFirst = vi.fn()
+  const prismaCurrency = {
     fXRate: {
       findFirst: (...a: unknown[]) => findFirst(...a)
     }
   }
+  return { findFirst, prismaCurrency }
+})
+
+vi.mock('../../src/lib/prisma', () => ({
+  prisma: prismaCurrency,
+  realPrisma: prismaCurrency,
+  demoPrisma: prismaCurrency,
+  getPrisma: vi.fn(async () => prismaCurrency),
+  invalidateDemoStateCache: vi.fn()
 }))
 
 const fresh = (ccy: 'EUR' | 'USD' | 'INR', rate: number) => ({

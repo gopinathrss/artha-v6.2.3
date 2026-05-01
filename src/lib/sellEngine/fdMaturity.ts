@@ -1,5 +1,5 @@
 import type { SellRow } from '../allocationRowTypes'
-import { prisma } from '../prisma'
+import { getPrisma } from '../prisma'
 import { num } from '../money'
 import { convertCurrency } from '../currency'
 import { getBestNREFDRate } from '../indiaIntelligence'
@@ -13,6 +13,7 @@ function tenorLabel(fd: { startDate: Date; maturityDate: Date }): string {
 }
 
 export async function detectFdMaturityActions(): Promise<SellRow[]> {
+  const prisma = await getPrisma()
   const fds = await prisma.indiaFixedDeposit.findMany({
     where: { autoRenew: false }
   })

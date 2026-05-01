@@ -1,3 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+export {
+  getPrisma,
+  realPrisma,
+  demoPrisma,
+  invalidateDemoStateCache
+} from './prismaProvider'
+import { realPrisma } from './prismaProvider'
 
-export const prisma = new PrismaClient()
+/** Points at the live database; tests mock this module and override exports. */
+export const prisma = realPrisma

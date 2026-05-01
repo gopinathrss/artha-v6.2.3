@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 
 const AMFI_URL = 'https://www.amfiindia.com/spages/NAVAll.txt'
 
@@ -57,6 +57,7 @@ export async function ingestAmfiNavAll(options?: { maxRows?: number }): Promise<
   asOf: string
   error?: string
 }> {
+  const prisma = await getPrisma()
   const maxRows = options?.maxRows ?? 20_000
   const asOf = asOfDateIndia()
   let text: string

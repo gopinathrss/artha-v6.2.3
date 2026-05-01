@@ -12,10 +12,17 @@ const prismaMock = vi.hoisted(() => ({
   holding: { findMany: vi.fn() },
   account: { findMany: vi.fn() },
   indiaMutualFund: { findMany: vi.fn() },
-  indiaFixedDeposit: { findMany: vi.fn() }
+  indiaFixedDeposit: { findMany: vi.fn() },
+  allocationPlan: { findFirst: vi.fn().mockResolvedValue(null) }
 }))
 
-vi.mock('../../src/lib/prisma', () => ({ prisma: prismaMock }))
+vi.mock('../../src/lib/prisma', () => ({
+  prisma: prismaMock,
+  realPrisma: prismaMock,
+  demoPrisma: prismaMock,
+  getPrisma: vi.fn(async () => prismaMock),
+  invalidateDemoStateCache: vi.fn()
+}))
 vi.mock('../../src/lib/instrumentLibrary', () => ({
   loadAllLibrary: vi.fn(async () => [
     { isin: 'IE1', name: 'World', category: 'EQUITY', score: 90, terPct: 0.2, availableInGeorge: true, return3yr: 10 },

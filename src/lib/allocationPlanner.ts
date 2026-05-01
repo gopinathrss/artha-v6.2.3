@@ -1,6 +1,6 @@
 import type { AllocationPlan, ExpenseCommitment, Holding, IncomeEvent, UpcomingEvent, UserProfile } from '@prisma/client'
 import type { IndiaMutualFund } from '@prisma/client'
-import { prisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { calculateAllocation, calculateTaxStatus, indiaMfAllocationPieces } from './calculations'
 import { loadAllLibrary, scoreInstrument } from './instrumentLibrary'
@@ -23,6 +23,54 @@ export type {
   SellRow
 } from './allocationRowTypes'
 export { ensureRowType, isAdherenceRow } from './allocationRowTypes'
+
+export type PlanContinuityMeta = {
+  unchangedFundsCount: number
+  newFundsCount: number
+  droppedFundsCount: number
+  droppedFunds: { isin: string; name: string; lastAmount: number }[]
+}
+
+function computeContinuityMeta(
+  prev: AllocationRow[] | null | undefined,
+  next: AllocationRow[]
+): PlanContinuityMeta {
+  const prevBuys = (prev || []).filter((r): r is BuyRow => r.type === 'BUY' && Boolean(r.isin))
+  const nextBuys = next.filter((r): r is BuyRow => r.type === 'BUY' && Boolean(r.isin))
+  const prevMap = new Map(
+    prevBuys.map((r) => [r.isin as string, { name: r.destination, amount: r.amountCzk }])
+  )
+  const nextIsins = new Set(nextBuys.map((r) => r.isin as string))
+  const prevIsins = new Set(prevMap.keys())
+  let unchangedFundsCount = 0
+  for (const isin of nextIsins) {
+    if (prevIsins.has(isin)) unchangedFundsCount += 1
+  }
+  const newFundsCount = [...nextIsins].filter((i) => !prevIsins.has(i)).length
+  const droppedFunds: { isin: string; name: string; lastAmount: number }[] = []
+  for (const isin of prevIsins) {
+    if (!nextIsins.has(isin)) {
+      const m = prevMap.get(isin)!
+      droppedFunds.push({ isin, name: m.name, lastAmount: m.amount })
+    }
+  }
+  return {
+    unchangedFundsCount,
+    newFundsCount,
+    droppedFundsCount: droppedFunds.length,
+    droppedFunds
+  }
+}
+
+function continuityBuyReason(base: string, isin: string | undefined, prev: AllocationRow[] | null): string {
+  if (!isin || !prev?.length) return base
+  const wasBuy = prev.some((r) => r.type === 'BUY' && r.isin === isin)
+  if (wasBuy) return `${base} Continuing from last month.`
+  const prevBuys = prev.filter((r): r is BuyRow => r.type === 'BUY')
+  const label =
+    prevBuys.find((b) => b.isin)?.destination || prevBuys[0]?.destination || 'no equity buy'
+  return `${base} New vs prior plan. (Last month: ${label})`
+}
 
 function monthYearFrom(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -90,7 +138,24 @@ export function nextMonthYearString(): string {
   return monthYearFrom(n)
 }
 
-export async function buildMonthlyPlanPayload(monthYear: string): Promise<MonthlyPlanPayload> {
+export async function buildMonthlyPlanPayload(
+  monthYear: string,
+  previousAllocations?: AllocationRow[] | null
+): Promise<MonthlyPlanPayload> {
+  const prisma = await getPrisma()
+  let prevAlloc = previousAllocations
+  if (prevAlloc === undefined) {
+    const prevPlan = await prisma.allocationPlan.findFirst({ orderBy: { generatedAt: 'desc' } })
+    prevAlloc = prevPlan?.allocations ? (prevPlan.allocations as unknown as AllocationRow[]) : null
+  }
+
+  const previouslyRecommendedIsins = new Set<string>()
+  if (prevAlloc) {
+    for (const row of prevAlloc) {
+      if (row.type === 'BUY' && row.isin) previouslyRecommendedIsins.add(row.isin)
+    }
+  }
+
   const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
   if (!profile) {
     throw new Error('Complete your profile in the onboarding wizard (Settings) first.')
@@ -103,7 +168,7 @@ export async function buildMonthlyPlanPayload(monthYear: string): Promise<Monthl
     prisma.incomeEvent.findMany(),
     prisma.expenseCommitment.findMany(),
     prisma.upcomingEvent.findMany(),
-    prisma.settings.findFirst(),
+    realPrisma.settings.findFirst(),
     prisma.holding.findMany({ where: { status: { not: 'EXITED' } }, include: { cashflows: true } }),
     loadAllLibrary(),
     prisma.account.findMany({ where: { isActive: true } }),
@@ -208,9 +273,13 @@ export async function buildMonthlyPlanPayload(monthYear: string): Promise<Monthl
     const caShare = (investable * tgtCa) / 100
 
     const eqH = holdings.find((h) => h.category === 'EQUITY' && h.status === 'ACTIVE')
-    const topEq = lib
-      .filter((i) => i.category === 'EQUITY' && libScore(i) > 0)
-      .sort((a, b) => libScore(b) - libScore(a))[0]
+    const eqCandidates = lib.filter((i) => i.category === 'EQUITY' && libScore(i) > 0)
+    const topEq = eqCandidates
+      .map((i) => ({
+        i,
+        adj: libScore(i) + (previouslyRecommendedIsins.has(i.isin) ? 10 : 0)
+      }))
+      .sort((a, b) => b.adj - a.adj)[0]?.i
     if (eqH && topEq) {
       if (sellingIsins.has(eqH.isin)) {
         // Same-month SELL on this ISIN — do not add a BUY to the same line
@@ -224,14 +293,22 @@ export async function buildMonthlyPlanPayload(monthYear: string): Promise<Monthl
             destination: topEq.name,
             isin: topEq.isin,
             amountCzk: Math.round(eqShare * 0.6),
-            reason: `Equity toward ${tgtEq}% target; top library match in George.`
+            reason: continuityBuyReason(
+              `Equity toward ${tgtEq}% target; top library match in George.`,
+              topEq.isin,
+              prevAlloc
+            )
           })
         } else {
           addBuy({
             destination: eqH.name,
             isin: eqH.isin,
             amountCzk: Math.round(eqShare * 0.5),
-            reason: 'Equity: existing holding; tax window soon — add carefully.'
+            reason: continuityBuyReason(
+              'Equity: existing holding; tax window soon — add carefully.',
+              eqH.isin,
+              prevAlloc
+            )
           })
         }
       }
@@ -240,27 +317,35 @@ export async function buildMonthlyPlanPayload(monthYear: string): Promise<Monthl
         destination: topEq.name,
         isin: topEq.isin,
         amountCzk: Math.round(eqShare * 0.6),
-        reason: `Equity allocation — no active equity holding; candidate from library.`
+        reason: continuityBuyReason(
+          `Equity allocation — no active equity holding; candidate from library.`,
+          topEq.isin,
+          prevAlloc
+        )
       })
     }
 
     const bdH = holdings.find((h) => h.category === 'BONDS' && h.status === 'ACTIVE')
-    const topBd = lib
-      .filter((i) => i.category === 'BONDS')
-      .sort((a, b) => libScore(b) - libScore(a))[0]
+    const bdCandidates = lib.filter((i) => i.category === 'BONDS')
+    const topBd = bdCandidates
+      .map((i) => ({
+        i,
+        adj: libScore(i) + (previouslyRecommendedIsins.has(i.isin) ? 10 : 0)
+      }))
+      .sort((a, b) => b.adj - a.adj)[0]?.i
     if (bdH && !sellingIsins.has(bdH.isin)) {
       addBuy({
         destination: bdH.name,
         isin: bdH.isin,
         amountCzk: Math.round(bdShare * 0.5),
-        reason: `Bond sleeve toward ${tgtBd}% target.`
+        reason: continuityBuyReason(`Bond sleeve toward ${tgtBd}% target.`, bdH.isin, prevAlloc)
       })
     } else if (topBd) {
       addBuy({
         destination: topBd.name,
         isin: topBd.isin,
         amountCzk: Math.round(bdShare * 0.5),
-        reason: 'Bond allocation from library.'
+        reason: continuityBuyReason('Bond allocation from library.', topBd.isin, prevAlloc)
       })
     }
 
@@ -308,8 +393,18 @@ export async function generateMonthlyPlan(
   monthYear: string,
   planSource: 'MANUAL' | 'AUTO_CRON' = 'MANUAL'
 ): Promise<AllocationPlan> {
-  const p = await buildMonthlyPlanPayload(monthYear)
-  return prisma.allocationPlan.create({
+  const prisma = await getPrisma()
+  const priorSnapshot = await prisma.allocationPlan.findFirst({
+    orderBy: { generatedAt: 'desc' }
+  })
+  const prevRows = priorSnapshot?.allocations
+    ? (priorSnapshot.allocations as unknown as AllocationRow[])
+    : null
+
+  const p = await buildMonthlyPlanPayload(monthYear, prevRows)
+  const continuity = computeContinuityMeta(prevRows, p.allocations)
+
+  const plan = await prisma.allocationPlan.create({
     data: {
       monthYear: p.monthYear,
       totalAvailableCzk: p.totalAvailableCzk,
@@ -317,11 +412,36 @@ export async function generateMonthlyPlan(
       reservedEventsCzk: p.reservedEventsCzk,
       investableCzk: p.investableCzk,
       emergencyTopupCzk: p.emergencyTopupCzk,
-      allocations: p.allocations as any,
+      allocations: p.allocations as object,
+      continuity: continuity as object,
       status: 'PROPOSED',
       planSource
     }
   })
+
+  const tracked = p.allocations.filter((r) => r.type === 'BUY' || r.type === 'SELL')
+  for (const row of tracked) {
+    const fundName =
+      row.type === 'BUY'
+        ? (row.destination ?? row.isin ?? 'BUY')
+        : row.type === 'SELL'
+          ? (row.source ?? row.isin ?? 'SELL')
+          : '—'
+    await prisma.recommendationOutcome.create({
+      data: {
+        planId: plan.id,
+        rowKey: row.rowKey ?? `${row.type}-${row.isin ?? 'row'}`,
+        rowType: row.type,
+        isin: row.isin ?? null,
+        fundName,
+        recommendedAmountCzk: row.amountCzk,
+        recommendedAt: plan.generatedAt,
+        status: 'PENDING'
+      }
+    })
+  }
+
+  return plan
 }
 
 export function currentMonthYear(): string {
@@ -329,5 +449,6 @@ export function currentMonthYear(): string {
 }
 
 export async function getPlanForMonth(monthYear: string) {
+  const prisma = await getPrisma()
   return prisma.allocationPlan.findFirst({ where: { monthYear }, orderBy: { generatedAt: 'desc' } })
 }

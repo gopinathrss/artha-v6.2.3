@@ -8,7 +8,7 @@
   </head>
   <body>
     <div id="demoBanner" class="demo-banner" style="display: none" role="status">
-      DEMO MODE ACTIVE — Settings still edit the real database
+      DEMO MODE ACTIVE — portfolio and plans use a separate demo database; Settings stay on your real DB
     </div>
     <div class="app">
       <aside class="sidebar">
@@ -51,7 +51,7 @@
               <div class="row" style="align-items: center; border: 0">
                 <div>
                   <div class="kicker">Simulated portfolio</div>
-                  <div class="sub">Turns on the demo overlay. Settings remain persisted to Postgres.</div>
+                  <div class="sub">Uses isolated Postgres (<code>artha_v4_demo</code>). Toggling on wipes and reseeds demo data. Integrations and demo flag stay on your main DB.</div>
                 </div>
                 <div class="sub">
                   <label><input type="checkbox" id="demoOn" disabled /> <span>Enable</span></label>
@@ -101,7 +101,7 @@
             <div class="card col-12">
               <div class="h2">C — Czech holdings</div>
               <div class="row" style="border: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap">
-                <div class="muted">CRUD is disabled in demo mode.</div>
+                <div class="muted">In demo mode, edits apply to the demo database only.</div>
                 <div style="display: flex; gap: 8px">
                   <input id="csv" type="file" accept=".csv" disabled style="display: none" />
                   <button class="btn" id="btnImport" type="button" disabled>Import CSV</button>

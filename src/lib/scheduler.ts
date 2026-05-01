@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { prisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { getPortfolioSummary } from './portfolio'
 import { generateAndSendMonthlyLetter, runMorningJob, runWeeklyBackup } from './triggers'
 import { fetchAllRates } from './currency'
@@ -49,7 +49,7 @@ export function startScheduler() {
       console.log('[Scheduler] Starting monthly letter generation...')
       try {
         const portfolio = await getPortfolioSummary()
-        const settings = await prisma.settings.findFirst()
+        const settings = await realPrisma.settings.findFirst()
         if (settings?.monthlyLetterEnabled && portfolio.success && portfolio.data) {
           await generateAndSendMonthlyLetter(portfolio.data, settings)
           // eslint-disable-next-line no-console
@@ -86,6 +86,7 @@ export function startScheduler() {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Month-end review reminder (EOM)...')
       try {
+        const prisma = await getPrisma()
         const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
         if (!profile) {
           // eslint-disable-next-line no-console
@@ -118,6 +119,7 @@ export function startScheduler() {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Daily salary check (auto plan)...')
       try {
+        const prisma = await getPrisma()
         const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
         if (!profile) {
           // eslint-disable-next-line no-console
@@ -147,7 +149,7 @@ export function startScheduler() {
         // eslint-disable-next-line no-console
         console.log(`[Scheduler] Auto-generating plan for ${monthYear}`)
         const plan = await generateMonthlyPlan(monthYear, 'AUTO_CRON')
-        const settings = await prisma.settings.findFirst()
+        const settings = await realPrisma.settings.findFirst()
         if (settings?.alertEmail && settings?.smtpUser) {
           const r = await sendEmail(
             settings.alertEmail,
@@ -184,7 +186,7 @@ export function startScheduler() {
       try {
         const { buildDailyDigest, getTelegramBot } = await import('./telegram/bot')
         const text = await buildDailyDigest()
-        const settings = await prisma.settings.findFirst()
+        const settings = await realPrisma.settings.findFirst()
         const bot = getTelegramBot()
         if (settings?.telegramChatId && bot) {
           await bot.sendMessage(settings.telegramChatId, text, { parse_mode: 'Markdown' })
@@ -244,6 +246,7 @@ export function startScheduler() {
           `[Scheduler] Czech NAV refresh: ${result.refreshed} refreshed, ${result.failed} failed, ${result.skipped} skipped`
         )
         if (result.errors.length > 0) {
+          const prisma = await getPrisma()
           await prisma.advisorJournal.create({
             data: {
               category: 'OBSERVATION',
@@ -280,8 +283,29 @@ export function startScheduler() {
     { timezone: 'Europe/Prague' }
   )
 
+  cron.schedule(
+    '0 2 * * *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Outcome evaluation starting')
+      try {
+        const { evaluatePendingOutcomes } = await import('./outcomeEvaluation')
+        const r = await evaluatePendingOutcomes()
+        // eslint-disable-next-line no-console
+        console.log('[Scheduler] Outcome evaluation done, touched=', r.touched)
+      } catch (err: unknown) {
+        const m = err instanceof Error ? err.message : String(err)
+        // eslint-disable-next-line no-console
+        console.error('[Scheduler] Outcome evaluation failed:', m)
+      }
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
   // eslint-disable-next-line no-console
   console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Outcome evaluation cron registered (daily 02:00 Europe/Prague)')
   // eslint-disable-next-line no-console
   console.log('[Scheduler] Czech NAV refresh registered (weekdays 17:00 Europe/Prague)')
   // eslint-disable-next-line no-console

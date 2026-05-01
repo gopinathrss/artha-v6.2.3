@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { num } from './money'
 
 const TIMEOUT = 8000
@@ -15,6 +15,7 @@ export const FX_STALENESS_FAIL_HOURS = 168
  * Single source of truth for FX age (F2.5 / F2.6).
  */
 export async function getFxAgeHours(): Promise<number> {
+  const prisma = await getPrisma()
   const quotes = ['EUR', 'USD', 'INR'] as const
   let maxH = 0
   let found = 0
@@ -102,6 +103,7 @@ async function fetchExchangeRateApiFallback(czkPerEur: number): Promise<{ USD: n
 }
 
 export async function fetchAllRates(): Promise<CoreFx> {
+  const prisma = await getPrisma()
   const now = new Date()
   let eur: number
   let usd: number
@@ -160,6 +162,7 @@ export async function getLatestFXRate(
   base: string,
   quote: string
 ): Promise<{ rate: number; fetchedAt: Date; stale: boolean; source: string } | null> {
+  const prisma = await getPrisma()
   const b = (base || 'CZK').toUpperCase()
   const q = (quote || '').toUpperCase()
   if (b !== 'CZK' || (q !== 'EUR' && q !== 'USD' && q !== 'INR')) return null

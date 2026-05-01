@@ -43,7 +43,13 @@ const prismaHealth = vi.hoisted(() => ({
   advisorJournal: { findFirst: vi.fn() }
 }))
 
-vi.mock('../../src/lib/prisma', () => ({ prisma: prismaHealth }))
+vi.mock('../../src/lib/prisma', () => ({
+  prisma: prismaHealth,
+  realPrisma: prismaHealth,
+  demoPrisma: prismaHealth,
+  getPrisma: vi.fn(async () => prismaHealth),
+  invalidateDemoStateCache: vi.fn()
+}))
 
 describe('runHealthChecks (mocked prisma)', () => {
   it('returns 14 checks and valid trust', async () => {

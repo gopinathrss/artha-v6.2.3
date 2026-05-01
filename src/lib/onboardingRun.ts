@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { currentMonthYear, generateMonthlyPlan } from './allocationPlanner'
 
 export type OnboardingCompleteBody = {
@@ -41,19 +41,20 @@ export async function runOnboardingCompleteFlow(body: OnboardingCompleteBody): P
   start.setDate(1)
   start.setHours(12, 0, 0, 0)
 
-  await prisma.$transaction(async (tx) => {
-    let s = await tx.settings.findFirst()
-    if (!s) s = await tx.settings.create({ data: {} })
-    await tx.settings.update({
-      where: { id: s.id },
-      data: {
-        onboardingComplete: true,
-        targetEquityPct: p.targetEquityPct,
-        targetBondsPct: p.targetBondsPct,
-        targetCashPct: p.targetCashPct
-      }
-    })
+  let s = await realPrisma.settings.findFirst()
+  if (!s) s = await realPrisma.settings.create({ data: {} })
+  await realPrisma.settings.update({
+    where: { id: s.id },
+    data: {
+      onboardingComplete: true,
+      targetEquityPct: p.targetEquityPct,
+      targetBondsPct: p.targetBondsPct,
+      targetCashPct: p.targetCashPct
+    }
+  })
 
+  const prisma = await getPrisma()
+  await prisma.$transaction(async (tx) => {
     const risk = (p.riskProfile || 'MODERATE').toUpperCase()
     const riskDb = risk === 'CONSERVATIVE' || risk === 'GROWTH' || risk === 'MODERATE' ? risk : 'MODERATE'
 

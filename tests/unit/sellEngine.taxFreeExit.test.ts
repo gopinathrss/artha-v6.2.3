@@ -4,7 +4,13 @@ const prismaMock = vi.hoisted(() => ({
   holding: { findMany: vi.fn() }
 }))
 
-vi.mock('../../src/lib/prisma', () => ({ prisma: prismaMock }))
+vi.mock('../../src/lib/prisma', () => ({
+  prisma: prismaMock,
+  realPrisma: prismaMock,
+  demoPrisma: prismaMock,
+  getPrisma: vi.fn(async () => prismaMock),
+  invalidateDemoStateCache: vi.fn()
+}))
 
 import { detectTaxFreeExitOpportunities } from '../../src/lib/sellEngine/taxFreeExit'
 

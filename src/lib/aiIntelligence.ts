@@ -1,13 +1,13 @@
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import type { AIMemory } from '@prisma/client'
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { projectFutureValue, calculateRequiredSIP } from './calculations'
 import { findBestAlternative, loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import { getBestNREFDRate, getRbiRepoRate } from './indiaIntelligence'
 import { num } from './money'
 import { ensureRowType } from './allocationRowTypes'
-import type { BuyRow, ReserveRow, SellRow } from './allocationRowTypes'
+import type { BuyRow, SellRow } from './allocationRowTypes'
 
 function calculateBlendedReturn(portfolio: any): number {
   const a = portfolio?.allocation
@@ -16,63 +16,77 @@ function calculateBlendedReturn(portfolio: any): number {
 }
 
 async function buildExecutionHistoryAppendix(): Promise<string> {
-  const plans = await prisma.allocationPlan.findMany({ orderBy: { generatedAt: 'desc' }, take: 4 })
-  if (plans.length < 2) return ''
-  const prev = plans[1]
-  const rawRows = Array.isArray(prev.allocations) ? (prev.allocations as unknown[]) : []
-  const rows = rawRows.map(ensureRowType).filter((r) => r.type !== 'HOLD')
-  let recommended = 0
-  let executed = 0
-  let skippedAmt = 0
-  let doneN = 0
-  const skipLines: string[] = []
-  for (const r of rows) {
-    recommended += Number(r.amountCzk) || 0
-    const st = (r.executionStatus || 'PENDING').toUpperCase()
-    if (st === 'DONE') {
-      doneN += 1
-      executed += Number(r.executedAmountCzk ?? r.amountCzk) || 0
-    } else if (st === 'SKIPPED') {
-      skippedAmt += Number(r.amountCzk) || 0
-      const label =
-        r.type === 'SELL'
-          ? `Sell from ${(r as SellRow).source}`
-          : r.type === 'RESERVE'
-            ? `Reserve ${(r as ReserveRow).destination}`
-            : `To ${(r as BuyRow).destination || (r as BuyRow).isin || 'destination'}`
-      skipLines.push(`- ${label}: "${String(r.skipReason || '').slice(0, 120)}"`)
-    }
-  }
-  const closable = rows.filter((r) => ['DONE', 'SKIPPED'].includes((r.executionStatus || '').toUpperCase())).length
-  const adherencePct = closable > 0 ? Math.round((doneN / closable) * 1000) / 10 : 0
-  const header = `RECENT EXECUTION HISTORY: Prior plan ${prev.monthYear}: recommended ~${Math.round(recommended)} CZK across ${rows.length} actionable rows; executed ~${Math.round(executed)} CZK (${doneN} done); skipped ~${Math.round(skippedAmt)} CZK.`
-  const skips = skipLines.length ? ` Skip reasons: ${skipLines.join(' ')}` : ''
-  const adherence = ` Adherence (done vs done+skipped on that plan): ${adherencePct}%.`
+  const prisma = await getPrisma()
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
-  const subtypeCounts = new Map<string, number>()
-  for (const p of plans) {
-    const arr = Array.isArray(p.allocations) ? (p.allocations as unknown[]) : []
-    for (const raw of arr) {
-      const r = ensureRowType(raw)
-      if ((r.executionStatus || '').toUpperCase() !== 'SKIPPED') continue
-      const rec = r as unknown as Record<string, unknown>
-      const key =
-        r.type === 'SELL' && (r as SellRow).sellSubtype
-          ? String((r as SellRow).sellSubtype)
-          : typeof rec.isin === 'string' && rec.isin
-            ? `ISIN:${rec.isin}`
-            : 'OTHER'
-      subtypeCounts.set(key, (subtypeCounts.get(key) || 0) + 1)
+  const recentPlans = await prisma.allocationPlan.findMany({
+    where: { generatedAt: { gte: sixMonthsAgo } },
+    orderBy: { generatedAt: 'desc' }
+  })
+
+  let totalRecommended = 0
+  let totalExecuted = 0
+  let totalSkipped = 0
+  const skipsByFund: Record<string, number> = {}
+  const recentSkips: Array<{ date: string; fund: string; amount: number; reason: string }> = []
+
+  for (const plan of recentPlans) {
+    const rawRows = Array.isArray(plan.allocations) ? (plan.allocations as unknown[]) : []
+    for (const raw of rawRows) {
+      const row = ensureRowType(raw)
+      if (row.type === 'HOLD') continue
+      if (row.type !== 'BUY' && row.type !== 'SELL') continue
+      const amt = Number(row.amountCzk) || 0
+      totalRecommended += amt
+      const st = (row.executionStatus || 'PENDING').toUpperCase()
+      if (st === 'DONE') {
+        totalExecuted += Number(row.executedAmountCzk ?? row.amountCzk) || 0
+      } else if (st === 'SKIPPED') {
+        totalSkipped += amt
+        const fundKey =
+          row.type === 'BUY'
+            ? String((row as BuyRow).destination || (row as BuyRow).isin || 'unknown')
+            : String((row as SellRow).source || (row as SellRow).isin || 'unknown')
+        skipsByFund[fundKey] = (skipsByFund[fundKey] ?? 0) + 1
+        if (recentSkips.length < 5) {
+          recentSkips.push({
+            date: plan.generatedAt.toISOString().slice(0, 10),
+            fund: fundKey,
+            amount: amt,
+            reason: String((row as { skipReason?: string }).skipReason || 'no reason given')
+          })
+        }
+      }
     }
   }
-  const patterns = [...subtypeCounts.entries()]
-    .filter(([, v]) => v >= 2)
-    .map(
-      ([k, v]) =>
-        `PATTERN DETECTED: Skips involving "${k}" appeared in ${v} recent plan(s). Consider whether advice thresholds match user preference.`
+
+  const adherencePct =
+    totalRecommended > 0 ? Math.round((totalExecuted / totalRecommended) * 100) : null
+
+  const patterns: string[] = []
+  for (const [fund, count] of Object.entries(skipsByFund)) {
+    if (count >= 3) {
+      patterns.push(
+        `User has skipped recommendations for ${fund} ${count} times in 6 months. Consider whether this fund still fits.`
+      )
+    }
+  }
+  if (adherencePct !== null && adherencePct < 60) {
+    patterns.push(
+      `Low adherence (${adherencePct}%). User consistently invests less than recommended. Plans may be too aggressive or expenses underestimated.`
     )
-  const patS = patterns.length ? ` ${patterns.join(' ')}` : ''
-  return ` ${header}${skips}${adherence}${patS}`
+  }
+
+  return `
+  RECENT EXECUTION HISTORY (rolling 6 months):
+    Total recommended: ${totalRecommended.toFixed(0)} CZK across ${recentPlans.length} plans
+    Executed: ${totalExecuted.toFixed(0)} CZK (${adherencePct ?? 'n/a'}% adherence)
+    Skipped: ${totalSkipped.toFixed(0)} CZK
+    Recent skips:
+${recentSkips.map((s) => `    - ${s.date}: ${s.fund} ${s.amount.toFixed(0)} CZK — "${s.reason}"`).join('\n') || '    (none)'}
+${patterns.length > 0 ? '\n   PATTERN DETECTED:\n' + patterns.map((p) => `    * ${p}`).join('\n') : ''}
+  `
 }
 
 export async function buildFullContext(
@@ -95,9 +109,10 @@ export async function buildFullContext(
   const libS = `Library top by category: ${JSON.stringify(
     library.slice(0, 8).map((l) => ({ isin: l.isin, name: l.name, s: l.score, ter: l.terPct }))
   )}.`
+  const base = parts.join(' ') + libS
+  const baseTrimmed = base.length > 2800 ? base.slice(0, 2800) + '...' : base
   const exec = await buildExecutionHistoryAppendix()
-  const s = parts.join(' ') + libS + exec
-  return s.length > 3200 ? s.slice(0, 3200) + '...' : s
+  return baseTrimmed + exec
 }
 
 function detectQuestionType(q: string): string {
@@ -205,6 +220,7 @@ function parseAIResponse(text: string | null | undefined): {
 export type AskKeys = { anthropicKey: string; openaiKey: string }
 
 export async function askArtha(question: string, portfolio: any, keys: AskKeys): Promise<AIMemory> {
+  const prisma = await getPrisma()
   const { anthropicKey, openaiKey } = keys
   const library = await loadAllLibrary()
   const rbiInfo = getRbiRepoRate()
@@ -312,5 +328,6 @@ CRITICAL RULES:
 }
 
 export async function lastMemories(n: number) {
+  const prisma = await getPrisma()
   return prisma.aIMemory.findMany({ orderBy: { createdAt: 'desc' }, take: n })
 }

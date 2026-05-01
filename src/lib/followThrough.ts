@@ -1,5 +1,5 @@
 import type { AllocationPlan } from '@prisma/client'
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { ensureRowType, isAdherenceRow } from './allocationRowTypes'
 
 type AllocRow = Record<string, unknown>
@@ -9,6 +9,7 @@ type AllocRow = Record<string, unknown>
  * with SipExecution + Advisor journal per row with ISIN, matching single-row PATCH behavior.
  */
 export async function markAllPendingRowsDone(planId: string, opts?: { executedAt?: string }): Promise<AllocationPlan> {
+  const prisma = await getPrisma()
   const plan = await prisma.allocationPlan.findUnique({ where: { id: planId } })
   if (!plan) {
     throw new Error('Plan not found')
@@ -51,10 +52,13 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
       const isin = r.isin != null ? String(r.isin) : ''
       const isSell = typed.type === 'SELL'
       const fundLabel = isSell ? String((r as { source?: string }).source || 'Fund') : String(r.destination || 'Fund')
+      const rowKey =
+        typeof r.rowKey === 'string' && r.rowKey.length > 0 ? String(r.rowKey) : null
       if (isin) {
         await tx.sipExecution.create({
           data: {
             planId,
+            planRowKey: rowKey,
             scheduledDate: new Date(),
             executedDate: new Date(executedAtIso),
             isin,

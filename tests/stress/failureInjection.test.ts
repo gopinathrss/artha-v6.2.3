@@ -7,7 +7,13 @@ const prismaFI = vi.hoisted(() => ({
   advisorJournal: { create: vi.fn() }
 }))
 
-vi.mock('../../src/lib/prisma', () => ({ prisma: prismaFI }))
+vi.mock('../../src/lib/prisma', () => ({
+  prisma: prismaFI,
+  realPrisma: prismaFI,
+  demoPrisma: prismaFI,
+  getPrisma: vi.fn(async () => prismaFI),
+  invalidateDemoStateCache: vi.fn()
+}))
 
 describe('stress: failure handling (mocks)', () => {
   beforeEach(() => {

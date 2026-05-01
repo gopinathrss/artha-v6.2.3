@@ -167,21 +167,19 @@
 
 ## Section 5 — Recommendation continuity
 
-**F5.1 [HIGH] [ARCHITECTURE]** `generateMonthlyPlan` / `buildMonthlyPlanPayload` **do not query** prior `AllocationPlan` rows.
+**F5.1 [CLOSED 2026-04-30 — Area 4]** `generateMonthlyPlan` reads the most recent prior `AllocationPlan`, applies continuity bias (+10 score for prior BUY ISINs), reason text distinguishes new vs continuing picks, and `continuity` metadata is stored on the new plan.
 
-- **Where:** `allocationPlanner.ts` — only current month inputs via Prisma (`findMany` income/expense/events) — no `getPlanForMonth(prev)`.
-
-**F5.2 [MEDIUM] [LOGIC]** AI prompt includes `lastMemories(3)` only (`aiIntelligence.ts` 150–154), **not** structured last-3-month plan-vs-executed tables.
+**F5.2 [CLOSED 2026-04-30 — Area 4]** `buildFullContext` / `buildExecutionHistoryAppendix` include **rolling 6-month** recommended vs executed CZK, adherence %, recent skips, and auto-detected pattern flags (per-fund skip counts, low adherence).
 
 **F5.3 [MEDIUM] [LOGIC]** No logic: “rejected twice → stop recommending” for plan rows. Skipped rows are journalized (`cfoRoutes.ts` 435–442) but **not** fed back into planner.
 
-**F5.4 [LOW] [ARCHITECTURE]** `RecommendationOutcome` model exists (`schema.prisma` 230–244) but **no** automated writer found in reviewed planner/AI paths (grep not run across entire repo — **potential** dead table).
+**F5.4 [CLOSED 2026-04-30 — Area 4]** `RecommendationOutcome` rows created for each BUY/SELL at plan generation; `evaluatePendingOutcomes` runs on daily cron (02:00 Europe/Prague) and via `POST /api/outcomes/evaluate`; `GET /api/outcomes/summary` returns aggregates.
 
 ---
 
 ## Section 6 — UI / UX / smoothness
 
-**F6.1 [CRITICAL] [UI]** Demo mode banner says **“Settings still edit the real database”** (`settings.html` 10–12). **Demo APIs** return canned JSON for many reads but **writes** to profile/plan/etc. are blocked selectively — easy to misunderstand and **cross-contaminate** mental model vs data.
+**F6.1 [CLOSED 2026-04-30 — Area 4]** Demo mode uses **separate Postgres** (`DATABASE_URL_DEMO` / `artha_v4_demo`); `getPrisma()` routes all user data to demo or real DB. `Settings` (incl. `demoModeEnabled`) is read/written on the **real** DB only. Toggling demo on wipes and reseeds the demo database.
 
 **F6.2 [MEDIUM] [UI]** Display currency: `ArthaUI.formatMoneyFromCzk` only affects elements explicitly switched to it (`artha-ui.js` 60–71). Any page that still uses raw `formatCZK` or server-rendered numbers **will not** switch — prior “partial” audit concern **remains by design** unless each page migrated.
 

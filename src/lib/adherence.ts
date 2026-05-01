@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { isAdherenceRow } from './allocationRowTypes'
 
 function lastNMonthYearLabels(n: number): string[] {
@@ -37,6 +37,7 @@ function countRowStates(arr: unknown): { total: number; done: number; skipped: n
 
 /** Consecutive months (newest first) with a plan, ≥1 row, 0 pending. */
 export async function computeOnTrackStreakMax(): Promise<number> {
+  const prisma = await getPrisma()
   const labels = lastNMonthYearLabels(36)
   let streak = 0
   for (const my of labels) {
@@ -61,6 +62,7 @@ function rollingSinceMonthsAgo(months: number): Date {
 }
 
 export async function sumFollowThroughCzk(since: Date): Promise<number> {
+  const prisma = await getPrisma()
   const rows = await prisma.sipExecution.findMany({
     where: { executedDate: { gte: since } },
     select: { amountCzk: true }
@@ -73,6 +75,7 @@ export async function sumFollowThroughCzk(since: Date): Promise<number> {
 }
 
 export async function computeAdherenceStats(months: number) {
+  const prisma = await getPrisma()
   const labels = lastNMonthYearLabels(Math.max(1, Math.min(24, months)))
   let totalRows = 0
   let doneRows = 0

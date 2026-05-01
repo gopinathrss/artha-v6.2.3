@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { num } from './money'
 import { isAdherenceRow } from './allocationRowTypes'
 
@@ -52,6 +52,7 @@ function countRows(arr: unknown): { total: number; done: number; skipped: number
 
 /** Last N calendar months (including current), newest first in the array. */
 export async function getMonthlyPlanOutcomes(months: number): Promise<MonthPlanOutcome[]> {
+  const prisma = await getPrisma()
   const n = Math.max(1, Math.min(24, months))
   const labels = lastNMonthYearLabels(n)
   const out: MonthPlanOutcome[] = []

@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
-import { prisma } from './prisma'
+import { getPrisma } from './prisma'
 import { buildReportData, type ReportAudience as PremAudience } from './reports/buildReportData'
 import { renderTenSectionReportHtml, type ReportAudience } from './reportDocument'
 
@@ -63,6 +63,7 @@ export async function createReport(
     generatedAt: data.generatedAtIso
   }
 
+  const prisma = await getPrisma()
   const r = await prisma.generatedReport.create({
     data: {
       type: reportType,

@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { prisma } from './prisma'
+import { realPrisma } from './prisma'
 
 export async function sendEmail(
   to: string,
@@ -7,7 +7,7 @@ export async function sendEmail(
   htmlContent: string
 ): Promise<{ sent: boolean; error?: string }> {
   try {
-    const settings = await prisma.settings.findFirst()
+    const settings = await realPrisma.settings.findFirst()
     if (!settings?.smtpUser || !settings.smtpPass) {
       return { sent: false, error: 'SMTP not configured. Go to Settings → Integrations.' }
     }
@@ -36,7 +36,7 @@ export async function sendEmail(
 }
 
 export async function sendTestEmail(): Promise<{ sent: boolean; error?: string }> {
-  const settings = await prisma.settings.findFirst()
+  const settings = await realPrisma.settings.findFirst()
   if (!settings?.alertEmail) return { sent: false, error: 'No alert email configured' }
   return sendEmail(
     settings.alertEmail,

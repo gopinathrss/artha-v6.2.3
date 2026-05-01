@@ -1,9 +1,8 @@
 import express from 'express'
 import fs from 'fs'
 import path from 'path'
-import { prisma } from '../lib/prisma'
+import { getPrisma, realPrisma } from '../lib/prisma'
 import { getPortfolioSummary } from '../lib/portfolio'
-import { getDemoPortfolio } from '../lib/demoData'
 import { loadAllLibrary, findBestAlternative, compareFundToETF, scoreInstrument } from '../lib/instrumentLibrary'
 import { askArtha } from '../lib/aiIntelligence'
 import { sendTestEmail } from '../lib/emailService'
@@ -60,7 +59,7 @@ app.use(
 
 async function isDemoMode(): Promise<{ demo: boolean; persona: string }> {
   try {
-    const s = await prisma.settings.findFirst()
+    const s = await realPrisma.settings.findFirst()
     return { demo: s?.demoModeEnabled ?? false, persona: s?.demoPersona ?? 'engineer' }
   } catch {
     return { demo: false, persona: 'engineer' }
@@ -77,10 +76,6 @@ function clientKey(req: express.Request) {
 }
 
 async function getIntelligencePortfolio() {
-  const { demo, persona } = await isDemoMode()
-  if (demo) {
-    return getDemoPortfolio(persona) as any
-  }
   const s = await getPortfolioSummary()
   if (!s.success || !s.data) return null
   return s.data
@@ -129,58 +124,51 @@ app.get('/profile', (_req, res) => {
 registerCfoRoutes(app)
 
 app.get('/api/overview', async (_req, res) => {
-  const { demo, persona } = await isDemoMode()
-  if (demo) return res.json({ success: true, ...getDemoPortfolio(persona), demo: true })
+  const { demo } = await isDemoMode()
   const result = await getPortfolioSummary()
-  res.json(result)
+  if (!result.success) {
+    return res.json(result)
+  }
+  return res.json({ ...result, demo })
 })
 
 app.get('/api/holdings', async (_req, res) => {
-  const { demo, persona } = await isDemoMode()
-  if (demo) {
-    const d = getDemoPortfolio(persona)
-    return res.json({ success: true, data: { holdings: d.holdings }, demo: true })
-  }
+  const { demo } = await isDemoMode()
   try {
+    const prisma = await getPrisma()
     const holdings = await prisma.holding.findMany({
       include: { cashflows: { orderBy: { date: 'asc' } } },
       orderBy: { createdAt: 'asc' }
     })
-    res.json({ success: true, data: { holdings } })
+    res.json({ success: true, data: { holdings }, demo })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
   }
 })
 
 app.get('/api/alerts', async (_req, res) => {
-  const { demo, persona } = await isDemoMode()
-  if (demo) {
-    const d = getDemoPortfolio(persona)
-    return res.json({ success: true, data: { alerts: d.alerts }, demo: true })
-  }
+  const { demo } = await isDemoMode()
   try {
+    const prisma = await getPrisma()
     const alerts = await prisma.alertLog.findMany({
       orderBy: { firedAt: 'desc' },
       take: 20
     })
-    res.json({ success: true, data: { alerts } })
+    res.json({ success: true, data: { alerts }, demo })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
   }
 })
 
 app.get('/api/snapshots', async (_req, res) => {
-  const { demo, persona } = await isDemoMode()
-  if (demo) {
-    const d = getDemoPortfolio(persona)
-    return res.json({ success: true, data: { snapshots: d.snapshots }, demo: true })
-  }
+  const { demo } = await isDemoMode()
   try {
+    const prisma = await getPrisma()
     const snapshots = await prisma.snapshot.findMany({
       orderBy: { date: 'asc' },
       take: 36
     })
-    res.json({ success: true, data: { snapshots } })
+    res.json({ success: true, data: { snapshots }, demo })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
   }
@@ -188,8 +176,8 @@ app.get('/api/snapshots', async (_req, res) => {
 
 app.get('/api/settings', async (_req, res) => {
   try {
-    let s = await prisma.settings.findFirst()
-    if (!s) s = await prisma.settings.create({ data: {} })
+    let s = await realPrisma.settings.findFirst()
+    if (!s) s = await realPrisma.settings.create({ data: {} })
     const safe = {
       ...s,
       smtpPass: '••••••',
@@ -204,17 +192,35 @@ app.get('/api/settings', async (_req, res) => {
 
 app.post('/api/settings', async (req, res) => {
   try {
-    let s = await prisma.settings.findFirst()
+    let s = await realPrisma.settings.findFirst()
+    const prevDemo = s?.demoModeEnabled ?? false
     const body = { ...req.body }
     if (body.smtpPass === '••••••') delete body.smtpPass
     if (body.openaiApiKey?.startsWith('sk-••••')) delete body.openaiApiKey
     if (body.telegramBotToken === '••••') delete body.telegramBotToken
 
     if (s) {
-      await prisma.settings.update({ where: { id: s.id }, data: body })
+      await realPrisma.settings.update({ where: { id: s.id }, data: body })
     } else {
-      await prisma.settings.create({ data: body })
+      await realPrisma.settings.create({ data: body })
     }
+
+    const refreshed = await realPrisma.settings.findFirst()
+    const nextDemo = refreshed?.demoModeEnabled ?? false
+    if (nextDemo && !prevDemo) {
+      const persona =
+        typeof body.demoPersona === 'string' && body.demoPersona.length > 0
+          ? body.demoPersona
+          : (refreshed?.demoPersona ?? 'engineer')
+      const { wipeAndSeedDemoDb } = await import('../lib/demoSeed')
+      const { invalidateDemoStateCache } = await import('../lib/prismaProvider')
+      await wipeAndSeedDemoDb(persona)
+      invalidateDemoStateCache()
+    } else if (!nextDemo && prevDemo) {
+      const { invalidateDemoStateCache } = await import('../lib/prismaProvider')
+      invalidateDemoStateCache()
+    }
+
     res.json({ success: true, data: { saved: true } })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
@@ -223,6 +229,7 @@ app.post('/api/settings', async (req, res) => {
 
 app.get('/api/accounts', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     const accounts = await prisma.account.findMany({ orderBy: { createdAt: 'asc' } })
     res.json({ success: true, data: { accounts } })
   } catch (e: any) {
@@ -232,8 +239,7 @@ app.get('/api/accounts', async (_req, res) => {
 
 app.post('/api/accounts', async (req, res) => {
   try {
-    const { demo } = await isDemoMode()
-    if (demo) return res.status(403).json({ success: false, error: 'Cannot modify data in demo mode' })
+    const prisma = await getPrisma()
     const acc = await prisma.account.create({ data: req.body })
     res.status(201).json({ success: true, data: { account: acc } })
   } catch (e: any) {
@@ -243,8 +249,7 @@ app.post('/api/accounts', async (req, res) => {
 
 app.put('/api/accounts/:id', async (req, res) => {
   try {
-    const { demo } = await isDemoMode()
-    if (demo) return res.status(403).json({ success: false, error: 'Demo mode active' })
+    const prisma = await getPrisma()
     const updated = await prisma.account.update({ where: { id: req.params.id }, data: req.body })
     res.json({ success: true, data: { account: updated } })
   } catch (e: any) {
@@ -254,9 +259,7 @@ app.put('/api/accounts/:id', async (req, res) => {
 
 app.post('/api/holdings', async (req, res) => {
   try {
-    const { demo } = await isDemoMode()
-    if (demo) return res.status(403).json({ success: false, error: 'Cannot modify data in demo mode' })
-
+    const prisma = await getPrisma()
     const body = req.body
     const purchaseDate = new Date(body.purchaseStartDate)
     const taxFreeDate = new Date(purchaseDate)
@@ -278,9 +281,7 @@ app.post('/api/holdings', async (req, res) => {
 
 app.put('/api/holdings/:id', async (req, res) => {
   try {
-    const { demo } = await isDemoMode()
-    if (demo) return res.status(403).json({ success: false, error: 'Demo mode active' })
-
+    const prisma = await getPrisma()
     const body: any = { ...req.body }
     if (body.units !== undefined || body.nav !== undefined) {
       const current = await prisma.holding.findUnique({ where: { id: req.params.id } })
@@ -301,8 +302,7 @@ app.put('/api/holdings/:id', async (req, res) => {
 
 app.delete('/api/holdings/:id', async (req, res) => {
   try {
-    const { demo } = await isDemoMode()
-    if (demo) return res.status(403).json({ success: false, error: 'Demo mode active' })
+    const prisma = await getPrisma()
     await prisma.holding.update({ where: { id: req.params.id }, data: { status: 'EXITED' } })
     res.json({ success: true })
   } catch (e: any) {
@@ -312,6 +312,7 @@ app.delete('/api/holdings/:id', async (req, res) => {
 
 app.get('/api/system/status', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     const [hCount, sCount, aCount] = await Promise.all([
       prisma.holding.count(),
       prisma.snapshot.count(),
@@ -340,6 +341,7 @@ app.post('/api/refresh', async (_req, res) => {
 
 app.get('/api/library', async (req, res) => {
   try {
+    const prisma = await getPrisma()
     const where: Record<string, unknown> = {}
     if (req.query.category) where.category = String(req.query.category).toUpperCase()
     if (req.query.availableInGeorge === 'true') where.availableInGeorge = true
@@ -356,6 +358,7 @@ app.get('/api/library', async (req, res) => {
 
 app.get('/api/library/compare/:holdingId', async (req, res) => {
   try {
+    const prisma = await getPrisma()
     const h = await prisma.holding.findUnique({ where: { id: req.params.holdingId } })
     if (!h) return res.status(404).json({ success: false, error: 'Holding not found' })
     const lib = await loadAllLibrary()
@@ -400,7 +403,7 @@ app.post('/api/intelligence/ask', async (req, res) => {
     }
     const portfolio = await getIntelligencePortfolio()
     if (!portfolio) return res.status(500).json({ success: false, error: 'Portfolio unavailable' })
-    const settings = await prisma.settings.findFirst()
+    const settings = await realPrisma.settings.findFirst()
     const anthropicKey = process.env.ANTHROPIC_API_KEY || ''
     const openaiKey = settings?.openaiApiKey || process.env.OPENAI_API_KEY || ''
     const mem = await askArtha(q, portfolio, { anthropicKey, openaiKey })
@@ -413,6 +416,7 @@ app.post('/api/intelligence/ask', async (req, res) => {
 
 app.get('/api/intelligence/history', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     const list = await prisma.aIMemory.findMany({ orderBy: { createdAt: 'desc' }, take: 20 })
     res.json({ success: true, data: { memories: list } })
   } catch (e: any) {
@@ -422,6 +426,7 @@ app.get('/api/intelligence/history', async (_req, res) => {
 
 app.post('/api/intelligence/feedback', async (req, res) => {
   try {
+    const prisma = await getPrisma()
     const { memoryId, feedback } = req.body
     if (!memoryId || !['HELPFUL', 'NOT_HELPFUL', 'PARTIALLY_HELPFUL'].includes(feedback)) {
       return res.status(400).json({ success: false, error: 'Invalid payload' })
@@ -438,6 +443,7 @@ app.post('/api/intelligence/feedback', async (req, res) => {
 
 app.get('/api/india/rates', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     const rows = await prisma.indiaIntelligence.findMany({
       where: { dataType: 'NRE_FD_RATE' },
       orderBy: { bankName: 'asc' }
@@ -456,6 +462,7 @@ app.get('/api/india/rates', async (_req, res) => {
 
 app.get('/api/india/analysis', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     const rbi = await prisma.indiaIntelligence.findFirst({
       where: { dataType: 'RBI_RATE' },
       orderBy: { validFrom: 'desc' }
@@ -505,6 +512,7 @@ app.post('/api/scheduler/run-now', async (_req, res) => {
 
 app.get('/api/currency/rates', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     const { ensureFreshRatesIfStale, getRateAge } = await import('../lib/currency')
     await ensureFreshRatesIfStale()
     const [e, u, i, age] = await Promise.all([
@@ -540,6 +548,7 @@ app.post('/api/currency/refresh', async (_req, res) => {
 
 app.post('/api/library/reseed', async (_req, res) => {
   try {
+    const prisma = await getPrisma()
     await prisma.instrumentLibrary.deleteMany({})
     const { seedLibraryWithTopETFs } = await import('../lib/instrumentLibrary')
     await seedLibraryWithTopETFs()
@@ -565,7 +574,7 @@ if (process.env.NODE_ENV !== 'test') {
       })
       await seedLibraryWithTopETFs()
       await seedNREFDRates()
-      const rbiN = await prisma.indiaIntelligence.count({ where: { dataType: 'RBI_RATE' } })
+      const rbiN = await realPrisma.indiaIntelligence.count({ where: { dataType: 'RBI_RATE' } })
       if (rbiN === 0) {
         const { fetchRBIRate } = await import('../lib/indiaIntelligence')
         await fetchRBIRate()

@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { isAdherenceRow } from './allocationRowTypes'
 import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS, getFxAgeHours } from './currency'
@@ -39,6 +39,7 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
 
 export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustScore: number }> {
   const checks: HealthRow[] = []
+  const prisma = await getPrisma()
 
   try {
     await prisma.$queryRaw`SELECT 1`
@@ -96,7 +97,7 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     checks.push({ name: 'NAV_FRESHNESS', status: 'WARN', message: 'Skip' })
   }
 
-  const s = await prisma.settings.findFirst()
+  const s = await realPrisma.settings.findFirst()
   checks.push({
     name: 'EMAIL_CONFIGURED',
     status: s?.smtpUser && s?.smtpPass ? 'PASS' : 'WARN',

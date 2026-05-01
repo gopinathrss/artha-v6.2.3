@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import {
   calculateXIRR,
@@ -15,13 +15,14 @@ import { getFXRates } from './fetchers'
 
 export async function getPortfolioSummary() {
   try {
+    const prisma = await getPrisma()
     const [holdings, accounts, settings, snapshots, indiaMutualFunds] = await Promise.all([
       prisma.holding.findMany({
         where: { status: { not: 'EXITED' } },
         include: { cashflows: true }
       }),
       prisma.account.findMany({ where: { isActive: true } }),
-      prisma.settings.findFirst(),
+      realPrisma.settings.findFirst(),
       prisma.snapshot.findMany({ orderBy: { date: 'desc' }, take: 13 }),
       prisma.indiaMutualFund.findMany()
     ])

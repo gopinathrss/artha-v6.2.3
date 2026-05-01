@@ -9,16 +9,22 @@ const mocks = vi.hoisted(() => ({
   upsert: vi.fn()
 }))
 
+const prismaNav = vi.hoisted(() => ({
+  holding: {
+    findMany: (...a: unknown[]) => mocks.findMany(...a),
+    update: (...a: unknown[]) => mocks.update(...a)
+  },
+  navHistory: { upsert: (...a: unknown[]) => mocks.upsert(...a) }
+}))
+
 vi.mock('../../src/lib/nav/erste', () => ({ fetchErsteNav: mocks.fetchErsteNav }))
 vi.mock('../../src/lib/nav/yahoo', () => ({ fetchYahooNav: mocks.fetchYahooNav }))
 vi.mock('../../src/lib/prisma', () => ({
-  prisma: {
-    holding: {
-      findMany: (...a: unknown[]) => mocks.findMany(...a),
-      update: (...a: unknown[]) => mocks.update(...a)
-    },
-    navHistory: { upsert: (...a: unknown[]) => mocks.upsert(...a) }
-  }
+  prisma: prismaNav,
+  realPrisma: prismaNav,
+  demoPrisma: prismaNav,
+  getPrisma: vi.fn(async () => prismaNav),
+  invalidateDemoStateCache: vi.fn()
 }))
 
 import { refreshAllCzechNavs } from '../../src/lib/nav/refreshAll'

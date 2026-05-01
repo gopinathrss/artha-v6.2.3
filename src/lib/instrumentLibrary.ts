@@ -1,5 +1,5 @@
-import { Prisma, type Holding, type InstrumentLibrary } from '@prisma/client'
-import { prisma } from './prisma'
+import { Prisma, type Holding, type InstrumentLibrary, type PrismaClient } from '@prisma/client'
+import { getPrisma } from './prisma'
 import { num } from './money'
 
 export function scoreInstrument(instrument: {
@@ -140,6 +140,7 @@ export async function getTopETFsByCategory(
   category: string,
   limit: number = 5
 ): Promise<InstrumentLibrary[]> {
+  const prisma = await getPrisma()
   return prisma.instrumentLibrary.findMany({
     where: { category: category.toUpperCase() as any, availableInGeorge: true },
     orderBy: { score: 'desc' },
@@ -189,6 +190,7 @@ export async function computeReturnsFromNavHistory(isin: string): Promise<{
   return5yr?: number | null
   return10yr?: number | null
 }> {
+  const prisma = await getPrisma()
   const rows = await prisma.navHistory.findMany({
     where: { isin },
     orderBy: { date: 'asc' }
@@ -235,6 +237,7 @@ export async function computeReturnsFromNavHistory(isin: string): Promise<{
 
 /** F2.7: Recompute returns from `NavHistory` where possible, re-score via `scoreInstrument`, update `score` + `scoreUpdatedAt`. Used by monthly cron and `POST /api/library/refresh-scores`. */
 export async function refreshAllLibraryScores(): Promise<{ updated: number; errors: number }> {
+  const prisma = await getPrisma()
   const instruments = await prisma.instrumentLibrary.findMany()
   let updated = 0
   let errors = 0
@@ -278,7 +281,8 @@ export async function refreshAllLibraryScores(): Promise<{ updated: number; erro
   return { updated, errors }
 }
 
-export async function seedLibraryWithTopETFs(): Promise<void> {
+export async function seedLibraryWithTopETFs(db?: PrismaClient): Promise<void> {
+  const prisma = db ?? (await getPrisma())
   const n = await prisma.instrumentLibrary.count()
   if (n > 0) return
   for (const row of TOP_ETF_SEED) {
@@ -297,5 +301,6 @@ export async function seedLibraryWithTopETFs(): Promise<void> {
 }
 
 export async function loadAllLibrary(): Promise<InstrumentLibrary[]> {
+  const prisma = await getPrisma()
   return prisma.instrumentLibrary.findMany()
 }

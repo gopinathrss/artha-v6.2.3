@@ -1,5 +1,5 @@
 import type { UserProfile } from '@prisma/client'
-import { prisma } from '../prisma'
+import { getPrisma } from '../prisma'
 import { getPortfolioSummary } from '../portfolio'
 import { buildMonthlyPlanPayload, currentMonthYear, getPlanForMonth, nextMonthYearString } from '../allocationPlanner'
 import { computeAdherenceStats } from '../adherence'
@@ -133,6 +133,7 @@ export async function buildReportData(
 ): Promise<PremiumReportData> {
   const my = monthYear || currentMonthYear()
   const client = audience === 'CLIENT'
+  const prisma = await getPrisma()
   const [portfolio, profile, lib, plan, adherence, mfs, fds, accounts, journals] = await Promise.all([
     getPortfolioSummary(),
     prisma.userProfile.findUnique({ where: { id: 'default' } }),

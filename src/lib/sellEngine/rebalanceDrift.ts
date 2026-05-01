@@ -1,6 +1,6 @@
 import type { Holding } from '@prisma/client'
 import type { SellRow } from '../allocationRowTypes'
-import { prisma } from '../prisma'
+import { getPrisma } from '../prisma'
 import { num } from '../money'
 import { calculateAllocation, calculateTaxStatus, mapCategoryToBuckets } from '../calculations'
 import { costBasisCzk } from './taxFreeExit'
@@ -57,6 +57,7 @@ export async function selectSellCandidates(
   amountNeededCzk: number,
   excludeIsins: Set<string>
 ): Promise<SellCandidate[]> {
+  const prisma = await getPrisma()
   const holdings = await prisma.holding.findMany({
     where: { status: 'ACTIVE', country: 'CZ' },
     include: { cashflows: true }

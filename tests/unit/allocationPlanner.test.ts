@@ -9,10 +9,17 @@ const prismaMock = vi.hoisted(() => ({
   holding: { findMany: vi.fn() },
   account: { findMany: vi.fn() },
   indiaMutualFund: { findMany: vi.fn() },
-  indiaFixedDeposit: { findMany: vi.fn() }
+  indiaFixedDeposit: { findMany: vi.fn() },
+  allocationPlan: { findFirst: vi.fn() }
 }))
 
-vi.mock('../../src/lib/prisma', () => ({ prisma: prismaMock }))
+vi.mock('../../src/lib/prisma', () => ({
+  prisma: prismaMock,
+  realPrisma: prismaMock,
+  demoPrisma: prismaMock,
+  getPrisma: vi.fn(async () => prismaMock),
+  invalidateDemoStateCache: vi.fn()
+}))
 
 vi.mock('../../src/lib/instrumentLibrary', () => ({
   loadAllLibrary: vi.fn(async () => [
@@ -149,6 +156,8 @@ beforeEach(() => {
   }
   prismaMock.indiaMutualFund.findMany.mockResolvedValue([] as never)
   prismaMock.indiaFixedDeposit.findMany.mockResolvedValue([] as never)
+  prismaMock.allocationPlan.findFirst.mockReset()
+  prismaMock.allocationPlan.findFirst.mockResolvedValue(null)
 })
 
 describe('buildMonthlyPlanPayload (10 scenarios)', () => {
