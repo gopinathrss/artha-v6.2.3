@@ -1058,6 +1058,55 @@ a[data-artha-setup-nav].artha-setup-nav--complete .artha-setup-dot {
     grid-template-columns: 1fr;
     gap: 14px;
   }
+
+  /* V4 pages must stay inside the viewport on phones. Hard cap the main column,
+     wrap topbar actions, and let dense tables become a horizontal scroll
+     region inside the card instead of bursting the page width. */
+  .main {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 14px;
+    row-gap: 8px;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .content {
+    padding: 14px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .main .table,
+  .main table.table,
+  .main table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .main .lede,
+  .main p,
+  .main pre {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  .main pre {
+    overflow-x: auto;
+  }
 }
 
 /* This month: horizontal month chips — touch scroll + snap */
