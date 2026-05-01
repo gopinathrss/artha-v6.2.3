@@ -6,6 +6,7 @@ import { fetchAllRates } from './currency'
 import { generateMonthlyPlan } from './allocationPlanner'
 import { sendEmail } from './emailService'
 import { buildPlanReadyEmail } from './planEmail'
+import { runCronJob } from './cronWrapper'
 
 export function startScheduler() {
   cron.schedule(
@@ -13,14 +14,11 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] FX refresh (CZK hub rates)...')
-      try {
+      await runCronJob('fx-refresh-weekday', async () => {
         await fetchAllRates()
         // eslint-disable-next-line no-console
         console.log('[Scheduler] FX rates updated')
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] FX refresh failed:', err?.message || err)
-      }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -30,14 +28,12 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Starting weekday morning job...')
-      try {
+      await runCronJob('morning-job-weekday', async () => {
         const r = await runMorningJob()
         // eslint-disable-next-line no-console
         console.log('[Scheduler] FX + prices + triggers done', r)
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Morning job failed:', err?.message || err)
-      }
+        return { itemsProcessed: r.triggered + r.alertsCreated }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -47,7 +43,7 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Starting monthly letter generation...')
-      try {
+      await runCronJob('monthly-letter', async () => {
         const portfolio = await getPortfolioSummary()
         const settings = await realPrisma.settings.findFirst()
         if (settings?.monthlyLetterEnabled && portfolio.success && portfolio.data) {
@@ -55,10 +51,8 @@ export function startScheduler() {
           // eslint-disable-next-line no-console
           console.log('[Scheduler] Monthly letter sent')
         }
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Monthly letter failed:', err?.message || err)
-      }
+        return { itemsProcessed: 1 }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -68,14 +62,11 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Starting weekly backup...')
-      try {
+      await runCronJob('weekly-backup', async () => {
         await runWeeklyBackup()
         // eslint-disable-next-line no-console
         console.log('[Scheduler] Backup complete')
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Backup failed:', err?.message || err)
-      }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -85,13 +76,13 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Month-end review reminder (EOM)...')
-      try {
+      await runCronJob('eom-journal', async () => {
         const prisma = await getPrisma()
         const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
         if (!profile) {
           // eslint-disable-next-line no-console
           console.log('[Scheduler] No profile. Skipping EOM journal.')
-          return
+          return { itemsProcessed: 0 }
         }
         const tzPrague = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Prague' }))
         const prev = new Date(tzPrague.getFullYear(), tzPrague.getMonth() - 1, 1)
@@ -105,10 +96,8 @@ export function startScheduler() {
         })
         // eslint-disable-next-line no-console
         console.log('[Scheduler] EOM journal entry created for', prevLabel)
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] EOM job failed:', err?.message || err)
-      }
+        return { itemsProcessed: 1 }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -118,13 +107,13 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Daily salary check (auto plan)...')
-      try {
+      await runCronJob('salary-auto-plan', async () => {
         const prisma = await getPrisma()
         const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
         if (!profile) {
           // eslint-disable-next-line no-console
           console.log('[Scheduler] No profile. Skipping salary check.')
-          return
+          return { itemsProcessed: 0 }
         }
         const today = new Date()
         const tzPrague = new Date(today.toLocaleString('en-US', { timeZone: 'Europe/Prague' }))
@@ -135,7 +124,7 @@ export function startScheduler() {
           console.log(
             `[Scheduler] Not salary+1 day. today=${dayOfMonth}, expected=${expectedTriggerDay}`
           )
-          return
+          return { itemsProcessed: 0 }
         }
         const monthYear = `${tzPrague.getFullYear()}-${String(tzPrague.getMonth() + 1).padStart(2, '0')}`
         const existingPlan = await prisma.allocationPlan.findFirst({
@@ -144,7 +133,7 @@ export function startScheduler() {
         if (existingPlan) {
           // eslint-disable-next-line no-console
           console.log(`[Scheduler] Plan for ${monthYear} already exists. Skipping.`)
-          return
+          return { itemsProcessed: 0 }
         }
         // eslint-disable-next-line no-console
         console.log(`[Scheduler] Auto-generating plan for ${monthYear}`)
@@ -170,10 +159,8 @@ export function startScheduler() {
         })
         // eslint-disable-next-line no-console
         console.log('[Scheduler] Plan generated (AUTO_CRON)')
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Salary check failed:', err?.message || err)
-      }
+        return { itemsProcessed: 1 }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -183,7 +170,7 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Daily digest (08:00 Europe/Prague)…')
-      try {
+      await runCronJob('daily-digest', async () => {
         const { buildDailyDigest, getTelegramBot } = await import('./telegram/bot')
         const text = await buildDailyDigest()
         const settings = await realPrisma.settings.findFirst()
@@ -202,10 +189,8 @@ export function startScheduler() {
             '<pre style="font-family:system-ui,sans-serif;white-space:pre-wrap">' + safe + '</pre>'
           )
         }
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Daily digest failed:', err?.message || err)
-      }
+        return { itemsProcessed: 1 }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -215,7 +200,7 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] AMFI NAVAll (India)…')
-      try {
+      await runCronJob('amfi-navall-ingest', async () => {
         const { ingestAmfiNavAll } = await import('./amfiIngest')
         const r = await ingestAmfiNavAll()
         if (!r.ok) {
@@ -225,10 +210,8 @@ export function startScheduler() {
           // eslint-disable-next-line no-console
           console.log('[Scheduler] AMFI OK inserted=', r.inserted, 'parsed=', r.parsed)
         }
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] AMFI error:', err?.message || err)
-      }
+        return { itemsProcessed: r.inserted }
+      })
     },
     { timezone: 'Asia/Kolkata' }
   )
@@ -238,7 +221,7 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Czech NAV refresh starting')
-      try {
+      await runCronJob('nav-refresh-czech', async () => {
         const { refreshAllCzechNavs } = await import('./nav/refreshAll')
         const result = await refreshAllCzechNavs()
         // eslint-disable-next-line no-console
@@ -255,10 +238,8 @@ export function startScheduler() {
             }
           })
         }
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Czech NAV refresh failed:', err?.message || err)
-      }
+        return { itemsProcessed: result.refreshed }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -268,17 +249,15 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Library scores refresh (monthly)…')
-      try {
+      await runCronJob('library-scores-monthly', async () => {
         const { refreshAllLibraryScores } = await import('./instrumentLibrary')
         const result = await refreshAllLibraryScores()
         // eslint-disable-next-line no-console
         console.log(
           `[Scheduler] Library scores refresh: ${result.updated} updated, ${result.errors} errors`
         )
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Library scores refresh failed:', err?.message || err)
-      }
+        return { itemsProcessed: result.updated }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
@@ -288,22 +267,21 @@ export function startScheduler() {
     async () => {
       // eslint-disable-next-line no-console
       console.log('[Scheduler] Outcome evaluation starting')
-      try {
+      await runCronJob('outcome-evaluation-daily', async () => {
         const { evaluatePendingOutcomes } = await import('./outcomeEvaluation')
         const r = await evaluatePendingOutcomes()
         // eslint-disable-next-line no-console
         console.log('[Scheduler] Outcome evaluation done, touched=', r.touched)
-      } catch (err: unknown) {
-        const m = err instanceof Error ? err.message : String(err)
-        // eslint-disable-next-line no-console
-        console.error('[Scheduler] Outcome evaluation failed:', m)
-      }
+        return { itemsProcessed: r.touched }
+      })
     },
     { timezone: 'Europe/Prague' }
   )
 
   // eslint-disable-next-line no-console
   console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Cron execution ledger active (CronExecution table)')
   // eslint-disable-next-line no-console
   console.log('[Scheduler] Outcome evaluation cron registered (daily 02:00 Europe/Prague)')
   // eslint-disable-next-line no-console
