@@ -2,6 +2,15 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
+    env: {
+      // Required by prismaProvider.ts (must differ from DATABASE_URL)
+      DATABASE_URL:
+        process.env.DATABASE_URL ||
+        'postgresql://postgres:postgres@127.0.0.1:5544/artha_v4?schema=public',
+      DATABASE_URL_DEMO:
+        process.env.DATABASE_URL_DEMO ||
+        'postgresql://postgres:postgres@127.0.0.1:5544/artha_v4_demo?schema=public'
+    },
     globals: true,
     environment: 'node',
     testTimeout: 60_000,
