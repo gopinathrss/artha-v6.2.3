@@ -2,6 +2,7 @@ import type { Application, Request, Response } from 'express'
 import { getPrisma, realPrisma } from '../lib/prisma'
 import { createReport, renderReportViewHtml } from '../lib/reportsService'
 import { registerExcelImportRoutes } from './excelImportRoutes'
+import { registerEmailIngestionRoutes } from './emailIngestionRoutes'
 import { HEALTH_CHECK_COUNT, runHealthChecks } from '../lib/health'
 import { currentMonthYear, generateMonthlyPlan, getPlanForMonth } from '../lib/allocationPlanner'
 import { sendEmail } from '../lib/emailService'
@@ -879,4 +880,5 @@ export function registerCfoRoutes(app: Application) {
   })
 
   registerExcelImportRoutes(app)
+  registerEmailIngestionRoutes(app)
 }
