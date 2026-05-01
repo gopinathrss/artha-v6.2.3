@@ -694,3 +694,611 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Sprint 3 — shared utilities used by every page after Overview.
+   These are intentionally global because the same form / toggle /
+   plan-row patterns repeat across This month, Settings, Finances,
+   India, etc. Page-specific styles live below in clearly-labelled
+   blocks (// Page X) per Rule R6.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* === Form fields === */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.form-field-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.form-field-input,
+.form-field-select,
+.form-field-textarea {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color var(--duration-fast) var(--ease-out);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-field-input:focus,
+.form-field-select:focus,
+.form-field-textarea:focus {
+  border-color: var(--color-accent-base);
+  outline: 2px solid var(--color-accent-subtle);
+  outline-offset: 0;
+}
+
+.form-field-textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-field-help {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+  flex-wrap: wrap;
+}
+
+/* === Toggle switch === */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  border-radius: var(--radius-full);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--color-accent-base);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(16px);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.toggle-row:last-child {
+  border-bottom: none;
+}
+
+.toggle-row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle-row-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.toggle-row-desc {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+/* === Plan row (used by /this-month for BUY/SELL/RESERVE/HOLD lines) === */
+.plan-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.plan-row:last-child {
+  border-bottom: none;
+}
+
+.plan-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--weight-semibold);
+}
+
+.plan-row-icon-BUY {
+  background: var(--color-positive-subtle);
+  color: var(--color-positive-text);
+}
+
+.plan-row-icon-SELL {
+  background: var(--color-negative-subtle);
+  color: var(--color-negative-text);
+}
+
+.plan-row-icon-RESERVE {
+  background: var(--color-info-subtle);
+  color: var(--color-info-text);
+}
+
+.plan-row-icon-hold {
+  background: var(--color-bg-muted);
+  color: var(--color-text-tertiary);
+}
+
+.plan-row-main {
+  min-width: 0;
+}
+
+.plan-row-title-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.plan-row-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.plan-row-name-muted {
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-regular);
+}
+
+.plan-row-reason {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.plan-row-tax {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.plan-row-amount {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.plan-row-amount-muted {
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-regular);
+}
+
+.plan-row-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .plan-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    row-gap: var(--space-2);
+  }
+
+  .plan-row-amount {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .plan-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+/* === Text colour helpers (used by inline status fragments) === */
+.text-positive {
+  color: var(--color-positive-text);
+}
+
+.text-negative {
+  color: var(--color-negative-text);
+}
+
+.text-warning {
+  color: var(--color-warning-text);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+/* === Empty state (centered card body) === */
+.empty-state {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-text-tertiary);
+}
+
+.empty-state-message {
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
+}
+
+/* === Page Tax calendar — staged urgency lists === */
+.tax-calendar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.tax-calendar-row:last-child {
+  border-bottom: none;
+}
+
+.tax-calendar-row-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin-bottom: 2px;
+}
+
+.tax-calendar-row-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tax-calendar-row-value {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .tax-calendar-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+  }
+
+  .tax-calendar-row-value {
+    grid-column: 2;
+  }
+}
+
+/* === Page Alerts — alert card === */
+.alert-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.alert-row:last-child {
+  border-bottom: none;
+}
+
+.alert-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  margin-top: 6px;
+}
+
+.alert-row-dot.crit {
+  background: var(--color-negative-base);
+}
+
+.alert-row-dot.warn {
+  background: var(--color-warning-base);
+}
+
+.alert-row-dot.info {
+  background: var(--color-info-base);
+}
+
+.alert-row-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin-bottom: 2px;
+}
+
+.alert-row-message {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.alert-row-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+}
+
+/* === Page Library — score badge tinting === */
+.score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-badge.strong {
+  background: var(--color-positive-subtle);
+  color: var(--color-positive-text);
+}
+
+.score-badge.good {
+  background: var(--color-info-subtle);
+  color: var(--color-info-text);
+}
+
+.score-badge.fair {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning-text);
+}
+
+.score-badge.weak {
+  background: var(--color-negative-subtle);
+  color: var(--color-negative-text);
+}
+
+/* === Page Intelligence — chat shell === */
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 420px;
+}
+
+.chat-msg {
+  max-width: 80%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.chat-msg-user {
+  align-self: flex-end;
+  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+}
+
+.chat-msg-assistant {
+  align-self: flex-start;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.chat-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.chip {
+  font-size: var(--text-xs);
+  padding: 4px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.chip:hover {
+  background: var(--color-bg-muted);
+  color: var(--color-text-primary);
+}
+
+.chat-composer {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.chat-composer textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 200px;
+}
+
+/* === Page Onboarding — wizard chrome === */
+.wizard-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) var(--space-4);
+  background: var(--color-bg-base);
+  box-sizing: border-box;
+}
+
+.wizard-inner {
+  width: 100%;
+  max-width: 600px;
+}
+
+.wizard-brand {
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.wizard-brand-name {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+}
+
+.wizard-brand-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
+.wizard-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.wizard-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-default);
+}
+
+.wizard-dot.on {
+  background: var(--color-accent-base);
+}
+
+/* === Page Settings — long-form section spacing === */
+.settings-stack > .card {
+  margin-bottom: var(--space-5);
+}
+
+.settings-stack > .card:last-child {
+  margin-bottom: 0;
+}
+
+/* === Callout (used by demo mode warning, etc.) === */
+.callout {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-subtle);
+}
+
+.callout-warning {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning-text);
+  border-color: color-mix(in srgb, var(--color-warning-base) 25%, transparent);
+}
+
+.callout-info {
+  background: var(--color-info-subtle);
+  color: var(--color-info-text);
+  border-color: color-mix(in srgb, var(--color-info-base) 25%, transparent);
+}
+
+/* === Inline editable row (used by NRE FD rates etc.) === */
+.kv-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-sm);
+}
+
+.kv-row:last-child {
+  border-bottom: none;
+}
+
+.kv-row-key {
+  color: var(--color-text-secondary);
+}
+
+.kv-row-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+}

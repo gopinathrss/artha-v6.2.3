@@ -4,768 +4,187 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — India</title>
-        <script src="/scripts/theme.js"></script>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
-    <style>
-      .fd-timeline {
-        position: relative;
-        min-height: 120px;
-        margin: 12px 0 16px 0;
-        padding: 8px 0 12px 0;
-        border: 1px solid var(--border-subtle);
-        border-radius: 8px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-      .fd-bar {
-        position: absolute;
-        height: 18px;
-        border-radius: 6px;
-        top: 48px;
-        background: var(--teal);
-        opacity: 0.85;
-      }
-      .fd-tick {
-        position: absolute;
-        top: 0;
-        width: 1px;
-        height: 100%;
-        background: var(--border-mid);
-      }
-    </style>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE</div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div>
-            <h1>ARTHA</h1>
-            <small>Personal CFO</small>
-          </div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a class="active" href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions">
-            <button class="btn" type="button" id="btnTheme">Theme</button>
-            <button class="btn btn-gold" type="button" id="btnRefreshNav">Refresh NAV</button>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">India</h1>
+          </div>
+          <div class="topbar-actions">
+            <button
+              class="btn btn-ghost btn-sm"
+              id="refresh-btn"
+              aria-label="Refresh"
+              type="button"
+            >
+              Refresh
+            </button>
+            <button class="btn btn-primary btn-sm" id="refresh-nav-btn" type="button">
+              Refresh NAV
+            </button>
           </div>
         </header>
-        <main class="content">
-          <div class="v4-hero card col-12 card--soft" style="padding: 16px 18px; margin-bottom: 6px">
-            <div class="h1" style="font-size: 1.2rem">India lane</div>
-            <p class="lede" style="max-width: 64ch; margin: 0">
-              NRE/NRO balances, India mutual funds (AMFI-backed NAVs when ISIN is set), and a fixed-deposit ladder. Not
-              tax advice—verify with a qualified advisor.
-            </p>
+
+        <div class="content">
+          <section class="overview-hero" id="hero">
+            <div class="hero-eyebrow">India wealth</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-total">—</div>
+            </div>
+            <div class="hero-meta" id="hero-sub">—</div>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-label">NRE balance</div>
+                <div class="hero-stat-value" id="stat-nre">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">NRO balance</div>
+                <div class="hero-stat-value" id="stat-nro">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Mutual funds</div>
+                <div class="hero-stat-value" id="stat-mf">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Fixed deposits</div>
+                <div class="hero-stat-value" id="stat-fd">—</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Indian mutual funds</h2>
+                <p class="card-subtitle" id="mf-subtitle">—</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="mf-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Scheme</th>
+                    <th scope="col">AMC</th>
+                    <th class="num" scope="col">Units</th>
+                    <th class="num" scope="col">NAV</th>
+                    <th class="num" scope="col">Value (INR)</th>
+                    <th class="num" scope="col">Value (CZK)</th>
+                  </tr>
+                </thead>
+                <tbody id="mf-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Fixed deposits</h2>
+                <p class="card-subtitle" id="fd-subtitle">—</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="fd-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Bank</th>
+                    <th scope="col">Type</th>
+                    <th class="num" scope="col">Principal</th>
+                    <th class="num" scope="col">Rate %</th>
+                    <th scope="col">Maturity</th>
+                    <th class="num" scope="col">Days left</th>
+                  </tr>
+                </thead>
+                <tbody id="fd-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="overview-row-2col">
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Best NRE FD (sample)</h2>
+                  <p class="card-subtitle" id="best-nre-meta">—</p>
+                </div>
+              </div>
+              <div class="hero-eyebrow">Top rate</div>
+              <div class="hero-value-row">
+                <div class="hero-value" id="best-nre-rate" style="font-size: var(--text-2xl);">—</div>
+              </div>
+              <div class="hero-meta" id="best-nre-bank">—</div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">FCNR vs NRE</h2>
+                  <p class="card-subtitle">Toy comparison</p>
+                </div>
+              </div>
+              <div id="fcnr-body" class="text-secondary" style="font-size: var(--text-sm); line-height: var(--leading-relaxed);">—</div>
+            </section>
           </div>
 
-          <div class="grid" style="gap: 16px">
-            <section class="card col-12" id="secA">
-              <div class="h2">A — NRE / NRO accounts</div>
-              <p class="sub muted" id="acctSync" style="min-height: 1.2em; margin: 0 0 8px 0">Loading…</p>
-              <div class="row" id="nreRow" style="border: 0; display: flex; flex-wrap: wrap; gap: 12px">—</div>
-            </section>
-
-            <section class="card col-12" id="secB">
-              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center">
-                <div class="h2" style="margin: 0">B — Mutual funds</div>
-                <button type="button" class="btn btn-gold" id="btnAddMf">+ Add fund</button>
+          <section class="card" style="margin-top: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Published NRE FD rates</h2>
+                <p class="card-subtitle">Reference rates from major banks</p>
               </div>
-              <p class="sub muted" style="font-size: 12px; margin: 4px 0 8px 0; max-width: 72ch">
-                Preset schemes include AMFI scheme codes; NAV refresh matches <span class="mono">NavHistory</span> on
-                <span class="mono">isin</span>. Enter/verify ISIN for live marks.
-              </p>
-              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px" id="presetRow"></div>
-              <div class="table-wrap">
-                <table class="table" style="font-size: 12px">
-                  <thead>
-                    <tr>
-                      <th>Scheme</th>
-                      <th>AMC</th>
-                      <th>Units</th>
-                      <th class="right">NAV</th>
-                      <th class="right">INR</th>
-                      <th class="right">CZK</th>
-                      <th class="right">XIRR</th>
-                      <th>Tax</th>
-                      <th>SIP</th>
-                    </tr>
-                  </thead>
-                  <tbody id="mfBody">
-                    <tr>
-                      <td colspan="9" class="muted">Loading…</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="card col-12" id="secC">
-              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; align-items: center">
-                <div class="h2" style="margin: 0">C — Fixed deposit ladder</div>
-                <button type="button" class="btn btn-gold" id="btnAddFd">+ Add FD</button>
-              </div>
-              <p class="sub muted" style="font-size: 12px; margin: 4px 0 8px 0">Next ~24 months (visual).</p>
-              <div class="fd-timeline" id="fdTimeline" aria-label="FD maturity timeline"></div>
-              <div id="fdRenew" style="display: none" class="goldbox" style="padding: 10px 12px; margin: 0 0 10px 0"></div>
-              <div class="table-wrap">
-                <table class="table" style="font-size: 12px">
-                  <thead>
-                    <tr>
-                      <th>Bank</th>
-                      <th>Acct</th>
-                      <th class="right">INR</th>
-                      <th class="right">Rate</th>
-                      <th>Maturity</th>
-                      <th class="right">Days</th>
-                      <th>TDS</th>
-                    </tr>
-                  </thead>
-                  <tbody id="fdBody">
-                    <tr>
-                      <td colspan="7" class="muted">—</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="card col-6" id="cardRbi">
-              <div class="h2">Policy &amp; best NRE (1yr sample)</div>
-              <p class="muted" id="rbiLine" style="min-height: 3.5em">Loading…</p>
-              <div class="kicker" id="bestBank" style="margin-top: 8px">—</div>
-            </section>
-            <section class="card col-6" id="cardDtaa">
-              <div class="h2">FCNR vs NRE (toy model)</div>
-              <p class="muted" id="fcnrLine" style="min-height: 4.5em">—</p>
-            </section>
-            <section class="card col-12">
-              <div class="h2">Banks with published NRE FDs (ingested sample)</div>
-              <p class="muted" style="margin-top: 0">Confirm live quotes with your bank.</p>
-              <div class="table-wrap">
-                <table class="table" id="rateTbl" style="font-size: 13px">
-                  <thead>
-                    <tr>
-                      <th>Bank</th>
-                      <th>Tenor</th>
-                      <th class="right">Rate %</th>
-                    </tr>
-                  </thead>
-                  <tbody id="rateBody"></tbody>
-                </table>
-              </div>
-            </section>
-            <section class="card col-12" id="cardAmfi">
-              <div class="h2">AMFI — NAV ingest</div>
-              <p class="muted" id="amfiStatus" style="min-height: 2.5em; margin: 0 0 6px 0">Loading…</p>
-              <p class="sub" style="margin: 0; max-width: 70ch; font-size: 12px; line-height: 1.45">
-                <code class="mono" style="font-size: 11px">NAVAll.txt</code> daily job (≈14:30 India). Admin:
-                <code class="mono" style="font-size: 11px">POST /api/india/amfi/ingest</code> (live).
-              </p>
-            </section>
-          </div>
-        </main>
-      </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="rates-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Bank</th>
+                    <th scope="col">Tenor</th>
+                    <th class="num" scope="col">Rate %</th>
+                  </tr>
+                </thead>
+                <tbody id="rates-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
 
-    <div
-      id="modalMf"
-      style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px"
-    >
-      <div class="card" style="max-width: 440px; width: 100%; padding: 16px" onclick="event.stopPropagation()">
-        <div class="h2" style="margin-top: 0">Add / edit fund</div>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >Scheme <input class="btn" id="m_name" type="text"
-        /></label>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >AMFI code <input class="btn" id="m_amfi" type="text"
-        /></label>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >ISIN (for NAV) <input class="btn" id="m_isin" type="text" placeholder="INF…"
-        /></label>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >Category
-          <select class="btn" id="m_cat"
-            ><option value="EQUITY">EQUITY</option
-            ><option value="ELSS">ELSS</option
-            ><option value="DEBT">DEBT</option
-            ><option value="BONDS">BONDS</option
-            ><option value="CASH">CASH</option
-            ><option value="MIXED">MIXED</option></select
-          ></label
-        >
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Units <input class="btn" id="m_units" type="number" step="0.0001"
-          /></label>
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Avg NAV (₹) <input class="btn" id="m_avg" type="number" step="0.0001"
-          /></label>
-        </div>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >Purchase date <input class="btn" id="m_purch" type="date"
-        /></label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >SIP ₹ (optional) <input class="btn" id="m_sip" type="number" step="1"
-          /></label>
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Folio <input class="btn" id="m_folio" type="text"
-          /></label>
-        </div>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >AMC <input class="btn" id="m_amc" type="text"
-        /></label>
-        <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 6px 0"
-          ><input type="checkbox" id="m_sipact" /> SIP active</label
-        >
-        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px">
-          <button type="button" class="btn" id="m_cancel">Cancel</button>
-          <button type="button" class="btn btn-gold" id="m_save">Save</button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      id="modalFd"
-      style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; padding: 16px"
-    >
-      <div class="card" style="max-width: 440px; width: 100%; padding: 16px" onclick="event.stopPropagation()">
-        <div class="h2" style="margin-top: 0">Add fixed deposit</div>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >Bank <input class="btn" id="f_bank" type="text"
-        /></label>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >Account type
-          <select class="btn" id="f_acct"
-            ><option value="NRE">NRE</option
-            ><option value="NRO">NRO</option
-            ><option value="REGULAR">REGULAR</option
-            ><option value="OTHER">OTHER</option
-            ></select
-        ></label>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Principal (₹) <input class="btn" id="f_pr" type="number" step="1"
-          /></label>
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Rate % <input class="btn" id="f_rate" type="number" step="0.01"
-          /></label>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Start <input class="btn" id="f_start" type="date"
-          /></label>
-          <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-            >Maturity <input class="btn" id="f_end" type="date"
-          /></label>
-        </div>
-        <label class="sub" style="display: grid; gap: 4px; margin: 6px 0"
-          >Interest type
-          <select class="btn" id="f_intt"
-            ><option value="CUMULATIVE">CUMULATIVE</option
-            ><option value="QUARTERLY">QUARTERLY</option></select
-          ></label
-        >
-        <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 6px 0"
-          ><input type="checkbox" id="f_tds" /> TDS applicable</label
-        >
-        <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 6px 0"
-          ><input type="checkbox" id="f_ren" /> Auto-renew</label
-        >
-        <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px">
-          <button type="button" class="btn" id="f_cancel">Cancel</button>
-          <button type="button" class="btn btn-gold" id="f_save">Save</button>
-        </div>
-      </div>
-    </div>
-
-    <script src="/vendor/echarts/echarts.min.js"></script>
-    <script src="/charts/echartsTheme.js"></script>
-    <script src="/artha-ui.js"></script>
-    <script>
-      /* global ArthaUI */
-      const PRESETS = {
-        hdfc: {
-          schemeName: 'HDFC Top 100 Fund',
-          amfiCode: '118989',
-          isin: 'INF179K01EL5',
-          amc: 'HDFC',
-          category: 'EQUITY'
-        },
-        icici: {
-          schemeName: 'ICICI Prudential Bluechip',
-          amfiCode: '120586',
-          isin: 'INF109K016L0',
-          amc: 'ICICI Prudential',
-          category: 'EQUITY'
-        },
-        mirae: { schemeName: 'Mirae Asset Large Cap', amfiCode: '118834', isin: 'INF769K01AR7', amc: 'Mirae', category: 'EQUITY' },
-        ppfas: { schemeName: 'Parag Parikh Flexi Cap', amfiCode: '122639', isin: 'INF879O01027', amc: 'PPFAS', category: 'EQUITY' },
-        sbi: { schemeName: 'SBI Small Cap', amfiCode: '125497', isin: 'INF200K01R96', amc: 'SBI', category: 'EQUITY' }
-      }
-      var __editingMf = null
-      var __demo = false
-      function esc(s) {
-        return String(s || '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-      }
-      function openMf(preset) {
-        __editingMf = null
-        if (preset) {
-          document.getElementById('m_name').value = preset.schemeName
-          document.getElementById('m_amfi').value = preset.amfiCode
-          document.getElementById('m_isin').value = preset.isin || ''
-          document.getElementById('m_cat').value = preset.category || 'EQUITY'
-          document.getElementById('m_amc').value = preset.amc || ''
-        } else {
-          document.getElementById('m_name').value = ''
-          document.getElementById('m_amfi').value = ''
-          document.getElementById('m_isin').value = ''
-          document.getElementById('m_cat').value = 'EQUITY'
-          document.getElementById('m_units').value = ''
-          document.getElementById('m_avg').value = ''
-          document.getElementById('m_purch').value = new Date().toISOString().slice(0, 10)
-          document.getElementById('m_sip').value = ''
-          document.getElementById('m_folio').value = ''
-          document.getElementById('m_amc').value = ''
-          document.getElementById('m_sipact').checked = false
-        }
-        document.getElementById('modalMf').style.display = 'flex'
-      }
-      function closeMf() {
-        document.getElementById('modalMf').style.display = 'none'
-      }
-      function openFd() {
-        document.getElementById('f_bank').value = ''
-        document.getElementById('f_pr').value = ''
-        document.getElementById('f_rate').value = ''
-        const t = new Date()
-        document.getElementById('f_start').value = t.toISOString().slice(0, 10)
-        const t2 = new Date(t)
-        t2.setFullYear(t2.getFullYear() + 1)
-        document.getElementById('f_end').value = t2.toISOString().slice(0, 10)
-        document.getElementById('f_tds').checked = false
-        document.getElementById('f_ren').checked = false
-        document.getElementById('modalFd').style.display = 'flex'
-      }
-      function closeFd() {
-        document.getElementById('modalFd').style.display = 'none'
-      }
-      function toneColor(t) {
-        if (t === 'green') return 'var(--green)'
-        if (t === 'amber') return 'var(--amber)'
-        if (t === 'red') return 'var(--red)'
-        return 'var(--text-muted)'
-      }
-      async function loadMf() {
-        const r = await fetch('/api/india/mf')
-        const j = await r.json()
-        if (!j.success) throw new Error('x')
-        const rows = (j.data && j.data.funds) || []
-        const tb = document.getElementById('mfBody')
-        if (!rows.length) {
-          tb.innerHTML = '<tr><td colspan="9" class="muted">No funds — add a row or a preset.</td></tr>'
-          return
-        }
-        tb.innerHTML = rows
-          .map(function (f) {
-            const sip = f.sipActive
-              ? '<span class="u-bar" style="height:6px;width:6px;min-width:6px; background:var(--green); border-radius:99px; display:inline-block" title="SIP on"></span>'
-              : '<span class="u-bar" style="height:6px;width:6px;min-width:6px; background:var(--text-muted); border-radius:99px; display:inline-block" title="SIP off"></span>'
-            return (
-              '<tr data-id="' +
-              esc(f.id) +
-              '"><td>' +
-              esc(f.schemeName) +
-              '</td><td class="sub">' +
-              esc(f.amc) +
-              '</td><td class="mono">' +
-              (f.units != null ? f.units : 0) +
-              '</td><td class="right mono">' +
-              (f.currentNavInr != null ? f.currentNavInr : f.avgNavInr || 0) +
-              '</td><td class="right mono">' +
-              (f.valueInr != null ? Number(f.valueInr).toFixed(0) : 0) +
-              '</td><td class="right mono">' +
-              (f.valueCzk != null ? Number(f.valueCzk).toFixed(0) : 0) +
-              '</td><td class="right sub">—</td><td class="sub" style="color:' +
-              toneColor(f.taxTone) +
-              '">' +
-              esc(f.taxLabel) +
-              '</td><td>' +
-              sip +
-              '</td></tr>'
-            )
-          })
-          .join('')
-        tb.querySelectorAll('tr[data-id]').forEach(function (tr) {
-          tr.addEventListener('dblclick', async function () {
-            if (__demo) return
-            const id = tr.getAttribute('data-id')
-            const r2 = await fetch('/api/india/mf')
-            const j2 = await r2.json()
-            const row = ((j2.data && j2.data.funds) || []).find((x) => x.id === id)
-            if (!row) return
-            __editingMf = id
-            document.getElementById('m_name').value = row.schemeName
-            document.getElementById('m_amfi').value = row.amfiCode
-            document.getElementById('m_isin').value = row.isin || ''
-            document.getElementById('m_cat').value = row.category
-            document.getElementById('m_units').value = row.units
-            document.getElementById('m_avg').value = row.avgNavInr || ''
-            document.getElementById('m_purch').value = row.purchaseDate ? new Date(row.purchaseDate).toISOString().slice(0, 10) : ''
-            document.getElementById('m_sip').value = row.sipAmountInr || ''
-            document.getElementById('m_folio').value = row.folioNumber || ''
-            document.getElementById('m_amc').value = row.amc || ''
-            document.getElementById('m_sipact').checked = !!row.sipActive
-            document.getElementById('modalMf').style.display = 'flex'
-          })
-        })
-      }
-      function renderFdTimeline(fds) {
-        const el = document.getElementById('fdTimeline')
-        if (!fds || !fds.length) {
-          el.innerHTML = '<p class="muted" style="margin:8px">No FDs yet.</p>'
-          return
-        }
-        el.style.position = 'relative'
-        el.style.minWidth = '100%'
-        el.style.minHeight = '140px'
-        el.innerHTML = '<div id="fdEcharts" style="width:100%;min-height:140px"></div>'
-        const dom = document.getElementById('fdEcharts')
-        if (!dom || typeof echarts === 'undefined' || !fds || !fds.length) return
-        const gold = (window.ArthaEcharts && window.ArthaEcharts.getGold) ? window.ArthaEcharts.getGold() : '#B8922A'
-        if (!window.__arthaFdChart) {
-          window.__arthaFdChart = echarts.init(dom, null, { renderer: 'svg' })
-        } else {
-          try {
-            window.__arthaFdChart.dispose()
-          } catch (e) {}
-          window.__arthaFdChart = echarts.init(dom, null, { renderer: 'svg' })
-        }
-        const c = window.__arthaFdChart
-        const banks = fds.map(function (f) { return f.bank || 'FD' })
-        const now = new Date()
-        const horizon = new Date(now)
-        horizon.setMonth(horizon.getMonth() + 24)
-        c.setOption({
-          color: [gold, '#0a7a8a', '#1b4f8a', '#4a5a6b', '#7a4a1b'],
-          grid: { left: 110, right: 24, top: 10, bottom: 28, containLabel: true },
-          tooltip: {
-            trigger: 'item',
-            formatter: function (p) {
-              const f = p.data && p.data.f
-              if (!f) return ''
-              return f.bank + '<br/>₹ ' + (f.principalInr || 0).toLocaleString('en-IN') + ' · ' + f.interestRatePct + '%'
-            }
-          },
-          xAxis: { type: 'time', min: now, max: horizon, axisLine: { lineStyle: { color: 'rgba(128,128,128,0.35)' } } },
-          yAxis: { type: 'category', data: banks, inverse: true, axisLine: { show: false } },
-          series: [
-            {
-              type: 'custom',
-              name: 'FD',
-              renderItem: function (params, api) {
-                const i = params.dataIndex
-                const f = fds[i]
-                const s = new Date(f.startDate).getTime()
-                const e = new Date(f.maturityDate).getTime()
-                const t0 = api.coord([s, i])
-                const t1 = api.coord([e, i])
-                const h = 12
-                return {
-                  type: 'rect',
-                  shape: { x: t0[0], y: t0[1] - h / 2, width: Math.max(2, t1[0] - t0[0]), height: h, r: 2 },
-                  style: { fill: params.color }
-                }
-              },
-              data: fds.map(function (f) {
-                return f
-              })
-            }
-          ]
-        }, { notMerge: true })
-        window.addEventListener('resize', function () {
-          try { c.resize() } catch (e) {}
-        })
-      }
-      async function loadFd() {
-        const r = await fetch('/api/india/fd')
-        const j = await r.json()
-        if (!j.success) throw new Error('x')
-        const fds = ((j.data && j.data.fds) || []).slice().sort(function (a, b) {
-          return new Date(a.maturityDate) - new Date(b.maturityDate)
-        })
-        const tb = document.getElementById('fdBody')
-        if (!fds.length) {
-          tb.innerHTML = '<tr><td colspan="7" class="muted">No FDs yet.</td></tr>'
-        } else {
-          tb.innerHTML = fds
-            .map(function (f) {
-              const mat = new Date(f.maturityDate)
-              const days = Math.ceil((mat - new Date()) / 86400000)
-              return (
-                '<tr data-fid="' +
-                esc(f.id) +
-                '"><td>' +
-                esc(f.bank) +
-                '</td><td>' +
-                esc(f.accountType) +
-                '</td><td class="right mono">' +
-                (f.principalInr || 0).toLocaleString('en-IN') +
-                '</td><td class="right mono">' +
-                (f.interestRatePct != null ? f.interestRatePct : 0) +
-                '</td><td class="mono">' +
-                mat.toLocaleDateString('en-GB') +
-                '</td><td class="right">' +
-                days +
-                '</td><td>' +
-                (f.tdsApplicable ? 'Yes' : 'No') +
-                '</td></tr>'
-              )
-            })
-            .join('')
-        }
-        renderFdTimeline(fds)
-        const soon = fds.filter(function (f) {
-          return Math.ceil((new Date(f.maturityDate) - new Date()) / 86400000) <= 30
-        })
-        const ren = document.getElementById('fdRenew')
-        if (soon.length) {
-          const s = soon[0]
-          const d = Math.ceil((new Date(s.maturityDate) - new Date()) / 86400000)
-          ren.style.display = 'block'
-          ren.textContent = s.bank + ' FD matures in ' + d + ' days. Check best NRE rates in the table above.'
-        } else ren.style.display = 'none'
-      }
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', function () {
-        ArthaUI.toggleTheme()
-      })
-      document.getElementById('btnAddMf').addEventListener('click', function () {
-        openMf(null)
-        document.getElementById('m_purch').value = new Date().toISOString().slice(0, 10)
-      })
-      document.getElementById('m_cancel').addEventListener('click', closeMf)
-      document.getElementById('m_save').addEventListener('click', async function () {
-        if (__demo) return ArthaUI.showToast('Turn off demo', 'error')
-        const body = {
-          schemeName: document.getElementById('m_name').value,
-          amfiCode: document.getElementById('m_amfi').value,
-          isin: document.getElementById('m_isin').value || null,
-          amc: document.getElementById('m_amc').value,
-          category: document.getElementById('m_cat').value,
-          units: Number(document.getElementById('m_units').value || 0),
-          avgNavInr: document.getElementById('m_avg').value ? Number(document.getElementById('m_avg').value) : null,
-          currentNavInr: document.getElementById('m_avg').value ? Number(document.getElementById('m_avg').value) : null,
-          purchaseDate: document.getElementById('m_purch').value
-            ? new Date(document.getElementById('m_purch').value + 'T12:00:00Z').toISOString()
-            : new Date().toISOString(),
-          folioNumber: document.getElementById('m_folio').value || null,
-          sipActive: document.getElementById('m_sipact').checked,
-          sipAmountInr: document.getElementById('m_sip').value ? Number(document.getElementById('m_sip').value) : null
-        }
-        const url = __editingMf ? '/api/india/mf/' + encodeURIComponent(__editingMf) : '/api/india/mf'
-        const method = __editingMf ? 'PATCH' : 'POST'
-        const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        const j = await r.json()
-        if (!j.success) return ArthaUI.showToast('Save failed', 'error')
-        ArthaUI.showToast('Saved', 'ok')
-        closeMf()
-        await loadMf()
-      })
-      document.getElementById('btnAddFd').addEventListener('click', openFd)
-      document.getElementById('f_cancel').addEventListener('click', closeFd)
-      document.getElementById('f_save').addEventListener('click', async function () {
-        if (__demo) return ArthaUI.showToast('Turn off demo', 'error')
-        const body = {
-          bank: document.getElementById('f_bank').value,
-          accountType: document.getElementById('f_acct').value,
-          principalInr: Number(document.getElementById('f_pr').value || 0),
-          interestRatePct: Number(document.getElementById('f_rate').value || 0),
-          startDate: document.getElementById('f_start').value,
-          maturityDate: document.getElementById('f_end').value,
-          interestType: document.getElementById('f_intt').value,
-          tdsApplicable: document.getElementById('f_tds').checked,
-          autoRenew: document.getElementById('f_ren').checked
-        }
-        const r = await fetch('/api/india/fd', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        })
-        const j = await r.json()
-        if (!j.success) return ArthaUI.showToast('Save failed', 'error')
-        ArthaUI.showToast('FD added', 'ok')
-        closeFd()
-        await loadFd()
-      })
-      document.getElementById('btnRefreshNav').addEventListener('click', async function () {
-        if (__demo) return ArthaUI.showToast('Turn off demo', 'error')
-        const r = await fetch('/api/india/refresh-nav', { method: 'POST' })
-        const j = await r.json()
-        if (!j.success) return ArthaUI.showToast('Refresh failed', 'error')
-        ArthaUI.showToast('NAV updated: ' + (j.data && j.data.updated) + ' fund(s)', 'ok')
-        await loadMf()
-      })
-      ;(async function () {
-        const pr = document.getElementById('presetRow')
-        pr.innerHTML = [
-          ['hdfc', 'HDFC Top 100'],
-          ['icici', 'ICICI Bluechip'],
-          ['mirae', 'Mirae Large Cap'],
-          ['ppfas', 'PPFAS Flexi'],
-          ['sbi', 'SBI Small Cap']
-        ]
-          .map(
-            (x) =>
-              '<button type="button" class="btn" data-preset="' +
-              x[0] +
-              '">' +
-              esc(x[1]) +
-              '</button>'
-          )
-          .join('')
-        pr.querySelectorAll('[data-preset]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            const k = b.getAttribute('data-preset')
-            openMf(PRESETS[k] || null)
-            document.getElementById('m_purch').value = '2024-01-15'
-          })
-        })
-        try {
-          const s = await fetch('/api/system/status')
-          const sj = await s.json()
-          __demo = !!(sj.data && sj.data.demoMode)
-          ArthaUI.applyDemoChrome(__demo)
-        } catch (e) {}
-        try {
-          const r = await fetch('/api/india/analysis')
-          const j = await r.json()
-          if (!j.success) throw new Error('x')
-          const d = j.data || {}
-          const rb = d.rbi
-          document.getElementById('rbiLine').textContent = rb
-            ? 'Repo / policy: ' + (rb.value != null ? rb.value + '%' : 'n/a') + (rb.asOf ? ' · as of ' + new Date(rb.asOf).toLocaleDateString('en-GB') : '') + '.'
-            : 'No RBI row.'
-          const b = d.bestNre1yr
-          document.getElementById('bestBank').textContent =
-            b && b.bank ? 'Best 1yr sample: ' + b.bank + ' · ' + (b.value != null ? b.value : '—') + '%' : '—'
-          document.getElementById('fcnrLine').textContent = d.fcnrVsNre
-            ? String(d.fcnrVsNre.recommendation || d.fcnrVsNre.summary || '')
-            : '—'
-        } catch (e) {
-          document.getElementById('rbiLine').textContent = 'Could not load India analysis.'
-        }
-        try {
-          const rr = await fetch('/api/india/rates')
-          const rj = await rr.json()
-          const rows = (rj.data && rj.data.rates) || []
-          const tb = document.getElementById('rateBody')
-          tb.innerHTML = ''
-          const list = rows.filter(function (x) {
-            return (x.dataType || '') === 'NRE_FD_RATE'
-          }).slice(0, 24)
-          if (!list.length) {
-            tb.innerHTML = '<tr><td colspan="3" class="muted">No NRE rate rows</td></tr>'
-          } else {
-            for (const row of list) {
-              const tr = document.createElement('tr')
-              tr.innerHTML =
-                '<td>' +
-                esc(row.bankName) +
-                '</td><td>' +
-                esc(row.tenor || '—') +
-                '</td><td class="right mono">' +
-                (row.value != null ? String(row.value) : '—') +
-                '</td>'
-              tb.appendChild(tr)
-            }
-          }
-        } catch (e) {
-          document.getElementById('rateBody').innerHTML = '<tr><td colspan="3" class="muted">Rates unavailable</td></tr>'
-        }
-        try {
-          const ar = await fetch('/api/india/amfi/status')
-          const aj = await ar.json()
-          if (!aj.success) throw new Error('x')
-          const d = aj.data || {}
-          const n = d.navRowsAmfi != null ? d.navRowsAmfi : 0
-          const last = d.lastIngest
-          const el = document.getElementById('amfiStatus')
-          if (el) {
-            el.textContent = last
-              ? 'Last: ' + new Date(last.checkedAt).toLocaleString('en-GB') + ' — ' + (last.message || '') + ' — ' + n + ' rows.'
-              : 'No ingest yet — ' + n + ' rows in DB.'
-          }
-        } catch (e) {
-          const el = document.getElementById('amfiStatus')
-          if (el) el.textContent = 'AMFI status unavailable.'
-        }
-        try {
-          const a = await fetch('/api/accounts')
-          const j = await a.json()
-          const accs = (j.data && j.data.accounts) || []
-          const nre = accs.find(function (x) {
-            return (x.type || '') === 'NRE'
-          })
-          const nro = accs.find(function (x) {
-            return (x.type || '') === 'NRO'
-          })
-          document.getElementById('acctSync').textContent = 'Last sync: n/a (manual balances).'
-          document.getElementById('nreRow').innerHTML =
-            '<div class="card" style="padding:12px; min-width:180px; flex:1 1 200px"><div class="kicker">NRE</div><div class="h2 mono" style="font-size:1.1rem; margin:6px 0">' +
-            (nre ? '₹ ' + (nre.balanceLocal || 0).toLocaleString('en-IN') : '—') +
-            '</div><p class="sub" style="margin:0; font-size:12px">INR in India lane</p></div>' +
-            '<div class="card" style="padding:12px; min-width:180px; flex:1 1 200px"><div class="kicker">NRO</div><div class="h2 mono" style="font-size:1.1rem; margin:6px 0">' +
-            (nro ? '₹ ' + (nro.balanceLocal || 0).toLocaleString('en-IN') : '—') +
-            '</div><p class="sub" style="margin:0; font-size:12px">INR in India lane</p></div>'
-        } catch (e) {
-          document.getElementById('acctSync').textContent = 'Could not load accounts.'
-        }
-        try {
-          await loadMf()
-        } catch (e) {
-          document.getElementById('mfBody').innerHTML =
-            '<tr><td colspan="9" class="muted">Could not load funds. Run <span class="mono">prisma migrate</span> + <span class="mono">prisma generate</span>.</td></tr>'
-        }
-        try {
-          await loadFd()
-        } catch (e) {
-          document.getElementById('fdBody').innerHTML =
-            '<tr><td colspan="7" class="muted">Could not load FDs (migration required).</td></tr>'
-        }
-      })()
-    </script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/india.js"></script>
   </body>
 </html>
