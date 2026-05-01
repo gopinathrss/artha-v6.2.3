@@ -4,645 +4,272 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — Finances</title>
-        <script src="/scripts/theme.js"></script>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">
-      DEMO MODE — profile and cashflow are sample; turn off demo in Settings to edit.
-    </div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a class="active" href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency (CZK stored)">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions">
-            <button class="btn" type="button" id="btnTheme">Theme</button>
-            <a class="btn" href="/this-month">This month</a>
-            <button class="btn btn-gold" type="button" id="btnSaveProfile">Save profile</button>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Finances</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-ghost btn-sm" id="refresh-btn" type="button">Refresh</button>
+            <button class="btn btn-primary btn-sm" id="save-profile-btn" type="button">Save profile</button>
           </div>
         </header>
-        <main class="content">
-          <div class="v4-hero card col-12 card--soft" style="padding: 18px 20px">
-            <div class="h1">Finances</div>
-            <p class="lede">
-              Your profile, income, fixed costs, and events feed the monthly allocation plan. Amounts are stored in CZK; use
-              the pill in the header to preview EUR/INR with live FX.
-            </p>
-          </div>
 
-          <div class="grid" style="gap: 16px; margin-top: 6px">
-            <section class="card col-12" id="secProfile">
-              <div class="h2">Profile</div>
-              <p class="muted" style="margin-top: 0">Required for “This month” — at minimum set name, net income, and emergency target.</p>
-              <div class="v4-form-grid" id="profileGrid">
-                <div class="field">
-                  <label for="p_name">Full name</label>
-                  <input class="inp" id="p_name" autocomplete="name" />
-                </div>
-                <div class="field">
-                  <label for="p_dob">Date of birth</label>
-                  <input class="inp" id="p_dob" type="date" />
-                </div>
-                <div class="field">
-                  <label for="p_ccy">Home currency</label>
-                  <select class="inp" id="p_ccy">
-                    <option value="CZK">CZK</option>
-                    <option value="EUR">EUR</option>
-                    <option value="INR">INR</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="p_tax">Tax residency</label>
-                  <input class="inp" id="p_tax" placeholder="CZ" />
-                </div>
-                <div class="field">
-                  <label for="p_risk">Risk</label>
-                  <select class="inp" id="p_risk">
-                    <option value="CONSERVATIVE">Conservative</option>
-                    <option value="MODERATE">Moderate</option>
-                    <option value="GROWTH">Growth</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="p_income">Net income (CZK / month)</label>
-                  <input class="inp" id="p_income" type="number" min="0" step="1000" />
-                </div>
-                <div class="field">
-                  <label for="p_day">Salary day</label>
-                  <input class="inp" id="p_day" type="number" min="1" max="28" />
-                </div>
-                <div class="field">
-                  <label for="p_em">Emergency target (CZK)</label>
-                  <input class="inp" id="p_em" type="number" min="0" step="10000" />
-                </div>
-                <div class="field">
-                  <label for="p_retAge">Retirement age</label>
-                  <input class="inp" id="p_retAge" type="number" min="40" max="80" />
-                </div>
-                <div class="field">
-                  <label for="p_retExp">Retirement spend (CZK / month)</label>
-                  <input class="inp" id="p_retExp" type="number" min="0" step="1000" />
-                </div>
-                <div class="field" style="grid-column: 1 / -1">
-                  <label for="p_notes">Notes</label>
-                  <textarea class="inp" id="p_notes" rows="2" style="width: 100%; resize: vertical"></textarea>
-                </div>
+        <div class="content settings-stack">
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Profile</h2>
+                <p class="card-subtitle">Used by This-month planner and retirement projections.</p>
               </div>
-            </section>
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-field-label" for="p_name">Full name</label>
+                <input id="p_name" type="text" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_dob">Date of birth</label>
+                <input id="p_dob" type="date" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_currency">Home currency</label>
+                <select id="p_currency" class="form-field-select">
+                  <option value="CZK">CZK</option>
+                  <option value="EUR">EUR</option>
+                  <option value="INR">INR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_residency">Tax residency</label>
+                <input id="p_residency" type="text" class="form-field-input" maxlength="2" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_risk">Risk profile</label>
+                <select id="p_risk" class="form-field-select">
+                  <option value="CONSERVATIVE">Conservative</option>
+                  <option value="MODERATE">Moderate</option>
+                  <option value="GROWTH">Growth</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_income">Net income (CZK / month)</label>
+                <input id="p_income" type="number" min="0" step="1000" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_salary_day">Salary day</label>
+                <input id="p_salary_day" type="number" min="1" max="28" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_sip_day">SIP day</label>
+                <input id="p_sip_day" type="number" min="1" max="28" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_emergency">Emergency target (CZK)</label>
+                <input id="p_emergency" type="number" min="0" step="10000" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_ret_age">Retirement age</label>
+                <input id="p_ret_age" type="number" min="40" max="80" class="form-field-input" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="p_ret_exp">Retirement spend (CZK / month)</label>
+                <input id="p_ret_exp" type="number" min="0" step="1000" class="form-field-input" />
+              </div>
+            </div>
+            <div class="form-field" style="margin-top: var(--space-2);">
+              <label class="form-field-label" for="p_notes">Notes</label>
+              <textarea id="p_notes" class="form-field-textarea"></textarea>
+            </div>
+          </section>
 
-            <section class="card col-12">
-              <div class="h2">Income, costs & events</div>
-              <div class="v4-tabs" role="tablist" aria-label="Finances sections">
-                <button type="button" class="v4-tab active" data-tab="income" id="tabBtnIncome" aria-selected="true">Income</button>
-                <button type="button" class="v4-tab" data-tab="expenses" id="tabBtnExp" aria-selected="false">Fixed costs</button>
-                <button type="button" class="v4-tab" data-tab="events" id="tabBtnEv" aria-selected="false">Upcoming events</button>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Income events</h2>
+                <p class="card-subtitle" id="income-subtitle">—</p>
               </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="income-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Source</th>
+                    <th class="num" scope="col">Amount</th>
+                    <th scope="col">Recurring</th>
+                    <th scope="col"></th>
+                  </tr>
+                </thead>
+                <tbody id="income-tbody"></tbody>
+              </table>
+            </div>
+            <div class="form-row" style="margin-top: var(--space-4);">
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="i_date">Date</label>
+                <input id="i_date" type="date" class="form-field-input" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="i_src">Source</label>
+                <input id="i_src" type="text" class="form-field-input" placeholder="SALARY" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="i_amt">Amount (CZK)</label>
+                <input id="i_amt" type="number" min="0" step="1" class="form-field-input" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label">Recurring</label>
+                <label class="toggle-row" style="border: none; padding: var(--space-1) 0;">
+                  <span class="toggle-row-text"><span class="toggle-row-title">Every month</span></span>
+                  <span class="toggle">
+                    <input type="checkbox" id="i_rec" />
+                    <span class="toggle-slider"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary btn-sm" id="add-income" type="button">Add income</button>
+            </div>
+          </section>
 
-              <div class="v4-tabpanel" id="panel-income">
-                <p class="muted">Recurring salary should be one row with <span class="pill-ok">Recurring</span> on. One-off bonuses use a date in-month.</p>
-                <div class="table-wrap">
-                  <table class="table" id="tblIncome">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Source</th>
-                        <th class="right">CZK</th>
-                        <th>Recurring</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="bodyIncome"></tbody>
-                  </table>
-                </div>
-                <div class="v4-form-grid" style="margin-top: 16px">
-                  <div class="field">
-                    <label for="i_date">Date</label>
-                    <input class="inp" id="i_date" type="date" />
-                  </div>
-                  <div class="field">
-                    <label for="i_src">Source</label>
-                    <input class="inp" id="i_src" placeholder="SALARY" />
-                  </div>
-                  <div class="field">
-                    <label for="i_amt">Amount (CZK)</label>
-                    <input class="inp" id="i_amt" type="number" min="0" step="1" />
-                  </div>
-                  <div class="field">
-                    <label for="i_rec">Recurring</label>
-                    <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 0; height: 40px"
-                      ><input type="checkbox" id="i_rec" /> <span>Every month</span></label
-                    >
-                  </div>
-                  <div class="field" style="align-self: end">
-                    <button type="button" class="btn btn-gold" id="btnAddIncome">Add income</button>
-                  </div>
-                </div>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Fixed expenses</h2>
+                <p class="card-subtitle" id="expenses-subtitle">—</p>
               </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="expenses-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Category</th>
+                    <th scope="col">Description</th>
+                    <th class="num" scope="col">Amount</th>
+                    <th scope="col">Frequency</th>
+                    <th scope="col"></th>
+                  </tr>
+                </thead>
+                <tbody id="expenses-tbody"></tbody>
+              </table>
+            </div>
+            <div class="form-row" style="margin-top: var(--space-4);">
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="e_cat">Category</label>
+                <input id="e_cat" type="text" class="form-field-input" placeholder="RENT" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="e_desc">Description</label>
+                <input id="e_desc" type="text" class="form-field-input" placeholder="Brno rent" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="e_amt">Amount (CZK)</label>
+                <input id="e_amt" type="number" min="0" step="100" class="form-field-input" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="e_freq">Frequency</label>
+                <select id="e_freq" class="form-field-select">
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="QUARTERLY">Quarterly</option>
+                  <option value="YEARLY">Yearly</option>
+                  <option value="ONE_TIME">One-time</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary btn-sm" id="add-expense" type="button">Add expense</button>
+            </div>
+          </section>
 
-              <div class="v4-tabpanel" id="panel-expenses" hidden>
-                <p class="muted">Rent, insurance, subscriptions. Frequency drives the monthly fixed line in the plan.</p>
-                <div class="table-wrap">
-                  <table class="table" id="tblExp">
-                    <thead>
-                      <tr>
-                        <th>Category</th>
-                        <th>Description</th>
-                        <th class="right">CZK</th>
-                        <th>Frequency</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="bodyExp"></tbody>
-                  </table>
-                </div>
-                <div class="v4-form-grid" style="margin-top: 16px">
-                  <div class="field">
-                    <label for="e_cat">Category</label>
-                    <input class="inp" id="e_cat" placeholder="RENT" />
-                  </div>
-                  <div class="field" style="grid-column: span 2">
-                    <label for="e_desc">Description</label>
-                    <input class="inp" id="e_desc" placeholder="Brno rent" />
-                  </div>
-                  <div class="field">
-                    <label for="e_amt">Amount (CZK)</label>
-                    <input class="inp" id="e_amt" type="number" min="0" step="100" />
-                  </div>
-                  <div class="field">
-                    <label for="e_freq">Frequency</label>
-                    <select class="inp" id="e_freq">
-                      <option value="MONTHLY">MONTHLY</option>
-                      <option value="QUARTERLY">QUARTERLY</option>
-                      <option value="YEARLY">YEARLY</option>
-                      <option value="ONE_TIME">ONE_TIME</option>
-                    </select>
-                  </div>
-                  <div class="field">
-                    <label for="e_start">Start</label>
-                    <input class="inp" id="e_start" type="date" />
-                  </div>
-                  <div class="field" style="align-self: end">
-                    <button type="button" class="btn btn-gold" id="btnAddExp">Add commitment</button>
-                  </div>
-                </div>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Upcoming events</h2>
+                <p class="card-subtitle" id="events-subtitle">—</p>
               </div>
-
-              <div class="v4-tabpanel" id="panel-events" hidden>
-                <p class="muted">Trips, moves, big purchases — the planner reserves part of the budget in the 90-day window.</p>
-                <div class="table-wrap">
-                  <table class="table" id="tblEv">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th class="right">Budget</th>
-                        <th class="right">Reserved</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="bodyEv"></tbody>
-                  </table>
-                </div>
-                <div class="v4-form-grid" style="margin-top: 16px">
-                  <div class="field">
-                    <label for="v_date">Event date</label>
-                    <input class="inp" id="v_date" type="date" />
-                  </div>
-                  <div class="field">
-                    <label for="v_title">Title</label>
-                    <input class="inp" id="v_title" placeholder="Prague trip" />
-                  </div>
-                  <div class="field">
-                    <label for="v_cat">Category</label>
-                    <input class="inp" id="v_cat" placeholder="TRAVEL" />
-                  </div>
-                  <div class="field">
-                    <label for="v_budget">Budget (CZK)</label>
-                    <input class="inp" id="v_budget" type="number" min="0" step="1000" />
-                  </div>
-                  <div class="field">
-                    <label for="v_res">Already reserved (CZK)</label>
-                    <input class="inp" id="v_res" type="number" min="0" step="1000" value="0" />
-                  </div>
-                  <div class="field" style="align-self: end">
-                    <button type="button" class="btn btn-gold" id="btnAddEv">Add event</button>
-                  </div>
-                </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="events-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Title</th>
+                    <th scope="col">Category</th>
+                    <th class="num" scope="col">Budget</th>
+                    <th class="num" scope="col">Reserved</th>
+                    <th scope="col"></th>
+                  </tr>
+                </thead>
+                <tbody id="events-tbody"></tbody>
+              </table>
+            </div>
+            <div class="form-row" style="margin-top: var(--space-4);">
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="v_date">Date</label>
+                <input id="v_date" type="date" class="form-field-input" />
               </div>
-            </section>
-          </div>
-        </main>
-      </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="v_title">Title</label>
+                <input id="v_title" type="text" class="form-field-input" placeholder="Prague trip" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="v_cat">Category</label>
+                <input id="v_cat" type="text" class="form-field-input" placeholder="TRAVEL" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="v_budget">Budget (CZK)</label>
+                <input id="v_budget" type="number" min="0" step="1000" class="form-field-input" />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="v_res">Reserved (CZK)</label>
+                <input id="v_res" type="number" min="0" step="1000" class="form-field-input" value="0" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary btn-sm" id="add-event" type="button">Add event</button>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', function () {
-        ArthaUI.toggleTheme()
-      })
 
-      let demo = false
-      const esc = function (s) {
-        return ArthaUI.escapeHtml(s)
-      }
-
-      function setDemoUi() {
-        const d = demo
-        document
-          .querySelectorAll(
-            '#secProfile input, #secProfile select, #secProfile textarea, #i_date, #i_src, #i_amt, #i_rec, #e_cat, #e_desc, #e_amt, #e_freq, #e_start, #v_date, #v_title, #v_cat, #v_budget, #v_res'
-          )
-          .forEach(function (el) {
-            el.disabled = d
-          })
-        document.getElementById('btnAddIncome').disabled = d
-        document.getElementById('btnAddExp').disabled = d
-        document.getElementById('btnAddEv').disabled = d
-        document.getElementById('btnSaveProfile').disabled = d
-        document.getElementById('tabBtnIncome').disabled = false
-        document.getElementById('tabBtnExp').disabled = false
-        document.getElementById('tabBtnEv').disabled = false
-      }
-
-      function isoDate(d) {
-        if (!d) return ''
-        const x = new Date(d)
-        if (isNaN(x.getTime())) return ''
-        return x.toISOString().slice(0, 10)
-      }
-
-      function renderIncome(rows) {
-        const tb = document.getElementById('bodyIncome')
-        tb.innerHTML = ''
-        if (!rows || !rows.length) {
-          tb.innerHTML = '<tr><td colspan="5" class="muted">No income rows. Add your salary and any one-offs.</td></tr>'
-          return
-        }
-        for (const r of rows) {
-          const tr = document.createElement('tr')
-          const d = isoDate(r.date)
-          tr.innerHTML =
-            '<td class="mono">' +
-            esc(d) +
-            '</td><td>' +
-            esc(r.source) +
-            '</td><td class="right mono">' +
-            esc(String(Math.round(r.amountCzk || 0))) +
-            '</td><td>' +
-            (r.recurring ? '<span class="pill-ok">Yes</span>' : '—') +
-            '</td><td><button type="button" class="btn btn-ghost" data-del-income="' +
-            esc(r.id) +
-            '">Remove</button></td>'
-          tb.appendChild(tr)
-        }
-        tb.querySelectorAll('[data-del-income]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var id = b.getAttribute('data-del-income')
-            if (!id || demo) return
-            fetch('/api/income/' + id, { method: 'DELETE' })
-              .then(function (r) {
-                return r.json()
-              })
-              .then(function (j) {
-                if (j.success) {
-                  ArthaUI.showToast('Removed', 'ok')
-                  return load()
-                }
-                ArthaUI.showToast('Failed', 'error')
-              })
-          })
-        })
-      }
-
-      function renderExp(rows) {
-        const tb = document.getElementById('bodyExp')
-        tb.innerHTML = ''
-        if (!rows || !rows.length) {
-          tb.innerHTML = '<tr><td colspan="5" class="muted">No fixed costs yet. Add rent, insurance, etc.</td></tr>'
-          return
-        }
-        for (const r of rows) {
-          const tr = document.createElement('tr')
-          tr.innerHTML =
-            '<td>' +
-            esc(r.category) +
-            '</td><td>' +
-            esc(r.description) +
-            '</td><td class="right mono">' +
-            esc(String(Math.round(r.amountCzk || 0))) +
-            '</td><td>' +
-            esc(r.frequency) +
-            '</td><td><button type="button" class="btn btn-ghost" data-del-exp="' +
-            esc(r.id) +
-            '">Remove</button></td>'
-          tb.appendChild(tr)
-        }
-        tb.querySelectorAll('[data-del-exp]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var id = b.getAttribute('data-del-exp')
-            if (!id || demo) return
-            fetch('/api/expenses/' + id, { method: 'DELETE' })
-              .then(function (r) {
-                return r.json()
-              })
-              .then(function (j) {
-                if (j.success) {
-                  ArthaUI.showToast('Removed', 'ok')
-                  return load()
-                }
-                ArthaUI.showToast('Failed', 'error')
-              })
-          })
-        })
-      }
-
-      function renderEv(rows) {
-        const tb = document.getElementById('bodyEv')
-        tb.innerHTML = ''
-        if (!rows || !rows.length) {
-          tb.innerHTML = '<tr><td colspan="6" class="muted">No upcoming events. Add trips or large purchases you are budgeting for.</td></tr>'
-          return
-        }
-        for (const r of rows) {
-          const tr = document.createElement('tr')
-          const d = isoDate(r.eventDate)
-          tr.innerHTML =
-            '<td class="mono">' +
-            esc(d) +
-            '</td><td>' +
-            esc(r.title) +
-            '</td><td>' +
-            esc(r.category) +
-            '</td><td class="right mono">' +
-            esc(String(Math.round(r.budgetCzk || 0))) +
-            '</td><td class="right mono">' +
-            esc(String(Math.round(r.reservedCzk || 0))) +
-            '</td><td><button type="button" class="btn btn-ghost" data-del-ev="' +
-            esc(r.id) +
-            '">Remove</button></td>'
-          tb.appendChild(tr)
-        }
-        tb.querySelectorAll('[data-del-ev]').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var id = b.getAttribute('data-del-ev')
-            if (!id || demo) return
-            fetch('/api/events/' + id, { method: 'DELETE' })
-              .then(function (r) {
-                return r.json()
-              })
-              .then(function (j) {
-                if (j.success) {
-                  ArthaUI.showToast('Removed', 'ok')
-                  return load()
-                }
-                ArthaUI.showToast('Failed', 'error')
-              })
-          })
-        })
-      }
-
-      function fillProfile(p) {
-        if (!p) return
-        document.getElementById('p_name').value = p.fullName || ''
-        document.getElementById('p_dob').value = p.dateOfBirth ? isoDate(p.dateOfBirth) : ''
-        document.getElementById('p_ccy').value = p.homeCurrency || 'CZK'
-        document.getElementById('p_tax').value = p.taxResidency || 'CZ'
-        document.getElementById('p_risk').value = p.riskProfile || 'MODERATE'
-        document.getElementById('p_income').value = p.monthlyNetIncomeCzk != null ? p.monthlyNetIncomeCzk : ''
-        document.getElementById('p_day').value = p.salaryDayOfMonth != null ? p.salaryDayOfMonth : 15
-        document.getElementById('p_em').value = p.emergencyFundTarget != null ? p.emergencyFundTarget : ''
-        document.getElementById('p_retAge').value = p.retirementAge != null ? p.retirementAge : 50
-        document.getElementById('p_retExp').value = p.retirementMonthlyExpense != null ? p.retirementMonthlyExpense : ''
-        document.getElementById('p_notes').value = p.notes || ''
-      }
-
-      function load() {
-        return Promise.all([
-          fetch('/api/system/status').then(function (r) {
-            return r.json()
-          }),
-          fetch('/api/profile').then(function (r) {
-            return r.json()
-          }),
-          fetch('/api/income').then(function (r) {
-            return r.json()
-          }),
-          fetch('/api/expenses').then(function (r) {
-            return r.json()
-          }),
-          fetch('/api/events').then(function (r) {
-            return r.json()
-          })
-        ]).then(function (parts) {
-          var st = parts[0]
-          var pj = parts[1]
-          var inc = parts[2]
-          var ex = parts[3]
-          var ev = parts[4]
-          demo = !!(st.data && st.data.demoMode) || !!pj.demo || !!inc.demo
-          ArthaUI.applyDemoChrome(!!(st.data && st.data.demoMode) || !!pj.demo)
-          fillProfile(pj.data && pj.data.profile)
-          setDemoUi()
-          renderIncome((inc.data && inc.data.events) || [])
-          renderExp((ex.data && ex.data.expenses) || [])
-          renderEv((ev.data && ev.data.events) || [])
-        })
-      }
-
-      document.getElementById('btnSaveProfile').addEventListener('click', function () {
-        if (demo) {
-          ArthaUI.showToast('Turn off demo in Settings to edit', 'error')
-          return
-        }
-        const body = {
-          fullName: document.getElementById('p_name').value,
-          dateOfBirth: document.getElementById('p_dob').value
-            ? new Date(document.getElementById('p_dob').value + 'T12:00:00').toISOString()
-            : undefined,
-          homeCurrency: document.getElementById('p_ccy').value,
-          taxResidency: document.getElementById('p_tax').value,
-          riskProfile: document.getElementById('p_risk').value,
-          monthlyNetIncomeCzk: Number(document.getElementById('p_income').value || 0),
-          salaryDayOfMonth: Number(document.getElementById('p_day').value || 15),
-          emergencyFundTarget: Number(document.getElementById('p_em').value || 0),
-          retirementAge: Number(document.getElementById('p_retAge').value || 50),
-          retirementMonthlyExpense: Number(document.getElementById('p_retExp').value || 0),
-          notes: document.getElementById('p_notes').value || null
-        }
-        fetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-          .then(function (r) {
-            return r.json()
-          })
-          .then(function (j) {
-            if (j.success) ArthaUI.showToast('Profile saved', 'ok')
-            else ArthaUI.showToast(j.error || 'Save failed', 'error')
-          })
-      })
-
-      function todayISODate() {
-        return new Date().toISOString().slice(0, 10)
-      }
-      document.getElementById('i_date').value = todayISODate()
-      document.getElementById('e_start').value = todayISODate()
-      var evDate = new Date()
-      evDate.setMonth(evDate.getMonth() + 2)
-      document.getElementById('v_date').value = evDate.toISOString().slice(0, 10)
-
-      document.getElementById('btnAddIncome').addEventListener('click', function () {
-        if (demo) return
-        const amt = Number(document.getElementById('i_amt').value || 0)
-        if (!document.getElementById('i_date').value || !document.getElementById('i_src').value || !isFinite(amt) || amt <= 0) {
-          ArthaUI.showToast('Fill date, source, and amount', 'error')
-          return
-        }
-        fetch('/api/income', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            date: new Date(document.getElementById('i_date').value + 'T12:00:00').toISOString(),
-            source: document.getElementById('i_src').value,
-            amountCzk: amt,
-            amountLocal: amt,
-            currency: 'CZK',
-            recurring: document.getElementById('i_rec').checked
-          })
-        })
-          .then(function (r) {
-            return r.json()
-          })
-          .then(function (j) {
-            if (j.success) {
-              ArthaUI.showToast('Income added', 'ok')
-              document.getElementById('i_amt').value = ''
-              return load()
-            }
-            ArthaUI.showToast(j.error || 'Failed', 'error')
-          })
-      })
-
-      document.getElementById('btnAddExp').addEventListener('click', function () {
-        if (demo) return
-        const amt = Number(document.getElementById('e_amt').value || 0)
-        if (!document.getElementById('e_cat').value || !document.getElementById('e_start').value || !isFinite(amt) || amt <= 0) {
-          ArthaUI.showToast('Fill category, start date, and amount', 'error')
-          return
-        }
-        fetch('/api/expenses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: document.getElementById('e_cat').value,
-            description: document.getElementById('e_desc').value || '—',
-            amountCzk: amt,
-            frequency: document.getElementById('e_freq').value,
-            startDate: new Date(document.getElementById('e_start').value + 'T12:00:00').toISOString()
-          })
-        })
-          .then(function (r) {
-            return r.json()
-          })
-          .then(function (j) {
-            if (j.success) {
-              ArthaUI.showToast('Fixed cost added', 'ok')
-              return load()
-            }
-            ArthaUI.showToast(j.error || 'Failed', 'error')
-          })
-      })
-
-      document.getElementById('btnAddEv').addEventListener('click', function () {
-        if (demo) return
-        const b = Number(document.getElementById('v_budget').value || 0)
-        if (!document.getElementById('v_date').value || !document.getElementById('v_title').value || !isFinite(b) || b <= 0) {
-          ArthaUI.showToast('Fill date, title, and budget', 'error')
-          return
-        }
-        fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            eventDate: new Date(document.getElementById('v_date').value + 'T12:00:00').toISOString(),
-            title: document.getElementById('v_title').value,
-            category: document.getElementById('v_cat').value || 'OTHER',
-            budgetCzk: b,
-            reservedCzk: Number(document.getElementById('v_res').value || 0)
-          })
-        })
-          .then(function (r) {
-            return r.json()
-          })
-          .then(function (j) {
-            if (j.success) {
-              ArthaUI.showToast('Event added', 'ok')
-              return load()
-            }
-            ArthaUI.showToast(j.error || 'Failed', 'error')
-          })
-      })
-
-      var tabs = document.querySelectorAll('.v4-tab')
-      var panels = {
-        income: document.getElementById('panel-income'),
-        expenses: document.getElementById('panel-expenses'),
-        events: document.getElementById('panel-events')
-      }
-      function activateTab(name) {
-        for (var i = 0; i < tabs.length; i++) {
-          var t = tabs[i]
-          var on = t.getAttribute('data-tab') === name
-          t.classList.toggle('active', on)
-          t.setAttribute('aria-selected', on ? 'true' : 'false')
-        }
-        panels.income.hidden = name !== 'income'
-        panels.expenses.hidden = name !== 'expenses'
-        panels.events.hidden = name !== 'events'
-      }
-      tabs.forEach(function (t) {
-        t.addEventListener('click', function () {
-          activateTab(t.getAttribute('data-tab'))
-        })
-      })
-      activateTab('income')
-
-      document.addEventListener('artha:fx-updated', function () {
-        void 0
-      })
-      load().catch(function () {
-        ArthaUI.showToast('Load failed', 'error')
-      })
-    </script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/finances.js"></script>
   </body>
 </html>

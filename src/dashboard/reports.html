@@ -4,159 +4,115 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — Reports</title>
-        <script src="/scripts/theme.js"></script>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE — Simulated Portfolio</div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a class="active" href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display preference">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions">
-            <button class="btn" id="btnTheme" type="button">Theme</button>
-            <button class="btn btn-gold" id="btnGenInt" type="button">Internal report</button>
-            <button class="btn" id="btnGenClient" type="button">Client report</button>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Reports</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-ghost btn-sm" id="refresh-btn" aria-label="Refresh" type="button">
+              Refresh
+            </button>
+            <button class="btn btn-secondary btn-sm" id="generate-internal" type="button">
+              Internal
+            </button>
+            <button class="btn btn-primary btn-sm" id="generate-client" type="button">
+              Client
+            </button>
           </div>
         </header>
-        <main class="content">
-          <div class="card">
-            <div class="h2">Reports</div>
-            <p class="muted" style="margin: 0 0 8px 0; max-width: 70ch; line-height: 1.45">
-              10-section CFO snapshot. <strong>Internal</strong> includes full position names and exact amounts.
-              <strong>Client</strong> uses rounded figures and generic labels — safe to share.
-            </p>
-            <div class="muted" id="empty">No reports yet. Generate an internal or client report to open a printable A4 view.</div>
-            <table class="table" style="margin-top: 12px; display: none" id="tbl">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Audience</th>
-                  <th>Period</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="body"></tbody>
-            </table>
-          </div>
-        </main>
-      </div>
+
+        <div class="content">
+          <section class="overview-hero" id="hero">
+            <div class="hero-eyebrow">CFO snapshots</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-count">—</div>
+            </div>
+            <div class="hero-meta">10-section monthly report. Internal includes full position names; Client uses rounded figures, safe to share.</div>
+
+            <div class="hero-stats" style="grid-template-columns: repeat(3, 1fr);">
+              <div class="hero-stat">
+                <div class="hero-stat-label">Last generated</div>
+                <div class="hero-stat-value" id="stat-last" style="font-size: var(--text-md);">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Internal reports</div>
+                <div class="hero-stat-value" id="stat-internal">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Client reports</div>
+                <div class="hero-stat-value" id="stat-client">—</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Recent reports</h2>
+                <p class="card-subtitle" id="list-subtitle">Loading…</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="reports-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Generated</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Audience</th>
+                    <th scope="col">Period</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reports-tbody">
+                  <tr>
+                    <td colspan="5" class="empty-state">
+                      <div class="empty-state-message">Loading…</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
-      function renderList(items) {
-        const tb = document.getElementById('body')
-        tb.innerHTML = ''
-        if (items && items.length) {
-          document.getElementById('empty').style.display = 'none'
-          document.getElementById('tbl').style.display = 'table'
-        } else {
-          document.getElementById('empty').style.display = 'block'
-          document.getElementById('tbl').style.display = 'none'
-        }
-        for (const rep of items || []) {
-          const tr = document.createElement('tr')
-          const d = new Date(rep.createdAt)
-          const aud = rep.audience === 'CLIENT' ? 'Client' : 'Internal'
-          const base = rep.id
-            ? '/reports/view/' + rep.id + '?token=' + encodeURIComponent(rep.token || '')
-            : '#'
-          const v = (base + '').indexOf('?') >= 0 ? base + '&' : base + '?'
-          const down = v + 'print=1'
-          tr.innerHTML = `<td>${d.toLocaleString()}</td><td>${(rep.type || '').replace(
-            /</g,
-            ''
-          )}</td><td>${aud}</td><td>${(rep.periodLabel || '').replace(/</g, '')}</td>
-          <td class="right" style="white-space:nowrap">
-            <a class="btn btn-gold" style="font-size:12px;padding:6px 10px" href="${base}">View</a>
-            <a class="btn" style="font-size:12px;padding:6px 10px;margin-left:4px" href="${down}">Download</a>
-          </td>`
-          tb.appendChild(tr)
-        }
-      }
-      ;(async () => {
-        const s = await fetch('/api/system/status')
-        const sj = await s.json()
-        ArthaUI.applyDemoChrome(!!(sj.data && sj.data.demoMode))
-        const r = await fetch('/api/reports')
-        const j = await r.json()
-        const items = (j.data && j.data.reports) || []
-        renderList(items)
-      })().catch(() => {})
-      async function doGenerate(audience) {
-        const b1 = document.getElementById('btnGenInt')
-        const b2 = document.getElementById('btnGenClient')
-        b1.disabled = true
-        b2.disabled = true
-        const lab = audience === 'CLIENT' ? 'Client report' : 'Internal report'
-        b1.textContent = audience === 'INTERNAL' ? 'Generating…' : 'Internal report'
-        b2.textContent = audience === 'CLIENT' ? 'Generating…' : 'Client report'
-        try {
-          const r = await fetch('/api/reports/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'CFO_10', audience: audience })
-          })
-          const j = await r.json()
-          if (j.demo) {
-            ArthaUI.showToast('Demo: report not persisted', 'error')
-            return
-          }
-          const u = j.data && j.data.viewUrl
-          if (u) {
-            const w = window.open(u, '_blank')
-            if (w) {
-              const r2 = await fetch('/api/reports')
-              const j2 = await r2.json()
-              renderList((j2.data && j2.data.reports) || [])
-            } else ArthaUI.showToast('Popup blocked', 'error')
-          } else throw new Error('no url')
-        } catch (e) {
-          ArthaUI.showToast('Generate failed', 'error')
-        } finally {
-          b1.disabled = false
-          b2.disabled = false
-          b1.textContent = 'Internal report'
-          b2.textContent = 'Client report'
-        }
-      }
-      document.getElementById('btnGenInt').addEventListener('click', () => doGenerate('INTERNAL'))
-      document.getElementById('btnGenClient').addEventListener('click', () => doGenerate('CLIENT'))
-    </script>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/reports.js"></script>
   </body>
 </html>

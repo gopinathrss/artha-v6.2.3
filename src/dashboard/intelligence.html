@@ -3,267 +3,95 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ARTHA — Intelligence</title>
-        <script src="/scripts/theme.js"></script>
+    <title>ARTHA — Ask Artha</title>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE</div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div>
-            <h1>ARTHA</h1>
-            <small>Personal CFO</small>
-          </div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a class="active" href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions">
-            <button class="btn" type="button" id="btnTheme" aria-label="Toggle theme">Theme</button>
-            <a class="btn" href="/this-month">This month</a>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Ask Artha</h1>
+          </div>
+          <div class="topbar-actions">
+            <a href="/this-month" class="btn btn-primary btn-sm">This month</a>
           </div>
         </header>
-        <main class="content">
-          <div class="intel-grid">
-            <div class="card col-12">
-              <div class="h2">Ask ARTHA</div>
-              <p class="v4-model-hint" style="margin-top: 0">
-                <strong>Models (best-in-class for CFO Q&amp;A):</strong> <span class="mono">Claude Sonnet</span> (primary,
-                set <span class="mono">ANTHROPIC_API_KEY</span> on the server and optional
-                <span class="mono">ANTHROPIC_MODEL</span>) and <span class="mono">GPT-4o</span> (fallback — OpenAI key
-                in Settings). Answers use your portfolio + library context, not the open web.
-              </p>
+
+        <div class="content">
+          <section class="card" style="margin-bottom: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Conversation</h2>
+                <p class="card-subtitle">Answers use your portfolio + library context, not the open web.</p>
+              </div>
+            </div>
+
+            <div id="chat-window" class="chat-window">
+              <div class="chat-msg chat-msg-assistant">
+                <strong>Hi — I'm Artha.</strong> Ask me anything about your portfolio, allocation,
+                tax window, or upcoming retirement. Try one of the suggestions below or type a
+                question directly.
+              </div>
+            </div>
+
+            <div class="chat-suggestions" id="chat-suggestions"></div>
+
+            <div class="chat-composer">
               <textarea
-                class="intel-textarea"
-                id="q"
+                id="chat-input"
+                class="form-field-textarea"
                 placeholder="e.g. What should I do this month?"
                 aria-label="Your question"
               ></textarea>
-              <button class="btn btn-gold" type="button" id="btnAsk" style="margin-top: 10px">ASK ARTHA</button>
-              <div class="h2" style="margin-top: 18px">Quick questions</div>
-              <div class="pill-row" id="pills"></div>
-              <div class="h2" style="margin-top: 8px">History</div>
-              <div id="history" class="muted" style="font-size: 12px; margin-top: 6px">Loading…</div>
+              <button class="btn btn-primary" id="chat-send" type="button">Ask</button>
             </div>
-            <div class="card col-12" id="answerPanel">
-              <div class="h2">Response</div>
-              <div id="sk" class="skeleton" style="display: none">
-                <div class="bar" style="width: 100%"></div>
-                <div class="bar" style="width: 92%"></div>
-                <div class="bar" style="width: 80%"></div>
-              </div>
-              <div class="num-row" id="nums"></div>
-              <div class="answer-prose" id="ans"></div>
-              <div class="top-action" id="actionBox" style="display: none">
-                <div class="k">This month's action</div>
-                <div id="actionText"></div>
-              </div>
-              <div class="intel-fb" id="fb" style="display: none">
-                <span class="muted" style="font-size: 12px; margin-right: 6px">Helpful?</span>
-                <button type="button" data-fb="HELPFUL">Helpful</button>
-                <button type="button" data-fb="PARTIALLY_HELPFUL">Partly</button>
-                <button type="button" data-fb="NOT_HELPFUL">No</button>
-              </div>
-              <div class="pill-row" id="follow"></div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      const QUICK = [
-        'What should I do this month?',
-        'Can I retire by age 50?',
-        'Where am I leaking money?',
-        'Should I buy a flat or keep investing?',
-        'What is the best ETF for my equity allocation?',
-        'How does my NRE money compare to Czech investing?'
-      ]
-      const pills = document.getElementById('pills')
-      for (const t of QUICK) {
-        const b = document.createElement('button')
-        b.className = 'pill-ask'
-        b.type = 'button'
-        b.textContent = t
-        b.addEventListener('click', () => {
-          document.getElementById('q').value = t
-        })
-        pills.appendChild(b)
-      }
+          </section>
 
-      function esc(s) {
-        return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      }
-      function fmtCs(n) {
-        if (n == null || n === '') return n
-        const v = Number(n)
-        if (!isFinite(v)) return esc(String(n))
-        return v.toLocaleString('cs-CZ')
-      }
-      function renderKeyNumbers(kn) {
-        const el = document.getElementById('nums')
-        el.innerHTML = ''
-        if (!Array.isArray(kn) || kn.length === 0) {
-          el.style.display = 'none'
-          return
-        }
-        el.style.display = 'grid'
-        for (const it of kn.slice(0, 4)) {
-          const d = document.createElement('div')
-          const c = (it.color || 'gold').toLowerCase()
-          d.className =
-            'num-card ' +
-            (c === 'green' ? 'c-green' : c === 'red' ? 'c-red' : c === 'amber' ? 'c-amber' : 'c-gold')
-          d.innerHTML = `<div class="label">${esc(it.label)}</div><div class="val">${fmtCs(
-            it.value
-          )}</div>`
-          el.appendChild(d)
-        }
-      }
-      function renderMem(mem) {
-        renderKeyNumbers(mem && mem.keyNumbers)
-        const text = (mem && mem.aiResponse) || '—'
-        const ans = document.getElementById('ans')
-        const lines = String(text)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .split('\n')
-        ans.innerHTML = lines
-          .map(
-            (line) =>
-              '<p class="answer-prose">' + line + '</p>'
-          )
-          .join('')
-        const aBox = document.getElementById('actionBox')
-        const rj = mem && mem.recommendations
-        if (rj && (rj.topAction != null && rj.topAction !== '')) {
-          aBox.style.display = 'block'
-          document.getElementById('actionText').textContent = String(rj.topAction)
-        } else {
-          aBox.style.display = 'none'
-        }
-        const follow = document.getElementById('follow')
-        follow.innerHTML = ''
-        const fol = (rj && rj.followUp) || []
-        for (const qn of (Array.isArray(fol) ? fol : []).slice(0, 2)) {
-          const p = document.createElement('button')
-          p.className = 'pill-ask'
-          p.type = 'button'
-          p.textContent = String(qn)
-          p.addEventListener('click', () => (document.getElementById('q').value = String(qn)))
-          follow.appendChild(p)
-        }
-      }
-      let lastId = null
-      async function loadHistory() {
-        const h = document.getElementById('history')
-        try {
-          const r = await fetch('/api/intelligence/history')
-          const j = await r.json()
-          const list = (j.data && j.data.memories) || []
-          h.innerHTML = list
-            .slice(0, 10)
-            .map(
-              (m) =>
-                `<div class="hist-item" data-id="${esc(
-                  m.id
-                )}"><div>${esc((m.createdAt && new Date(m.createdAt).toLocaleDateString('en-GB')) || '')} — ${esc(
-                  (m.questionAsked || '').slice(0, 60)
-                )}${(m.questionAsked || '').length > 60 ? '…' : ''}</div><div>${m.userFeedback || '—'}</div></div>`
-            )
-            .join('') || 'No questions yet'
-          h.querySelectorAll('.hist-item').forEach((el) => {
-            el.addEventListener('click', () => {
-              const id = el.getAttribute('data-id')
-              const m = list.find((x) => x.id === id)
-              if (m) {
-                lastId = m.id
-                renderMem(m)
-                document.getElementById('fb').style.display = 'flex'
-              }
-            })
-          })
-        } catch {
-          h.textContent = 'Failed to load history'
-        }
-      }
-      document.getElementById('fb').addEventListener('click', (e) => {
-        const t = e.target
-        if (t.getAttribute('data-fb') && lastId) {
-          fetch('/api/intelligence/feedback', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ memoryId: lastId, feedback: t.getAttribute('data-fb') })
-          }).then(() => ArthaUI && ArthaUI.showToast && ArthaUI.showToast('Thanks', 'ok'))
-        }
-      })
-      async function ask() {
-        const sk = document.getElementById('sk')
-        sk.style.display = 'flex'
-        document.getElementById('fb').style.display = 'none'
-        try {
-          const body = { question: document.getElementById('q').value }
-          const r = await fetch('/api/intelligence/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          })
-          const j = await r.json()
-          if (!j.success) {
-            if (r.status === 429) {
-              if (ArthaUI && ArthaUI.showToast) ArthaUI.showToast('Rate limit', 'error')
-            } else {
-              if (ArthaUI && ArthaUI.showToast) ArthaUI.showToast(j.error || 'Error', 'error')
-            }
-            return
-          }
-          const mem = (j.data && j.data.memory) || j
-          lastId = mem.id
-          renderMem(mem)
-          document.getElementById('fb').style.display = 'flex'
-        } catch {
-          if (ArthaUI && ArthaUI.showToast) ArthaUI.showToast('Request failed', 'error')
-        } finally {
-          sk.style.display = 'none'
-        }
-        void loadHistory()
-      }
-      document.getElementById('btnAsk').addEventListener('click', ask)
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
-      void loadHistory()
-    </script>
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">History</h2>
+                <p class="card-subtitle" id="history-subtitle">Loading…</p>
+              </div>
+            </div>
+            <div id="history-list"></div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/intelligence.js"></script>
   </body>
 </html>
