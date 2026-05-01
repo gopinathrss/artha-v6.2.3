@@ -1,9 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="preload">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — Settings</title>
+        <script src="/scripts/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles/v5-core.css" />
+    <link rel="stylesheet" href="/styles/components.css" />
     <link rel="stylesheet" href="/artha-ui.css" />
   </head>
   <body>
@@ -46,6 +52,36 @@
         </header>
         <main class="content">
           <div class="grid" style="gap: 16px">
+            <section class="settings-section card col-12">
+              <h2 class="heading-lg" style="margin: 0 0 var(--space-3)">Appearance</h2>
+              <div class="theme-picker" role="radiogroup" aria-label="Theme">
+                <label>
+                  <input type="radio" name="theme" value="system" checked />
+                  <div class="theme-option">
+                    <div class="theme-preview-system"></div>
+                    <span>System</span>
+                    <small>Follow OS preference</small>
+                  </div>
+                </label>
+                <label>
+                  <input type="radio" name="theme" value="light" />
+                  <div class="theme-option">
+                    <div class="theme-preview-light"></div>
+                    <span>Light</span>
+                    <small>Always light</small>
+                  </div>
+                </label>
+                <label>
+                  <input type="radio" name="theme" value="dark" />
+                  <div class="theme-option">
+                    <div class="theme-preview-dark"></div>
+                    <span>Dark</span>
+                    <small>Always dark</small>
+                  </div>
+                </label>
+              </div>
+            </section>
+
             <div class="card col-12">
               <div class="h2">A — Demo mode</div>
               <div class="row" style="align-items: center; border: 0">
@@ -301,6 +337,16 @@
     <script>
       /* global ArthaUI */
       ArthaUI.initTheme()
+      if (window.ArthaTheme) {
+        document.querySelectorAll('input[name="theme"]').forEach((radio) => {
+          radio.addEventListener('change', () => {
+            window.ArthaTheme.setPreference(radio.value)
+          })
+        })
+        const cur = window.ArthaTheme.getPreference()
+        const r = document.querySelector(`input[name="theme"][value="${cur}"]`)
+        if (r) r.checked = true
+      }
       ArthaUI.setGreeting(document.getElementById('greet'))
       if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
       document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())

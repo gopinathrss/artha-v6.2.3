@@ -2,11 +2,17 @@
   const ArthaUI = {}
 
   ArthaUI.initTheme = function initTheme() {
+    if (window.ArthaTheme) return
     const v = localStorage.getItem('artha_theme') || 'light'
     document.documentElement.setAttribute('data-theme', v)
   }
 
   ArthaUI.toggleTheme = function toggleTheme() {
+    if (window.ArthaTheme) {
+      const cur = window.ArthaTheme.getResolvedTheme() === 'dark' ? 'dark' : 'light'
+      window.ArthaTheme.setPreference(cur === 'dark' ? 'light' : 'dark')
+      return
+    }
     const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
     const next = cur === 'dark' ? 'light' : 'dark'
     document.documentElement.setAttribute('data-theme', next)
