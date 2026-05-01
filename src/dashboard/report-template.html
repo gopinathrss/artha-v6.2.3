@@ -359,15 +359,15 @@
                 '</td><td class="right mono small">' +
                 h.isin +
                 '</td><td class="right">' +
-                (h.units || 0).toFixed(2) +
+                Number(h.units || 0).toFixed(2) +
                 '</td><td class="right">' +
-                (h.nav || 0).toFixed(2) +
+                Number(h.nav || 0).toFixed(2) +
                 '</td><td class="right">' +
                 czk(h.valueCzk) +
                 '</td><td class="right">' +
                 czk(0) +
                 '</td><td class="right">' +
-                (h.xirr == null ? '—' : h.xirr.toFixed(2) + '%') +
+                (h.xirr == null ? '—' : Number(h.xirr).toFixed(2) + '%') +
                 '</td><td class="right">' +
                 h.taxFreeDate +
                 '</td></tr>'
@@ -393,15 +393,15 @@
                 '</td><td>' +
                 (m.amc || '') +
                 '</td><td class="right">' +
-                m.units.toFixed(2) +
+                Number(m.units || 0).toFixed(2) +
                 '</td><td class="right">' +
-                m.nav.toFixed(2) +
+                Number(m.nav || 0).toFixed(2) +
                 '</td><td class="right">' +
                 m.valueInr.toLocaleString('en-IN') +
                 '</td><td class="right">' +
                 czk(m.valueCzk) +
                 '</td><td class="right">' +
-                (m.xirr == null ? '—' : m.xirr) +
+                (m.xirr == null ? '—' : Number(m.xirr).toFixed(2) + '%') +
                 '</td><td>' +
                 m.taxLabel +
                 '</td></tr>'
@@ -416,7 +416,7 @@
                 '</td><td class="right">₹ ' +
                 f.principalInr.toLocaleString('en-IN') +
                 '</td><td class="right">' +
-                f.rate.toFixed(2) +
+                Number(f.rate || 0).toFixed(2) +
                 '%</td><td>' +
                 f.maturity +
                 '</td><td class="right">' +
@@ -490,7 +490,7 @@
                   '</td><td class="right">' +
                   czk(g.currentCzk) +
                   '</td><td class="right">' +
-                  (g.pct || 0).toFixed(0) +
+                  Number(g.pct || 0).toFixed(0) +
                   '%</td><td class="right">' +
                   (g.prob == null ? '—' : g.prob) +
                   '</td><td class="right">' +

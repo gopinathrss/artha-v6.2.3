@@ -1,4 +1,5 @@
 ;(function () {
+  /** Coerce API / Prisma Decimal strings with Number() in page scripts before .toFixed — this module has none on raw API fields. */
   const ArthaUI = {}
 
   ArthaUI.initTheme = function initTheme() {

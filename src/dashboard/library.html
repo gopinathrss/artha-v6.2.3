@@ -96,14 +96,14 @@
       }
       function estScore(h, libByIsin) {
         const row = libByIsin.get(h.isin)
-        if (row && row.score != null) return row.score
-        if (h.terPct != null) return Math.max(0, 50 - h.terPct * 2)
+        if (row && row.score != null) return Number(row.score)
+        if (h.terPct != null) return Math.max(0, 50 - Number(h.terPct) * 2)
         return 45
       }
       function colVsYou(L, holdings, libByIsin) {
         const owned = holdings.find((h) => h.isin === L.isin)
         if (owned) return '<span class="owned-pill">OWNED</span>'
-        const lScore = L.score ?? 0
+        const lScore = Number(L.score ?? 0)
         const same = holdings.filter(
           (h) => (h.category || '').toUpperCase() === (L.category || '').toUpperCase() && h.isin !== L.isin
         )
@@ -115,8 +115,12 @@
         if (!pick) return '—'
         const diff = Math.round(lScore - pick.hs)
         const rowH = libByIsin.get(pick.h.isin)
-        const terH = rowH?.terPct != null ? rowH.terPct : pick.h.terPct != null ? pick.h.terPct : 1.4
-        const save = Math.max(0, ((terH - (L.terPct || 0)) / 100) * (pick.h.currentValueCzk || 0))
+        const terH =
+          rowH?.terPct != null ? Number(rowH.terPct) : pick.h.terPct != null ? Number(pick.h.terPct) : 1.4
+        const save = Math.max(
+          0,
+          ((terH - (Number(L.terPct) || 0)) / 100) * (Number(pick.h.currentValueCzk) || 0)
+        )
         return `Better than your <strong class="hl-gold">${esc(
           pick.h.name
         )}</strong> by ${diff} pts. <span class="teal" style="font-weight: 800">Annual: ${Math.round(
@@ -141,13 +145,13 @@
         const libMap = libByIsin
         body.innerHTML = rows
           .map((L) => {
-            const s = Math.round(L.score || 0)
+            const s = Math.round(Number(L.score || 0))
             return `<tr>
             <td>${esc(L.name)}</td>
             <td class="mono">${esc(L.isin)}</td>
             <td>${esc(L.category)}</td>
-            <td class="mono">${(L.terPct ?? 0).toFixed(2)}</td>
-            <td class="mono">${(L.return3yr ?? 0).toFixed(1)}%</td>
+            <td class="mono">${Number(L.terPct ?? 0).toFixed(2)}</td>
+            <td class="mono">${Number(L.return3yr ?? 0).toFixed(1)}%</td>
             <td><span class="score-badge ${scoreClass(s)}">${labelFor(s)} ${s}</span></td>
             <td style="max-width: 320px; font-size: 12px">${colVsYou(L, holdings, libMap)}</td>
           </tr>`

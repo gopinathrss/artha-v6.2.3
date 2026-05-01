@@ -2,7 +2,7 @@
   const fmtCzk = (n) =>
     new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(Number(n) || 0))
 
-  const fmtPct = (n) => (n >= 0 ? '+' : '') + Number(n).toFixed(1) + '%'
+  const fmtPct = (n) => (Number(n) >= 0 ? '+' : '') + Number(n).toFixed(1) + '%'
 
   async function loadOverview() {
     try {
@@ -70,13 +70,13 @@
     if (!bar) return
     bar.innerHTML =
       '<div class="alloc-bar-segment alloc-bar-equity" style="width:' +
-      a.equityPct +
+      Number(a.equityPct) +
       '%"></div>' +
       '<div class="alloc-bar-segment alloc-bar-bonds" style="width:' +
-      a.bondsPct +
+      Number(a.bondsPct) +
       '%"></div>' +
       '<div class="alloc-bar-segment alloc-bar-cash" style="width:' +
-      a.cashPct +
+      Number(a.cashPct) +
       '%"></div>'
     const eq = document.getElementById('alloc-equity-pct')
     const bd = document.getElementById('alloc-bonds-pct')
@@ -85,7 +85,11 @@
     if (bd) bd.textContent = Number(a.bondsPct).toFixed(1) + '%'
     if (ca) ca.textContent = Number(a.cashPct).toFixed(1) + '%'
 
-    const drift = Math.max(Math.abs(a.equityGap), Math.abs(a.bondsGap), Math.abs(a.cashGap))
+    const drift = Math.max(
+      Math.abs(Number(a.equityGap)),
+      Math.abs(Number(a.bondsGap)),
+      Math.abs(Number(a.cashGap))
+    )
     const driftEl = document.getElementById('alloc-drift-status')
     if (driftEl) {
       if (drift > 10) {
@@ -106,9 +110,10 @@
       { name: 'Cash', current: a.cashPct, gap: a.cashGap, color: 'alloc-bar-cash' }
     ]
     for (const b of buckets) {
-      const direction = b.gap > 0 ? 'over' : b.gap < 0 ? 'under' : 'at'
-      const arrow = b.gap > 0 ? '↑' : b.gap < 0 ? '↓' : '·'
-      const gapCls = Math.abs(b.gap) > 5 ? 'text-warning' : 'text-secondary'
+      const g = Number(b.gap)
+      const direction = g > 0 ? 'over' : g < 0 ? 'under' : 'at'
+      const arrow = g > 0 ? '↑' : g < 0 ? '↓' : '·'
+      const gapCls = Math.abs(g) > 5 ? 'text-warning' : 'text-secondary'
       rows.innerHTML +=
         '<div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--text-sm);gap:var(--space-2);flex-wrap:wrap">' +
         '<span><span class="alloc-legend-dot ' +

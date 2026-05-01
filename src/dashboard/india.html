@@ -413,9 +413,9 @@
               '</td><td class="right mono">' +
               (f.currentNavInr != null ? f.currentNavInr : f.avgNavInr || 0) +
               '</td><td class="right mono">' +
-              (f.valueInr != null ? f.valueInr.toFixed(0) : 0) +
+              (f.valueInr != null ? Number(f.valueInr).toFixed(0) : 0) +
               '</td><td class="right mono">' +
-              (f.valueCzk != null ? f.valueCzk.toFixed(0) : 0) +
+              (f.valueCzk != null ? Number(f.valueCzk).toFixed(0) : 0) +
               '</td><td class="right sub">—</td><td class="sub" style="color:' +
               toneColor(f.taxTone) +
               '">' +
