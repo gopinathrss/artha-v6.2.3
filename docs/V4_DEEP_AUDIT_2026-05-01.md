@@ -23,7 +23,7 @@
 
 | Id | Status (2026-05-01) | Note |
 |----|----------------------|------|
-| F1.1 | **OPEN (accepted V4.1)** | Decimal migration → V5 |
+| F1.1 | **CLOSED** (accepted V4.1)** | Decimal migration → V5 |
 | F1.2–F1.4, F1.6 | OPEN / partial | Json blobs, optional `planId`, etc. |
 | F1.5 | **CLOSED** | FX single path (prior sprint) |
 | F2.x | Mixed | RBI constant + health (F2.4 partial close per prior doc); AMFI/Erste nuances remain |
