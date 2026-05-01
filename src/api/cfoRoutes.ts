@@ -563,9 +563,15 @@ export function registerCfoRoutes(app: Application) {
   app.post('/api/holdings/refresh-nav', async (req, res) => {
     const { demo } = await demoState()
     const holdingId = (req.body as { holdingId?: string } | undefined)?.holdingId
-    const { refreshAllCzechNavs } = await import('../lib/nav/refreshAll')
-    const r = await refreshAllCzechNavs(holdingId)
-    return res.json({ success: true, data: r })
+    const { runCronJob } = await import('../lib/cronWrapper')
+    const result = await runCronJob('nav-refresh-czech-manual', async () => {
+      const { refreshAllCzechNavs } = await import('../lib/nav/refreshAll')
+      return refreshAllCzechNavs(holdingId)
+    })
+    if (result == null) {
+      return res.status(500).json({ success: false, error: 'NAV refresh failed', demo })
+    }
+    return res.json({ success: true, data: result, demo })
   })
 
   app.post('/api/library/refresh-scores', async (_req, res) => {
@@ -779,6 +785,61 @@ export function registerCfoRoutes(app: Application) {
       return res.json({ success: true, data: r })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Evaluate failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.post('/api/alerts/:id/dismiss', async (req, res) => {
+    try {
+      const prisma = await getPrisma()
+      const id = String(req.params.id)
+      const updated = await prisma.alertLog.update({
+        where: { id },
+        data: { status: 'DISMISSED', dismissedAt: new Date() }
+      })
+      return res.json({ success: true, data: { alert: updated } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Dismiss failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.post('/api/alerts/evaluate', async (_req, res) => {
+    try {
+      const { evaluateAlertTriggersOnly } = await import('../lib/triggers')
+      const r = await evaluateAlertTriggersOnly()
+      return res.json({ success: true, data: r })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Evaluate failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/ai/recent-errors', async (_req, res) => {
+    try {
+      const prisma = await getPrisma()
+      const rows = await prisma.systemHealth.findMany({
+        where: { checkName: 'AI_CALL_FAILURE' },
+        orderBy: { checkedAt: 'desc' },
+        take: 20
+      })
+      return res.json({ success: true, data: { errors: rows } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/cron/recent', async (_req, res) => {
+    try {
+      const prisma = await getPrisma()
+      const rows = await prisma.cronExecution.findMany({
+        orderBy: { startedAt: 'desc' },
+        take: 50
+      })
+      return res.json({ success: true, data: { executions: rows } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
       return res.status(500).json({ success: false, error: m })
     }
   })

@@ -146,13 +146,16 @@ app.get('/api/holdings', async (_req, res) => {
   }
 })
 
-app.get('/api/alerts', async (_req, res) => {
+app.get('/api/alerts', async (req, res) => {
   const { demo } = await isDemoMode()
   try {
     const prisma = await getPrisma()
+    const q = req.query as Record<string, string | undefined>
+    const includeDismissed = q.includeDismissed === '1' || q.includeDismissed === 'true'
     const alerts = await prisma.alertLog.findMany({
+      where: includeDismissed ? {} : { status: { not: 'DISMISSED' } },
       orderBy: { firedAt: 'desc' },
-      take: 20
+      take: 50
     })
     res.json({ success: true, data: { alerts }, demo })
   } catch (e: any) {

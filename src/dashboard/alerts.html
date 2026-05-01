@@ -49,32 +49,57 @@
       ArthaUI.setGreeting(document.getElementById('greet'))
       if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
       document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
-      ;(async () => {
-        const r = await fetch('/api/alerts')
+      async function loadAlerts(showDismissed) {
+        const q = showDismissed ? '?includeDismissed=1' : ''
+        const r = await fetch('/api/alerts' + q)
         const j = await r.json()
         ArthaUI.applyDemoChrome(!!j.demo)
         const als = (j.data && j.data.alerts) || []
         const root = document.getElementById('root')
         if (!als.length) {
           root.innerHTML =
-            '<div class="card"><div class="h2">Alerts</div><div class="muted">No alerts yet. System is watching your wealth.</div></div>'
+            '<div class="card"><div class="h2">Alerts</div><label class="sub" style="display:block;margin:8px 0"><input type="checkbox" id="showDismissed" /> Show dismissed</label><div class="muted">No alerts yet. System is watching your wealth.</div></div>'
+          document.getElementById('showDismissed').checked = showDismissed
+          document.getElementById('showDismissed').addEventListener('change', (e) => loadAlerts(e.target.checked))
           return
         }
         root.innerHTML =
-          '<div class="card"><div class="h2">Alerts</div><div id="list"></div></div>'
+          '<div class="card"><div class="h2">Alerts</div><label class="sub" style="display:block;margin:8px 0"><input type="checkbox" id="showDismissed" /> Show dismissed</label><div id="list"></div></div>'
+        document.getElementById('showDismissed').checked = showDismissed
+        document.getElementById('showDismissed').addEventListener('change', (e) => loadAlerts(e.target.checked))
         const list = document.getElementById('list')
         list.innerHTML = als
           .map((a) => {
             const u = String(a.urgency || 'INFO')
+            const st = String(a.status || 'ACTIVE')
+            const fc = a.fireCount != null ? ` · fired ${a.fireCount}x` : ''
+            const btn =
+              st === 'DISMISSED'
+                ? ''
+                : `<button type="button" class="btn" data-dismiss="${a.id}" style="margin-top:8px">Dismiss</button>`
             return `<div class="urg-${u}" style="border: 1px solid rgba(13,20,33,0.08); padding: 12px; border-radius: 2px; margin: 10px 0">
               <div class="u-bar"></div>
-              <div class="kicker">${u} · ${String(a.triggerType || '')}</div>
+              <div class="kicker">${u} · ${String(a.triggerType || '')} · ${st}${fc}</div>
               <div class="h2" style="margin: 8px 0 0 0">${(a.title || '').replace(/</g, '')}</div>
               <div class="sub">${(a.message || '').replace(/</g, '')}</div>
               <div class="muted" style="margin-top: 10px">${new Date(a.firedAt).toLocaleString('en-GB')}</div>
+              ${btn}
             </div>`
           })
           .join('')
+        list.querySelectorAll('[data-dismiss]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-dismiss')
+            const dr = await fetch('/api/alerts/' + encodeURIComponent(id) + '/dismiss', { method: 'POST' })
+            const dj = await dr.json()
+            if (!dr.ok || !dj.success) return ArthaUI.showToast('Dismiss failed', 'error')
+            ArthaUI.showToast('Dismissed', 'success')
+            await loadAlerts(document.getElementById('showDismissed').checked)
+          })
+        })
+      }
+      ;(async () => {
+        await loadAlerts(false)
       })().catch(() => ArthaUI.showToast('Load failed', 'error'))
     </script>
   </body>
