@@ -112,6 +112,13 @@ model Snapshot {
 
 model AlertLog {
   id              String    @id @default(cuid())
+  alertKey        String
+  firstFiredAt    DateTime  @default(now())
+  lastFiredAt     DateTime  @default(now())
+  fireCount       Int       @default(1)
+  status          String    @default("ACTIVE") // ACTIVE | RESOLVED | DISMISSED
+  resolvedAt      DateTime?
+  dismissedAt     DateTime?
   triggerType     String
   title           String
   message         String
@@ -122,6 +129,8 @@ model AlertLog {
   sentViaTelegram Boolean   @default(false)
   firedAt         DateTime  @default(now())
   sentAt          DateTime?
+
+  @@index([alertKey, status])
 }
 
 model MonthlyLetter {
@@ -400,9 +409,25 @@ model SystemHealth {
   checkName      String
   status         String
   message        String?
+  metadata       Json?
   lastSuccessful DateTime?
   checkedAt      DateTime  @default(now())
   @@index([checkName, checkedAt])
+}
+
+model CronExecution {
+  id               String    @id @default(cuid())
+  jobName          String
+  scheduledFor     DateTime
+  startedAt        DateTime
+  completedAt      DateTime?
+  status           String // RUNNING | SUCCESS | FAILED
+  durationMs       Int?
+  itemsProcessed   Int?
+  errors           Json?
+  metadata         Json?
+
+  @@index([jobName, scheduledFor])
 }
 
 model AdvisorJournal {

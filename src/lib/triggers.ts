@@ -2,6 +2,11 @@ import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { getPortfolioSummary } from './portfolio'
 import { calculateTaxStatus } from './calculations'
+import {
+  alertKeyForTrigger,
+  fireAlertWithDedup,
+  resolveInactiveTriggerAlerts
+} from './alerts/dedup'
 
 export interface FiredTrigger {
   triggerType: string
@@ -84,6 +89,43 @@ export async function saveDailySnapshotFromPortfolio(data: any) {
   })
 }
 
+function mapUrgencyToSeverity(u: string): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+  if (u === 'CRITICAL') return 'CRITICAL'
+  if (u === 'HIGH') return 'HIGH'
+  if (u === 'INFO') return 'LOW'
+  return 'MEDIUM'
+}
+
+/** Fire triggers with deduplication + resolve stale keys (no FX / NAV refresh). */
+export async function evaluateAlertTriggersOnly(): Promise<{ fired: number; alertsCreated: number }> {
+  const summary = await getPortfolioSummary()
+  if (!summary.success || !summary.data) {
+    return { fired: 0, alertsCreated: 0 }
+  }
+  const triggers = await runAllTriggers(summary.data)
+  const settings = await realPrisma.settings.findFirst()
+  let alertsCreated = 0
+  const activeKeys = new Set<string>()
+  for (const tr of triggers) {
+    const key = alertKeyForTrigger(tr)
+    activeKeys.add(key)
+    const r = await fireAlertWithDedup({
+      alertKey: key,
+      severity: mapUrgencyToSeverity(tr.urgency),
+      category: tr.triggerType,
+      message: tr.message,
+      title: tr.title,
+      metadata: tr.dataSnapshot
+    })
+    if (r.created) {
+      alertsCreated += 1
+      await deliverAlert({ ...tr, id: r.alertId } as any, settings)
+    }
+  }
+  await resolveInactiveTriggerAlerts(activeKeys)
+  return { fired: triggers.length, alertsCreated }
+}
+
 export async function runMorningJob(): Promise<{
   triggered: number
   errors: string[]
@@ -127,23 +169,24 @@ export async function runMorningJob(): Promise<{
     triggered = triggers.length
 
     const settings = await realPrisma.settings.findFirst()
+    const activeKeys = new Set<string>()
     for (const tr of triggers) {
-      const log = await prisma.alertLog.create({
-        data: {
-          triggerType: tr.triggerType,
-          title: tr.title,
-          message: tr.message,
-          urgency: tr.urgency,
-          dataSnapshot: tr.dataSnapshot as any,
-          wasSent: false
-        }
+      const key = alertKeyForTrigger(tr)
+      activeKeys.add(key)
+      const r = await fireAlertWithDedup({
+        alertKey: key,
+        severity: mapUrgencyToSeverity(tr.urgency),
+        category: tr.triggerType,
+        message: tr.message,
+        title: tr.title,
+        metadata: tr.dataSnapshot
       })
-      alertsCreated += 1
-      await deliverAlert(
-        { ...tr, id: log.id } as any,
-        settings
-      )
+      if (r.created) {
+        alertsCreated += 1
+        await deliverAlert({ ...tr, id: r.alertId } as any, settings)
+      }
     }
+    await resolveInactiveTriggerAlerts(activeKeys)
     await saveDailySnapshotFromPortfolio(p)
   } catch (e: any) {
     errors.push(e?.message || String(e))
