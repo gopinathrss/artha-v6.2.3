@@ -71,24 +71,46 @@ echo === Prisma: generate (via node, no npx) ===
 echo [TIP] If you see EPERM on query_engine*.dll under OneDrive: close other Node/Cursor terminals using this repo,
 echo       pause OneDrive sync for this folder, or clone artha-v4 to a path outside OneDrive (e.g. C:\src\artha-v4).
 
-REM OneDrive / Defender often block Prisma's "rename .tmp -> .dll" in node_modules\.prisma\client — clear locks first.
+REM Clear stale Prisma temp files only — do not delete query_engine*.dll while
+REM a Node process may have it mapped ^(causes EPERM on rename during generate^).
 if exist "%~dp0node_modules\.prisma\client" (
   attrib -r "%~dp0node_modules\.prisma\client\*.*" /s >nul 2>&1
   del /f /q "%~dp0node_modules\.prisma\client\query_engine-windows.dll.node.tmp*" 2>nul
-  del /f /q "%~dp0node_modules\.prisma\client\query_engine-windows.dll.node" 2>nul
 )
 
 "%NODE%" "%PRISMA_CLI%" generate
-if errorlevel 1 (
+if not errorlevel 1 goto :prisma_generate_ok
+
+echo [WARN] prisma generate failed ^(attempt 1/4^). Retrying after 4s...
+timeout /t 4 /nobreak >nul
+"%NODE%" "%PRISMA_CLI%" generate
+if not errorlevel 1 goto :prisma_generate_ok
+
+echo [WARN] prisma generate failed ^(attempt 2/4^). Retrying after 4s...
+timeout /t 4 /nobreak >nul
+"%NODE%" "%PRISMA_CLI%" generate
+if not errorlevel 1 goto :prisma_generate_ok
+
+echo [WARN] prisma generate failed ^(attempt 3/4^). Retrying after 4s...
+timeout /t 4 /nobreak >nul
+"%NODE%" "%PRISMA_CLI%" generate
+if not errorlevel 1 goto :prisma_generate_ok
+
+if exist "%~dp0node_modules\.prisma\client\index.js" if exist "%~dp0node_modules\.prisma\client\query_engine-windows.dll.node" (
   echo.
-  echo [ERROR] prisma generate failed.
-  echo   Common on Windows + OneDrive: EPERM when renaming the Prisma query engine under node_modules\.prisma
-  echo   Try: 1^) Right-click OneDrive tray ^> Pause syncing, run start.cmd again
-  echo        2^) Move the project folder out of OneDrive (recommended for Node projects)
-  echo        3^) Exclude this folder from real-time antivirus scan for node_modules
-  pause
-  exit /b 1
+  echo [WARN] prisma generate still failing — continuing with existing Prisma client.
+  echo       After stopping other Node processes:  npm run db:generate
+  goto :prisma_generate_ok
 )
+
+echo.
+echo [ERROR] prisma generate failed.
+echo   Common on Windows: EPERM when renaming query_engine-windows.dll.node ^(file in use or OneDrive/Defender^)
+echo   Try: 1^) Close dev server / terminals using this repo  2^) Pause OneDrive  3^) Defender exclusion for .prisma
+pause
+exit /b 1
+
+:prisma_generate_ok
 
 echo.
 echo === Prisma: migrate deploy ===

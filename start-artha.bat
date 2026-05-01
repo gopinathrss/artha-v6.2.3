@@ -138,18 +138,51 @@ if not exist "node_modules\@prisma\client" (
 
 echo.
 echo === Prisma: generate ===
+REM Do NOT delete query_engine-windows.dll.node here: if any Node process (dev
+REM server, Cursor, tests) has it loaded, delete fails silently and generate
+REM still hits EPERM on rename. Only clear stale partial .tmp files.
 if exist "%~dp0node_modules\.prisma\client" (
   attrib -r "%~dp0node_modules\.prisma\client\*.*" /s >nul 2>&1
   del /f /q "%~dp0node_modules\.prisma\client\query_engine-windows.dll.node.tmp*" 2>nul
-  del /f /q "%~dp0node_modules\.prisma\client\query_engine-windows.dll.node" 2>nul
 )
 
 "%NODE%" "%PRISMA_CLI%" generate
-if errorlevel 1 (
-  echo [ERROR] prisma generate failed.
-  pause
-  exit /b 1
+if not errorlevel 1 goto :prisma_generate_ok
+
+echo [WARN] prisma generate failed ^(attempt 1/4^). Retrying after 4s ^(often EPERM: engine DLL locked^)...
+timeout /t 4 /nobreak >nul
+"%NODE%" "%PRISMA_CLI%" generate
+if not errorlevel 1 goto :prisma_generate_ok
+
+echo [WARN] prisma generate failed ^(attempt 2/4^). Retrying after 4s...
+timeout /t 4 /nobreak >nul
+"%NODE%" "%PRISMA_CLI%" generate
+if not errorlevel 1 goto :prisma_generate_ok
+
+echo [WARN] prisma generate failed ^(attempt 3/4^). Retrying after 4s...
+timeout /t 4 /nobreak >nul
+"%NODE%" "%PRISMA_CLI%" generate
+if not errorlevel 1 goto :prisma_generate_ok
+
+REM Last resort: continue if a previous generate left a usable client ^(schema unchanged^).
+if exist "%~dp0node_modules\.prisma\client\index.js" if exist "%~dp0node_modules\.prisma\client\query_engine-windows.dll.node" (
+  echo.
+  echo [WARN] prisma generate still failing — continuing with EXISTING Prisma client + query engine.
+  echo       If you edited prisma\schema.prisma: stop ALL Node/Cursor terminals using this repo, then run:
+  echo         npm run db:generate
+  echo       Or close the dev server on port 3002 and re-run start-artha.bat.
+  goto :prisma_generate_ok
 )
+
+echo.
+echo [ERROR] prisma generate failed and no usable Prisma client found under node_modules\.prisma\client
+echo   Common causes: EPERM rename on query_engine-windows.dll.node ^(file locked by another process^)
+echo   Try: 1^) Close dev server / Playwright / any `node` using this folder  2^) Pause OneDrive for this path
+echo        3^) Add Windows Defender exclusion for node_modules\.prisma  4^) Run:  npm run db:generate
+pause
+exit /b 1
+
+:prisma_generate_ok
 
 echo.
 echo === Prisma: migrate deploy ===
