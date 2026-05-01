@@ -1,0 +1,55 @@
+/* === Reset + base === */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text-primary);
+  background: var(--color-bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+/* Numbers must always be tabular */
+.num,
+.num *,
+[data-num],
+td.num,
+th.num,
+.stat-value,
+.table-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Remove default focus ring; provide custom */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent-base);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Smooth theme transitions */
+html {
+  transition:
+    background-color var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+
+/* Disable transitions during initial load to prevent flash */
+html.preload * {
+  transition: none !important;
+}

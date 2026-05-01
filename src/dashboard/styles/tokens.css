@@ -1,0 +1,139 @@
+/* ARTHA V5 design tokens — Linear/Notion direction */
+
+:root {
+  /* === Color: Light theme === */
+  --color-bg-base: #ffffff;
+  --color-bg-subtle: #fafafa;
+  --color-bg-muted: #f4f4f5;
+  --color-bg-elevated: #ffffff;
+
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-default: rgba(0, 0, 0, 0.1);
+  --color-border-strong: rgba(0, 0, 0, 0.16);
+
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-tertiary: #a1a1aa;
+  --color-text-disabled: #d4d4d8;
+
+  --color-accent-base: #4f46e5; /* indigo-600 — single brand accent */
+  --color-accent-hover: #4338ca;
+  --color-accent-subtle: #eef2ff;
+  --color-accent-text: #ffffff;
+
+  --color-positive-base: #10b981; /* emerald-500 */
+  --color-positive-subtle: #ecfdf5;
+  --color-positive-text: #047857;
+
+  --color-negative-base: #ef4444; /* red-500 */
+  --color-negative-subtle: #fef2f2;
+  --color-negative-text: #b91c1c;
+
+  --color-warning-base: #f59e0b; /* amber-500 */
+  --color-warning-subtle: #fffbeb;
+  --color-warning-text: #b45309;
+
+  --color-info-base: #3b82f6; /* blue-500 */
+  --color-info-subtle: #eff6ff;
+  --color-info-text: #1d4ed8;
+
+  /* === Typography === */
+  --font-sans: 'Inter', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monaco, 'Cascadia Code', monospace;
+
+  /* Type scale — limit to 8 sizes */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+
+  /* Line heights */
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* Weights — TWO weights only */
+  --weight-regular: 400;
+  --weight-semibold: 600;
+
+  /* === Spacing — 4px grid === */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* === Radius === */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 9999px;
+
+  /* === Shadows — depth 1 and 2 only === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  /* === Motion === */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* === Layout === */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --topbar-height: 56px;
+  --content-max-width: 1200px;
+}
+
+/* === Color: Dark theme === */
+:root[data-theme='dark'] {
+  --color-bg-base: #09090b;
+  --color-bg-subtle: #0f0f11;
+  --color-bg-muted: #18181b;
+  --color-bg-elevated: #1c1c1f;
+
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+
+  --color-text-primary: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-tertiary: #71717a;
+  --color-text-disabled: #3f3f46;
+
+  --color-accent-base: #6366f1; /* indigo-500 — slightly lighter for dark */
+  --color-accent-hover: #818cf8;
+  --color-accent-subtle: rgba(99, 102, 241, 0.12);
+  --color-accent-text: #ffffff;
+
+  --color-positive-base: #10b981;
+  --color-positive-subtle: rgba(16, 185, 129, 0.12);
+  --color-positive-text: #34d399;
+
+  --color-negative-base: #ef4444;
+  --color-negative-subtle: rgba(239, 68, 68, 0.12);
+  --color-negative-text: #f87171;
+
+  --color-warning-base: #f59e0b;
+  --color-warning-subtle: rgba(245, 158, 11, 0.12);
+  --color-warning-text: #fbbf24;
+
+  --color-info-base: #3b82f6;
+  --color-info-subtle: rgba(59, 130, 246, 0.12);
+  --color-info-text: #60a5fa;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
