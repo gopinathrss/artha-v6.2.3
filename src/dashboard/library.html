@@ -4,186 +4,155 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — Library</title>
-        <script src="/scripts/theme.js"></script>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE</div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div>
-            <h1>ARTHA</h1>
-            <small>Personal CFO</small>
-          </div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a class="active" href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions">
-            <button class="btn" type="button" id="btnTheme" aria-label="Toggle theme">Theme</button>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Library</h1>
+          </div>
+          <div class="topbar-actions">
+            <button
+              class="btn btn-ghost btn-sm"
+              id="refresh-btn"
+              aria-label="Refresh"
+              type="button"
+            >
+              Refresh
+            </button>
           </div>
         </header>
-        <main class="content">
-          <div class="card col-12">
-            <div class="h2">Instrument library (George)</div>
-            <div class="filter-row">
-              <label>Category <select id="cat"><option value="">All</option></select></label>
-              <label
-                ><input type="checkbox" id="george" checked style="margin-right: 6px" /> Only available in
-                George</label
-              >
+
+        <div class="content">
+          <section class="overview-hero" id="hero">
+            <div class="hero-eyebrow">Instrument library</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-count">—</div>
             </div>
-            <table class="table" id="tbl">
-              <thead>
-                <tr>
-                  <th>Fund</th>
-                  <th>ISIN</th>
-                  <th>Category</th>
-                  <th>TER %</th>
-                  <th>3yr return</th>
-                  <th>Score</th>
-                  <th>vs your holdings</th>
-                </tr>
-              </thead>
-              <tbody id="body"></tbody>
-            </table>
-          </div>
-        </main>
-      </div>
+            <div class="hero-meta">Funds vetted by Artha across George availability</div>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-label">Available in George</div>
+                <div class="hero-stat-value" id="stat-george">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Average score</div>
+                <div class="hero-stat-value" id="stat-avg-score">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Average TER</div>
+                <div class="hero-stat-value" id="stat-avg-ter">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Equity / Bonds / Cash</div>
+                <div class="hero-stat-value" id="stat-mix">—</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Filters</h2>
+                <p class="card-subtitle">Narrow the table</p>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="filter-category">Category</label>
+                <select id="filter-category" class="form-field-select">
+                  <option value="">All</option>
+                  <option value="EQUITY">Equity</option>
+                  <option value="BONDS">Bonds</option>
+                  <option value="CASH">Cash</option>
+                  <option value="COMMODITY">Commodity</option>
+                </select>
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label" for="filter-search">Search</label>
+                <input
+                  id="filter-search"
+                  type="search"
+                  class="form-field-input"
+                  placeholder="Name or ISIN…"
+                />
+              </div>
+              <div class="form-field" style="margin: 0;">
+                <label class="form-field-label">George availability</label>
+                <label class="toggle-row" style="border: none; padding: var(--space-1) 0;">
+                  <span class="toggle-row-text">
+                    <span class="toggle-row-title">Only available in George</span>
+                  </span>
+                  <span class="toggle">
+                    <input type="checkbox" id="filter-george" checked />
+                    <span class="toggle-slider"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Library</h2>
+                <p class="card-subtitle" id="lib-subtitle">Loading…</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="lib-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Fund</th>
+                    <th scope="col">Category</th>
+                    <th class="num" scope="col">TER %</th>
+                    <th class="num" scope="col">3yr return</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">In George</th>
+                  </tr>
+                </thead>
+                <tbody id="lib-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      function esc(s) {
-        return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      }
-      function scoreClass(s) {
-        if (s >= 80) return 'score-strong'
-        if (s >= 60) return 'score-good'
-        if (s >= 40) return 'score-fair'
-        return 'score-weak'
-      }
-      function labelFor(s) {
-        if (s >= 80) return 'STRONG'
-        if (s >= 60) return 'GOOD'
-        if (s >= 40) return 'FAIR'
-        return 'WEAK'
-      }
-      function estScore(h, libByIsin) {
-        const row = libByIsin.get(h.isin)
-        if (row && row.score != null) return Number(row.score)
-        if (h.terPct != null) return Math.max(0, 50 - Number(h.terPct) * 2)
-        return 45
-      }
-      function colVsYou(L, holdings, libByIsin) {
-        const owned = holdings.find((h) => h.isin === L.isin)
-        if (owned) return '<span class="owned-pill">OWNED</span>'
-        const lScore = Number(L.score ?? 0)
-        const same = holdings.filter(
-          (h) => (h.category || '').toUpperCase() === (L.category || '').toUpperCase() && h.isin !== L.isin
-        )
-        let pick = null
-        for (const h of same) {
-          const hs = estScore(h, libByIsin)
-          if (hs < lScore && (pick == null || hs < pick.hs)) pick = { h, hs }
-        }
-        if (!pick) return '—'
-        const diff = Math.round(lScore - pick.hs)
-        const rowH = libByIsin.get(pick.h.isin)
-        const terH =
-          rowH?.terPct != null ? Number(rowH.terPct) : pick.h.terPct != null ? Number(pick.h.terPct) : 1.4
-        const save = Math.max(
-          0,
-          ((terH - (Number(L.terPct) || 0)) / 100) * (Number(pick.h.currentValueCzk) || 0)
-        )
-        return `Better than your <strong class="hl-gold">${esc(
-          pick.h.name
-        )}</strong> by ${diff} pts. <span class="teal" style="font-weight: 800">Annual: ${Math.round(
-          save
-        ).toLocaleString('cs-CZ')} Kč</span>`
-      }
-      let all = []
-      let libByIsin = new Map()
-      let holdings = []
-      function applyFilters() {
-        const cat = document.getElementById('cat').value
-        const gOnly = document.getElementById('george').checked
-        return all.filter(
-          (r) =>
-            (!cat || (r.category || '').toUpperCase() === cat) &&
-            (!gOnly || r.availableInGeorge === true)
-        )
-      }
-      function render() {
-        const rows = applyFilters()
-        const body = document.getElementById('body')
-        const libMap = libByIsin
-        body.innerHTML = rows
-          .map((L) => {
-            const s = Math.round(Number(L.score || 0))
-            return `<tr>
-            <td>${esc(L.name)}</td>
-            <td class="mono">${esc(L.isin)}</td>
-            <td>${esc(L.category)}</td>
-            <td class="mono">${Number(L.terPct ?? 0).toFixed(2)}</td>
-            <td class="mono">${Number(L.return3yr ?? 0).toFixed(1)}%</td>
-            <td><span class="score-badge ${scoreClass(s)}">${labelFor(s)} ${s}</span></td>
-            <td style="max-width: 320px; font-size: 12px">${colVsYou(L, holdings, libMap)}</td>
-          </tr>`
-          })
-          .join('')
-      }
-      async function load() {
-        const [lRes, hRes] = await Promise.all([fetch('/api/library'), fetch('/api/holdings')])
-        const lj = await lRes.json()
-        const hj = await hRes.json()
-        all = (lj.data && lj.data.instruments) || []
-        libByIsin = new Map(all.map((r) => [r.isin, r]))
-        holdings = (hj.data && hj.data.holdings) || hj.holdings || []
-        if (Array.isArray(hj) && hj.holdings) holdings = hj.holdings
-        const cats = new Set(all.map((r) => (r.category || '').toUpperCase()).filter(Boolean))
-        const catSel = document.getElementById('cat')
-        for (const c of [...cats].sort()) {
-          const o = document.createElement('option')
-          o.value = c
-          o.textContent = c
-          catSel.appendChild(o)
-        }
-        document.getElementById('cat').addEventListener('change', render)
-        document.getElementById('george').addEventListener('change', render)
-        render()
-      }
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
-      void load()
-    </script>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/library.js"></script>
   </body>
 </html>

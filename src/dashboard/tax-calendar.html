@@ -3,120 +3,121 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ARTHA — Tax calendar</title>
-        <script src="/scripts/theme.js"></script>
+    <title>ARTHA — Tax Calendar</title>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE — Simulated Portfolio</div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a class="active" href="/tax-calendar">Tax calendar</a>
-          <a href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions"><button class="btn" id="btnTheme" type="button">Theme</button></div>
-        </header>
-        <main class="content">
-          <div class="card">
-            <div class="h2">Czech mutual fund tax window</div>
-            <div class="muted">Rows are sorted by urgency (closest tax-free date first).</div>
-            <table class="table" style="margin-top: 12px" id="tbl">
-              <thead>
-                <tr>
-                  <th>Fund</th>
-                  <th>Value</th>
-                  <th>Gain</th>
-                  <th>Purchase</th>
-                  <th>Tax-free date</th>
-                  <th>Days</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="body"></tbody>
-            </table>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Tax Calendar</h1>
           </div>
-        </main>
-      </div>
+          <div class="topbar-actions">
+            <button
+              class="btn btn-ghost btn-sm"
+              id="refresh-btn"
+              aria-label="Refresh"
+              type="button"
+            >
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="overview-hero" id="hero">
+            <div class="hero-eyebrow">Czech 3-year rule</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-locked">—</div>
+            </div>
+            <div class="hero-meta">Total value still inside the tax-window across all holdings</div>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-label">Tax-free now</div>
+                <div class="hero-stat-value" id="stat-now">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Within 90 days</div>
+                <div class="hero-stat-value" id="stat-90">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Within 1 year</div>
+                <div class="hero-stat-value" id="stat-365">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Holdings tracked</div>
+                <div class="hero-stat-value" id="stat-total">—</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Imminent — next 90 days</h2>
+                <p class="card-subtitle" id="imminent-subtitle">—</p>
+              </div>
+            </div>
+            <div id="imminent-list"></div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5);">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Within 1 year</h2>
+                <p class="card-subtitle" id="upcoming-subtitle">—</p>
+              </div>
+            </div>
+            <div id="upcoming-list"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Already tax-free</h2>
+                <p class="card-subtitle" id="free-subtitle">—</p>
+              </div>
+              <a href="/this-month" class="btn btn-ghost btn-sm">Plan a sell</a>
+            </div>
+            <div id="free-list"></div>
+          </section>
+        </div>
+      </main>
     </div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
 
-      function calcTax(h, today) {
-        const purchase = new Date(h.purchaseStartDate)
-        const taxFree = new Date(purchase)
-        taxFree.setFullYear(taxFree.getFullYear() + 3)
-        const days = Math.round((taxFree.getTime() - today.getTime()) / 86400000)
-        const isTaxFree = days <= 0
-        const urgency = isTaxFree ? 'FREE' : days <= 30 ? 'CRITICAL' : days <= 90 ? 'HIGH' : 'FUTURE'
-        return { taxFree, days, isTaxFree, urgency }
-      }
-
-      ;(async () => {
-        const r = await fetch('/api/holdings')
-        const j = await r.json()
-        ArthaUI.applyDemoChrome(!!j.demo)
-        const rows = ((j.data && j.data.holdings) || []).filter((h) => h.status !== 'EXITED')
-        const today = new Date()
-        const enriched = rows
-          .map((h) => ({ h, t: calcTax(h, today) }))
-          .sort((a, b) => a.t.days - b.t.days)
-
-        const b = document.getElementById('body')
-        if (!enriched.length) {
-          b.innerHTML = '<tr><td colspan="7">No active holdings.</td></tr>'
-          return
-        }
-
-        b.innerHTML = enriched
-          .map(({ h, t }) => {
-            const cls =
-              t.isTaxFree ? 'tr-taxfree' : t.days > 0 && t.days <= 30 ? 'tr-urg-30' : t.days <= 90 ? 'tr-urg-90' : ''
-            const status = t.isTaxFree ? 'TAX FREE' : t.days + 'd'
-            return `<tr class="${cls}">
-              <td>${(h.name || '').replace(/</g, '')}</td>
-              <td class="mono">${(h.currentValueCzk || 0).toLocaleString('cs-CZ')} Kč</td>
-              <td class="mono">${(h.gainCzk != null ? h.gainCzk : '—')}</td>
-              <td class="mono">${new Date(h.purchaseStartDate).toLocaleDateString('en-GB')}</td>
-              <td class="mono">${t.taxFree.toLocaleDateString('en-GB')}</td>
-              <td class="mono">${t.days}</td>
-              <td><span class="badge">${status}</span></td>
-            </tr>`
-          })
-          .join('')
-      })().catch(() => ArthaUI.showToast('Load failed', 'error'))
-    </script>
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/tax-calendar.js"></script>
   </body>
 </html>

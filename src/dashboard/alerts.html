@@ -4,108 +4,101 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ARTHA — Alerts</title>
-        <script src="/scripts/theme.js"></script>
+    <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/styles/v5-core.css" />
-    <link rel="stylesheet" href="/artha-ui.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">DEMO MODE ACTIVE — Simulated Portfolio</div>
-    <div class="app">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"></div>
-          <div><h1>ARTHA</h1><small>Personal CFO</small></div>
-        </div>
-        <nav class="nav">
-          <a href="/this-month">This month</a>
-          <a href="/onboarding" data-artha-setup-nav
-            ><span class="artha-setup-label">✨ Complete Setup</span
-            ><span class="artha-setup-dot" aria-hidden="true"></span
-          ></a>
-          <a href="/">Overview</a>
-          <a href="/portfolio">Portfolio</a>
-          <a href="/india">India</a>
-          <a href="/tax-calendar">Tax calendar</a>
-          <a class="active" href="/alerts">Alerts</a>
-          <a href="/finances">Finances</a>
-          <a href="/reports">Reports</a>
-          <a href="/intelligence">Intelligence</a>
-          <a href="/library">Library</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
-      <div class="main">
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
         <header class="topbar">
-          <div class="greeting" id="greet"></div>
-          <div class="currency-pill muted" id="currencyPill" title="Display currency">CZK</div>
-          <div class="sub muted" id="trustLine" style="min-width: 5rem" aria-live="polite"></div>
-          <div class="actions"><button class="btn" id="btnTheme" type="button">Theme</button></div>
+          <div class="topbar-left">
+            <button
+              class="topbar-menu-trigger"
+              aria-label="Open menu"
+              id="menu-toggle"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Alerts</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="toggle-row" style="border: none; padding: 0; gap: var(--space-2);">
+              <span class="toggle-row-text" style="font-size: var(--text-xs); color: var(--color-text-tertiary);">Show dismissed</span>
+              <span class="toggle">
+                <input type="checkbox" id="show-dismissed" />
+                <span class="toggle-slider"></span>
+              </span>
+            </label>
+            <button class="btn btn-primary btn-sm" id="evaluate-btn" type="button">
+              Run evaluation
+            </button>
+          </div>
         </header>
-        <main class="content" id="root"></main>
-      </div>
+
+        <div class="content">
+          <section class="overview-hero" id="hero">
+            <div class="hero-eyebrow">Alert log</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-active">—</div>
+            </div>
+            <div class="hero-meta" id="hero-sub">—</div>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-label">Active</div>
+                <div class="hero-stat-value" id="stat-active">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Resolved</div>
+                <div class="hero-stat-value" id="stat-resolved">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Dismissed</div>
+                <div class="hero-stat-value" id="stat-dismissed">—</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Critical</div>
+                <div class="hero-stat-value" id="stat-critical">—</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Recent alerts</h2>
+                <p class="card-subtitle" id="list-subtitle">Loading…</p>
+              </div>
+            </div>
+            <div id="alert-list"></div>
+          </section>
+        </div>
+      </main>
     </div>
-    <script src="/artha-ui.js"></script>
-    <script>
-      /* global ArthaUI */
-      ArthaUI.initTheme()
-      ArthaUI.setGreeting(document.getElementById('greet'))
-      if (ArthaUI.initV4Shell) ArthaUI.initV4Shell()
-      document.getElementById('btnTheme').addEventListener('click', () => ArthaUI.toggleTheme())
-      async function loadAlerts(showDismissed) {
-        const q = showDismissed ? '?includeDismissed=1' : ''
-        const r = await fetch('/api/alerts' + q)
-        const j = await r.json()
-        ArthaUI.applyDemoChrome(!!j.demo)
-        const als = (j.data && j.data.alerts) || []
-        const root = document.getElementById('root')
-        if (!als.length) {
-          root.innerHTML =
-            '<div class="card"><div class="h2">Alerts</div><label class="sub" style="display:block;margin:8px 0"><input type="checkbox" id="showDismissed" /> Show dismissed</label><div class="muted">No alerts yet. System is watching your wealth.</div></div>'
-          document.getElementById('showDismissed').checked = showDismissed
-          document.getElementById('showDismissed').addEventListener('change', (e) => loadAlerts(e.target.checked))
-          return
-        }
-        root.innerHTML =
-          '<div class="card"><div class="h2">Alerts</div><label class="sub" style="display:block;margin:8px 0"><input type="checkbox" id="showDismissed" /> Show dismissed</label><div id="list"></div></div>'
-        document.getElementById('showDismissed').checked = showDismissed
-        document.getElementById('showDismissed').addEventListener('change', (e) => loadAlerts(e.target.checked))
-        const list = document.getElementById('list')
-        list.innerHTML = als
-          .map((a) => {
-            const u = String(a.urgency || 'INFO')
-            const st = String(a.status || 'ACTIVE')
-            const fc = a.fireCount != null ? ` · fired ${a.fireCount}x` : ''
-            const btn =
-              st === 'DISMISSED'
-                ? ''
-                : `<button type="button" class="btn" data-dismiss="${a.id}" style="margin-top:8px">Dismiss</button>`
-            return `<div class="urg-${u}" style="border: 1px solid rgba(13,20,33,0.08); padding: 12px; border-radius: 2px; margin: 10px 0">
-              <div class="u-bar"></div>
-              <div class="kicker">${u} · ${String(a.triggerType || '')} · ${st}${fc}</div>
-              <div class="h2" style="margin: 8px 0 0 0">${(a.title || '').replace(/</g, '')}</div>
-              <div class="sub">${(a.message || '').replace(/</g, '')}</div>
-              <div class="muted" style="margin-top: 10px">${new Date(a.firedAt).toLocaleString('en-GB')}</div>
-              ${btn}
-            </div>`
-          })
-          .join('')
-        list.querySelectorAll('[data-dismiss]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const id = btn.getAttribute('data-dismiss')
-            const dr = await fetch('/api/alerts/' + encodeURIComponent(id) + '/dismiss', { method: 'POST' })
-            const dj = await dr.json()
-            if (!dr.ok || !dj.success) return ArthaUI.showToast('Dismiss failed', 'error')
-            ArthaUI.showToast('Dismissed', 'success')
-            await loadAlerts(document.getElementById('showDismissed').checked)
-          })
-        })
-      }
-      ;(async () => {
-        await loadAlerts(false)
-      })().catch(() => ArthaUI.showToast('Load failed', 'error'))
-    </script>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/alerts.js"></script>
   </body>
 </html>
