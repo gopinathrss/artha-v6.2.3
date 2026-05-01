@@ -29,6 +29,7 @@ model Holding {
   navSourceType     String? // ERSTE | YAHOO | AMFI | MANUAL
   navSourceId       String? // Erste notation ID or Yahoo ticker
   navLastFetchedAt  DateTime?
+  holdReason        String? // TACTICAL_HOLD | AT_TARGET | TAX_WINDOW_NEAR etc.
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   cashflows         Cashflow[]
@@ -177,8 +178,36 @@ model Settings {
   timezone             String  @default("Europe/Prague")
   // Onboarding: false until user finishes wizard (banner persists while false)
   onboardingComplete   Boolean @default(false)
+  autoIngestEmails     Boolean @default(false)
+  imapHost             String?
+  imapPort             Int?    @default(993)
+  imapUser             String?
+  imapPassword         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+model EmailIngestionPreview {
+  id                  String    @id @default(cuid())
+  receivedAt          DateTime  @default(now())
+  fromAddress         String
+  subject             String
+  parsedType          String // ERSTE_SIP_CONFIRM | CAS_PDF | UNKNOWN
+  parsedAmount        Decimal?  @db.Decimal(14, 2)
+  parsedFundIsin      String?
+  parsedFundName      String?
+  parsedDate          DateTime?
+  rawBody             String?   @db.Text
+  confidence          Decimal   @db.Decimal(5, 2)
+  status              String    @default("PENDING") // PENDING | APPROVED | REJECTED | AUTO_INGESTED
+  linkedExecutionId   String?
+  reviewedAt          DateTime?
+  reviewerNote        String?
+  messageIdHeader     String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([status, receivedAt])
 }
 
 model InstrumentLibrary {
@@ -277,6 +306,7 @@ model UserProfile {
   riskProfile              String   @default("MODERATE")
   monthlyNetIncomeCzk      Decimal  @db.Decimal(14, 2)
   salaryDayOfMonth         Int      @default(15)
+  sipDayOfMonth            Int      @default(14)
   emergencyFundTarget      Decimal  @db.Decimal(14, 2)
   retirementAge            Int      @default(50)
   retirementMonthlyExpense Decimal @db.Decimal(14, 2)
