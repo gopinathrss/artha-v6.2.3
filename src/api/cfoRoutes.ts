@@ -1,6 +1,7 @@
 import type { Application, Request, Response } from 'express'
 import { getPrisma, realPrisma } from '../lib/prisma'
 import { createReport, renderReportViewHtml } from '../lib/reportsService'
+import { registerExcelImportRoutes } from './excelImportRoutes'
 import { HEALTH_CHECK_COUNT, runHealthChecks } from '../lib/health'
 import { currentMonthYear, generateMonthlyPlan, getPlanForMonth } from '../lib/allocationPlanner'
 import { sendEmail } from '../lib/emailService'
@@ -47,6 +48,7 @@ const defaultProfileCreate = () => ({
   riskProfile: 'MODERATE' as const,
   monthlyNetIncomeCzk: 0,
   salaryDayOfMonth: 15,
+  sipDayOfMonth: 14,
   emergencyFundTarget: 120_000,
   retirementAge: 50,
   retirementMonthlyExpense: 30_000
@@ -875,4 +877,6 @@ export function registerCfoRoutes(app: Application) {
       return res.status(500).json({ success: false, error: m })
     }
   })
+
+  registerExcelImportRoutes(app)
 }

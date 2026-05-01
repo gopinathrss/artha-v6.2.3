@@ -30,6 +30,7 @@ export async function wipeAndSeedDemoDb(persona: string): Promise<void> {
       riskProfile: finances.profile.riskProfile,
       monthlyNetIncomeCzk: finances.profile.monthlyNetIncomeCzk,
       salaryDayOfMonth: finances.profile.salaryDayOfMonth,
+      sipDayOfMonth: finances.profile.sipDayOfMonth,
       emergencyFundTarget: finances.profile.emergencyFundTarget,
       retirementAge: finances.profile.retirementAge,
       retirementMonthlyExpense: finances.profile.retirementMonthlyExpense

@@ -315,6 +315,7 @@ export function getDemoFinances() {
       riskProfile: 'MODERATE',
       monthlyNetIncomeCzk: 65_000,
       salaryDayOfMonth: 15,
+      sipDayOfMonth: 14,
       emergencyFundTarget: 180_000,
       retirementAge: 50,
       retirementMonthlyExpense: 32_000
