@@ -32,7 +32,12 @@ export interface HoldRow extends AllocationRowBase {
   type: 'HOLD'
   isin: string
   currentValueCzk: number
-  holdReason: 'AT_TARGET' | 'TAX_WINDOW_NEAR' | 'TAX_WINDOW_HOLD' | 'INSUFFICIENT_DATA'
+  holdReason:
+    | 'AT_TARGET'
+    | 'TAX_WINDOW_NEAR'
+    | 'TAX_WINDOW_HOLD'
+    | 'INSUFFICIENT_DATA'
+    | 'TACTICAL_HOLD'
   daysToAction?: number
 }
 

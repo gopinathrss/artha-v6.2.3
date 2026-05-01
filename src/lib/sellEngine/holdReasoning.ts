@@ -6,7 +6,7 @@ import { num } from '../money'
 import { DRIFT_THRESHOLD_PP } from './rebalanceDrift'
 
 /**
- * Explicit HOLD rows for active holdings not already in BUY/SELL recommendations.
+ * Explicit HOLD rows for non-EXITED holdings not already in BUY/SELL recommendations.
  */
 export async function generateHoldRows(
   activeHoldings: Holding[],
@@ -38,6 +38,21 @@ export async function generateHoldRows(
     if (recommendedIsins.has(h.isin)) continue
 
     const val = num(h.currentValueCzk)
+
+    if (h.status === 'INACTIVE') {
+      rows.push({
+        type: 'HOLD',
+        isin: h.isin,
+        currentValueCzk: val,
+        holdReason: 'TACTICAL_HOLD',
+        amountCzk: 0,
+        reason: `Held but not actively investing. Was: ${h.category}. Reason: legacy position.`,
+        executionStatus: 'PENDING',
+        currency: 'CZK'
+      })
+      continue
+    }
+
     if (val <= 0 || (num(h.units) > 0 && num(h.nav) <= 0)) {
       rows.push({
         type: 'HOLD',

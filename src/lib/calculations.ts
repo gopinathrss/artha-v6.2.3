@@ -444,7 +444,7 @@ export function calculateAllocation(
   let bondsCzk = d(0)
   let cashCzk = d(0)
   for (const h of holdings || []) {
-    if (h?.status !== 'ACTIVE') continue
+    if (h?.status === 'EXITED') continue
     const v = d(h?.currentValueCzk)
     const w = mapCategoryToBuckets(h?.category)
     equityCzk = equityCzk.plus(v.mul(d(w.eq)))

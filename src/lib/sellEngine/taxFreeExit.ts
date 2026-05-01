@@ -11,7 +11,7 @@ export function costBasisCzk(holding: { cashflows?: { amountCzk: unknown; type: 
     const t = (c.type || '').toUpperCase()
     if (t !== 'SIP' && t !== 'LUMP_SUM') continue
     const a = num(c.amountCzk as MoneyInput)
-    if (a < 0) s += Math.abs(a)
+    s += Math.abs(a)
   }
   return s
 }
@@ -23,7 +23,7 @@ export function costBasisCzk(holding: { cashflows?: { amountCzk: unknown; type: 
 export async function detectTaxFreeExitOpportunities(): Promise<SellRow[]> {
   const prisma = await getPrisma()
   const holdings = await prisma.holding.findMany({
-    where: { status: 'ACTIVE', country: 'CZ' },
+    where: { status: { in: ['ACTIVE', 'INACTIVE'] }, country: 'CZ' },
     include: { cashflows: true }
   })
   const today = new Date()

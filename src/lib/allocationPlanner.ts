@@ -198,6 +198,7 @@ export async function buildMonthlyPlanPayload(
       ? indiaMfAllocationPieces(indiaFunds, { EURCZK: fx.EURCZK, EURINR: fx.EURINR })
       : null
 
+  const investedHoldings = holdings.filter((h) => h.status !== 'EXITED') as Holding[]
   const activeHoldings = holdings.filter((h) => h.status === 'ACTIVE') as Holding[]
 
   const taxFreeExits = await detectTaxFreeExitOpportunities()
@@ -367,8 +368,8 @@ export async function buildMonthlyPlanPayload(
 
   const buyRows = allocations.filter((r): r is BuyRow => r.type === 'BUY')
   const sellRows = allocations.filter((r): r is SellRow => r.type === 'SELL')
-  const allocation = calculateAllocation(activeHoldings as any[], tgtEq, tgtBd, tgtCa, indiaSlices)
-  const holdRows = await generateHoldRows(activeHoldings, buyRows, sellRows, allocation, {
+  const allocation = calculateAllocation(investedHoldings as any[], tgtEq, tgtBd, tgtCa, indiaSlices)
+  const holdRows = await generateHoldRows(investedHoldings, buyRows, sellRows, allocation, {
     targetEquityPct: tgtEq,
     targetBondsPct: tgtBd,
     targetCashPct: tgtCa
