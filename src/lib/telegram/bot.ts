@@ -28,6 +28,42 @@ export function stopTelegramBot() {
   }
 }
 
+let lastAiDegradedTelegramAt = 0
+
+/** After 3+ AI_CALL_FAILURE rows in 1h, deduped alert + at most one Telegram per hour. */
+export async function notifyAiDegradedIfNeeded(): Promise<void> {
+  const prisma = await getPrisma()
+  const since = new Date(Date.now() - 3600000)
+  const n = await prisma.systemHealth.count({
+    where: { checkName: 'AI_CALL_FAILURE', checkedAt: { gte: since } }
+  })
+  if (n < 3) return
+  if (Date.now() - lastAiDegradedTelegramAt < 3600000) return
+  lastAiDegradedTelegramAt = Date.now()
+
+  const { fireAlertWithDedup } = await import('../alerts/dedup')
+  await fireAlertWithDedup({
+    alertKey: 'ai:provider-degraded',
+    severity: 'HIGH',
+    category: 'SYSTEM_MONITOR',
+    title: 'ARTHA — AI provider',
+    message: 'AI provider degraded — check /api/ai/recent-errors.',
+    metadata: { failuresIn1h: n }
+  })
+
+  const settings = await realPrisma.settings.findFirst()
+  const bot = getTelegramBot()
+  if (settings?.telegramChatId && bot) {
+    await bot
+      .sendMessage(
+        settings.telegramChatId,
+        '*ARTHA* — AI provider degraded. Check /api/ai/recent-errors for details.',
+        { parse_mode: 'Markdown' }
+      )
+      .catch(() => {})
+  }
+}
+
 export async function buildDailyDigest(): Promise<string> {
   const settings = await realPrisma.settings.findFirst()
   const s = await getPortfolioSummary()
