@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:stress": "vitest run tests/stress",
+    "test:visual": "playwright test --config playwright.config.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "node -e \"console.log('lint: not configured')\"",
     "test:stress:run": "npx tsx tests/stress/multiYear.test.ts",
@@ -40,6 +41,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.6.0",

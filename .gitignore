@@ -7,3 +7,6 @@ dist/
 tests/reports/*.html
 backups/ 
 seed-data/ 
+test-results/
+playwright-report/
+

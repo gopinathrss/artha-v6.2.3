@@ -14,14 +14,11 @@
     <link rel="stylesheet" href="/styles/index.css" />
   </head>
   <body>
-    <div id="demoBanner" class="demo-banner" style="display: none" role="status">
-      DEMO MODE ACTIVE — Simulated Portfolio
-    </div>
     <div class="app-shell">
-      <aside class="sidebar" id="sidebar" aria-label="Primary">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation">
         <div class="sidebar-brand">
-          <div class="sidebar-brand-mark" aria-hidden="true">A</div>
-          <div class="sidebar-brand-name">ARTHA</div>
+          <div class="sidebar-brand-mark">A</div>
+          <div class="sidebar-brand-name">Artha</div>
         </div>
 
         <nav class="sidebar-section">
@@ -35,9 +32,11 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M2 8 L8 2 L14 8 V14 H2 Z" />
+                  <path d="M2 7 L8 2 L14 7 V13 A1 1 0 0 1 13 14 H3 A1 1 0 0 1 2 13 Z" />
                 </svg>
                 Overview
               </a>
@@ -50,6 +49,8 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                   aria-hidden="true"
                 >
                   <circle cx="8" cy="8" r="6" />
@@ -66,27 +67,14 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                   aria-hidden="true"
                 >
-                  <rect x="2" y="3" width="12" height="11" rx="1" />
-                  <path d="M2 6 H14 M5 1 V5 M11 1 V5" />
+                  <rect x="2" y="3" width="12" height="11" rx="1.5" />
+                  <path d="M2 6 H14 M5 1.5 V4.5 M11 1.5 V4.5" />
                 </svg>
-                This month
-              </a>
-            </li>
-            <li class="sidebar-nav-item">
-              <a href="/onboarding" data-page="onboarding" data-artha-setup-nav>
-                <svg
-                  class="sidebar-nav-item-icon"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  aria-hidden="true"
-                >
-                  <path d="M8 2 L10 6 L14 7 L10 8 L8 12 L6 8 L2 7 L6 6 Z" />
-                </svg>
-                <span class="artha-setup-label">Setup</span>
+                This Month
               </a>
             </li>
             <li class="sidebar-nav-item">
@@ -97,27 +85,12 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
                   aria-hidden="true"
                 >
-                  <path d="M2 8 H14 M2 4 H14 M2 12 H14" />
+                  <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
                 </svg>
                 India
-              </a>
-            </li>
-            <li class="sidebar-nav-item">
-              <a href="/finances" data-page="finances">
-                <svg
-                  class="sidebar-nav-item-icon"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  aria-hidden="true"
-                >
-                  <rect x="2" y="2" width="12" height="12" rx="1" />
-                  <path d="M4 6 H12 M4 10 H10" />
-                </svg>
-                Finances
               </a>
             </li>
             <li class="sidebar-nav-item">
@@ -128,12 +101,14 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                   aria-hidden="true"
                 >
                   <circle cx="8" cy="8" r="6" />
                   <path d="M8 4 V8 L11 10" />
                 </svg>
-                Tax calendar
+                Tax Calendar
               </a>
             </li>
           </ul>
@@ -150,12 +125,15 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
                   aria-hidden="true"
                 >
-                  <circle cx="8" cy="8" r="3" />
-                  <path d="M8 2 V4 M8 12 V14 M2 8 H4 M12 8 H14 M3.5 3.5 L5 5 M11 11 L12.5 12.5 M3.5 12.5 L5 11 M11 5 L12.5 3.5" />
+                  <circle cx="8" cy="8" r="2.5" />
+                  <path
+                    d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15 M3.2 3.2 L4.6 4.6 M11.4 11.4 L12.8 12.8 M3.2 12.8 L4.6 11.4 M11.4 4.6 L12.8 3.2"
+                  />
                 </svg>
-                Ask ARTHA
+                Ask Artha
               </a>
             </li>
             <li class="sidebar-nav-item">
@@ -166,10 +144,10 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
                   aria-hidden="true"
                 >
-                  <rect x="2" y="3" width="12" height="11" rx="1" />
-                  <path d="M5 7 H11 M5 10 H9" />
+                  <path d="M3 2 H10 A3 3 0 0 1 13 5 V14 H6 A3 3 0 0 1 3 11 Z M6 14 A3 3 0 0 0 3 11" />
                 </svg>
                 Library
               </a>
@@ -182,9 +160,10 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
                   aria-hidden="true"
                 >
-                  <rect x="3" y="2" width="10" height="12" rx="1" />
+                  <rect x="3" y="2" width="10" height="12" rx="1.5" />
                   <path d="M5 5 H11 M5 8 H11 M5 11 H8" />
                 </svg>
                 Reports
@@ -198,9 +177,11 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
                   aria-hidden="true"
                 >
-                  <path d="M3 12 H13 L12 7 A4 4 0 0 0 4 7 Z M6 13 A2 2 0 0 0 10 13" />
+                  <path d="M3 12 H13 L12 7 A4 4 0 0 0 4 7 Z M6.5 12.5 A1.5 1.5 0 0 0 9.5 12.5" />
                 </svg>
                 Alerts
               </a>
@@ -209,15 +190,31 @@
         </nav>
 
         <div class="sidebar-footer">
-          <a href="/settings" class="sidebar-footer-link">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <a href="/settings" data-page="settings">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
               <circle cx="8" cy="8" r="2" />
-              <path d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15" />
+              <path
+                d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15 M2.5 2.5 L4 4 M12 12 L13.5 13.5 M2.5 13.5 L4 12 M12 4 L13.5 2.5"
+              />
             </svg>
             Settings
           </a>
-          <div id="sidebar-trust-badge" style="margin-top: var(--space-2); font-size: var(--text-xs); color: var(--color-text-tertiary); padding: 0 var(--space-2)">
-            Trust: <span id="trust-score">—</span>
+          <div class="sidebar-trust">
+            Trust score:
+            <span
+              id="trust-score"
+              style="font-weight: var(--weight-semibold); color: var(--color-text-secondary);"
+              >—</span
+            >
           </div>
         </div>
       </aside>
@@ -226,73 +223,122 @@
 
       <main class="main-area">
         <header class="topbar">
-          <div style="display: flex; align-items: center; gap: var(--space-3)">
-            <button type="button" class="topbar-menu-trigger" aria-label="Open menu" id="menu-toggle">
-              <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <div class="topbar-left">
+            <button class="topbar-menu-trigger" aria-label="Open menu" id="menu-toggle" type="button">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
                 <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
               </svg>
             </button>
-            <h1 class="topbar-page-title" id="page-title">Overview</h1>
+            <h1 class="topbar-page-title">Overview</h1>
           </div>
-          <div class="topbar-actions" id="topbar-actions">
-            <button type="button" class="btn btn-secondary btn-sm" id="refresh-btn">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                <path d="M14 8 A6 6 0 1 1 12 4 M14 4 V8 H10" />
+          <div class="topbar-actions">
+            <button
+              class="btn btn-ghost btn-sm"
+              id="refresh-btn"
+              aria-label="Refresh"
+              type="button"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 8 A6 6 0 1 1 12.5 4 M14 4 V8 H10" />
               </svg>
               Refresh
             </button>
-            <a href="/this-month" class="btn btn-primary btn-sm">This month →</a>
+            <a href="/this-month" class="btn btn-primary btn-sm">
+              This month
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M3 8 H13 M9 4 L13 8 L9 12" />
+              </svg>
+            </a>
           </div>
         </header>
 
-        <div class="content" id="content">
-          <section class="overview-hero card" style="margin-bottom: var(--space-6); padding: var(--space-8)">
-            <div class="stat-block-label">Net worth · CZK</div>
-            <div class="stat-block-value stat-block-value-lg" style="margin-top: var(--space-2)" id="hero-networth">
-              <span class="shimmer" style="display: inline-block; width: 280px; height: 36px"></span>
+        <div class="content">
+          <section class="overview-hero" id="overview-hero">
+            <div class="hero-eyebrow">Net worth</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-networth">—</div>
+              <span class="badge badge-positive" id="hero-mom">—</span>
             </div>
-            <div style="display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-2); flex-wrap: wrap">
-              <span class="stat-block-meta" id="hero-eur">—</span>
-              <span class="badge badge-neutral" id="hero-mom">—</span>
-            </div>
-            <hr class="divider" />
-            <div class="overview-hero-grid">
-              <div class="stat-block">
-                <div class="stat-block-label">Czech funds</div>
-                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-czech-funds">—</div>
+            <div class="hero-meta" id="hero-eur">—</div>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-label">Czech funds</div>
+                <div class="hero-stat-value" id="stat-czech-funds">—</div>
               </div>
-              <div class="stat-block">
-                <div class="stat-block-label">CZ savings</div>
-                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-cz-savings">—</div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">CZ savings</div>
+                <div class="hero-stat-value" id="stat-cz-savings">—</div>
               </div>
-              <div class="stat-block">
-                <div class="stat-block-label">India NRE/NRO</div>
-                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-india-nre">—</div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">India NRE / NRO</div>
+                <div class="hero-stat-value" id="stat-india-nre">—</div>
               </div>
-              <div class="stat-block">
-                <div class="stat-block-label">India MF</div>
-                <div class="stat-block-value" style="font-size: var(--text-lg)" id="stat-india-mf">—</div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">India MF</div>
+                <div class="hero-stat-value" id="stat-india-mf">—</div>
               </div>
             </div>
           </section>
 
-          <div class="overview-two-col">
+          <div class="overview-row-2col">
             <section class="card">
               <div class="card-header">
                 <div>
                   <h2 class="card-title">Allocation</h2>
-                  <p class="card-subtitle">vs. target mix</p>
+                  <p class="card-subtitle">vs. target 60 / 30 / 10</p>
                 </div>
-                <span class="badge badge-warning" id="alloc-drift-status">drift</span>
+                <span class="badge badge-warning" id="alloc-drift-status">—</span>
               </div>
-              <div class="alloc-bar" id="alloc-bar-current"></div>
+              <div class="alloc-bar" id="alloc-bar-current">
+                <div class="alloc-bar-segment alloc-bar-equity" style="width: 0%"></div>
+                <div class="alloc-bar-segment alloc-bar-bonds" style="width: 0%"></div>
+                <div class="alloc-bar-segment alloc-bar-cash" style="width: 0%"></div>
+              </div>
               <div class="alloc-legend">
-                <span><span class="alloc-legend-dot alloc-bar-equity"></span><span id="alloc-equity-pct">—</span> equity</span>
-                <span><span class="alloc-legend-dot alloc-bar-bonds"></span><span id="alloc-bonds-pct">—</span> bonds</span>
-                <span><span class="alloc-legend-dot alloc-bar-cash"></span><span id="alloc-cash-pct">—</span> cash</span>
+                <span
+                  ><span class="alloc-legend-dot alloc-bar-equity"></span
+                  ><span id="alloc-equity-pct">—</span> equity</span
+                >
+                <span
+                  ><span class="alloc-legend-dot alloc-bar-bonds"></span
+                  ><span id="alloc-bonds-pct">—</span> bonds</span
+                >
+                <span
+                  ><span class="alloc-legend-dot alloc-bar-cash"></span
+                  ><span id="alloc-cash-pct">—</span> cash</span
+                >
               </div>
               <hr class="divider" />
-              <div id="alloc-drift-rows"></div>
+              <div class="alloc-drift-rows" id="alloc-drift-rows"></div>
             </section>
 
             <section class="card">
@@ -301,25 +347,26 @@
                   <h2 class="card-title">This month</h2>
                   <p class="card-subtitle" id="this-month-subtitle">—</p>
                 </div>
-                <a href="/this-month" class="btn btn-ghost btn-sm">View →</a>
+                <a href="/this-month" class="btn btn-ghost btn-sm">View</a>
               </div>
-              <div id="this-month-summary">
-                <div class="shimmer" style="height: 80px; border-radius: var(--radius-md)"></div>
-              </div>
+              <div id="this-month-summary"></div>
             </section>
           </div>
 
-          <div class="overview-split-2-1">
+          <div class="overview-row-2to1">
             <section class="card">
               <div class="card-header">
                 <div>
                   <h2 class="card-title">Holdings</h2>
-                  <p class="card-subtitle"><span id="holdings-active-count">—</span> active · <span id="holdings-inactive-count">—</span> inactive</p>
+                  <p class="card-subtitle">
+                    <span id="holdings-active-count">—</span> active ·
+                    <span id="holdings-inactive-count">—</span> inactive
+                  </p>
                 </div>
-                <a href="/portfolio" class="btn btn-ghost btn-sm">All →</a>
+                <a href="/portfolio" class="btn btn-ghost btn-sm">All</a>
               </div>
-              <div class="table-responsive-wrap">
-                <table class="table table-responsive-stack">
+              <div class="table-wrap">
+                <table class="table holdings-table">
                   <thead>
                     <tr>
                       <th scope="col">Fund</th>
@@ -340,11 +387,9 @@
                   <h2 class="card-title">Tax calendar</h2>
                   <p class="card-subtitle">Next 90 days</p>
                 </div>
-                <a href="/tax-calendar" class="btn btn-ghost btn-sm">View →</a>
+                <a href="/tax-calendar" class="btn btn-ghost btn-sm">View</a>
               </div>
-              <div id="tax-calendar-list">
-                <div class="shimmer" style="height: 60px"></div>
-              </div>
+              <div id="tax-calendar-list" class="tax-calendar-list"></div>
             </section>
           </div>
 
@@ -353,20 +398,20 @@
               <div>
                 <h2 class="card-title">System health</h2>
                 <p class="card-subtitle">
-                  <span id="health-passing-count">—</span> of <span id="health-total-count">—</span> checks passing · trust
+                  <span id="health-passing-count">—</span> of
+                  <span id="health-total-count">—</span> checks · trust
                   <span id="health-trust">—</span>
                 </p>
               </div>
-              <a href="/settings" class="btn btn-ghost btn-sm">Details →</a>
+              <a href="/settings#health" class="btn btn-ghost btn-sm">Details</a>
             </div>
-            <div id="health-checks-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-2)"></div>
+            <div id="health-checks-grid" class="health-checks-grid"></div>
           </section>
         </div>
       </main>
     </div>
 
     <script src="/scripts/shell.js"></script>
-    <script src="/artha-ui.js"></script>
     <script src="/scripts/overview.js"></script>
   </body>
 </html>
