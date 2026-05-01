@@ -229,6 +229,43 @@
               <div style="margin-top: 10px"><button class="btn btn-gold" type="button" id="btnSaveInt" disabled>Save integrations</button></div>
             </div>
 
+            <div class="card col-12" id="cardEmailIng">
+              <div class="h2">H — Email ingestion (Path B autonomy)</div>
+              <p class="muted" style="font-size: 12px; line-height: 1.4; margin: 0 0 10px 0">
+                When <strong>Auto-ingest</strong> is off (default), ARTHA only writes to a preview queue — review on
+                <a href="/alerts">Alerts</a>. When on and parser confidence is high, SIP rows are created automatically.
+                See <span class="mono">docs/V5_EMAIL_INGESTION.md</span>.
+              </p>
+              <label class="sub" style="display: flex; align-items: center; gap: 8px; margin: 8px 0"
+                ><input type="checkbox" id="autoIngestEmails" disabled /> Auto-ingest emails (<span class="mono">autoIngestEmails</span>)</label
+              >
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >IMAP host<input id="imapHost" class="btn" disabled placeholder="imap.gmail.com"
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >IMAP port<input id="imapPort" class="btn" type="number" disabled placeholder="993"
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >IMAP user<input id="imapUser" class="btn" disabled placeholder="you@gmail.com"
+              /></label>
+              <label class="sub" style="display: grid; gap: 6px; margin: 6px 0"
+                >App password
+                <span style="display: flex; gap: 8px; align-items: center"
+                  ><input id="imapPass" class="btn" type="password" disabled autocomplete="new-password" />
+                  <button type="button" class="btn" id="imapPassToggle" disabled>Show</button></span
+                ></label
+              >
+              <p class="sub muted" style="margin: 8px 0">
+                Pending previews: <strong id="ingPendingCount">—</strong> — review at
+                <a href="/alerts">/alerts</a>
+              </p>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px">
+                <button class="btn" type="button" id="btnImapTest" disabled>Test connection</button>
+                <button class="btn" type="button" id="btnImapRun" disabled>Run now</button>
+                <button class="btn btn-gold" type="button" id="btnSaveEmailIng" disabled>Save email settings</button>
+              </div>
+            </div>
+
             <div class="card col-12" id="cardHealth">
               <div class="h2">G — System health</div>
               <p class="sub" style="margin: 0 0 4px 0" id="healthSub">Trust score: <span class="mono" id="healthScore2">—</span></p>
@@ -251,7 +288,7 @@
               </div>
             </div>
             <div class="card col-12" id="sys">
-              <div class="h2">H — System debug</div>
+              <div class="h2">I — System debug</div>
               <p class="sub" style="margin: 0 0 8px 0">Raw <span class="mono">/api/system/status</span> payload (diagnostics).</p>
               <div class="h2" style="font-size: 15px; margin: 8px 0 6px 0">Raw status</div>
               <div class="mono" id="sysOut">Loading…</div>
@@ -291,6 +328,15 @@
           'tgTok',
           'openai',
           'btnSaveInt',
+          'autoIngestEmails',
+          'imapHost',
+          'imapPort',
+          'imapUser',
+          'imapPass',
+          'imapPassToggle',
+          'btnImapTest',
+          'btnImapRun',
+          'btnSaveEmailIng',
           'btnRunHealth',
           'a_isin',
           'a_name',
@@ -371,6 +417,20 @@
         document.getElementById('smtpPass').value = s.smtpPass || ''
         document.getElementById('tgTok').value = s.telegramBotToken || ''
         document.getElementById('openai').value = s.openaiApiKey || ''
+        document.getElementById('autoIngestEmails').checked = !!s.autoIngestEmails
+        document.getElementById('imapHost').value = s.imapHost || 'imap.gmail.com'
+        document.getElementById('imapPort').value = s.imapPort || 993
+        document.getElementById('imapUser').value = s.imapUser || ''
+        document.getElementById('imapPass').value = s.imapPassword || ''
+
+        try {
+          const pc = await fetch('/api/ingestion/previews/count')
+          const pcJ = await pc.json()
+          document.getElementById('ingPendingCount').textContent =
+            pcJ.success && pcJ.data ? String(pcJ.data.pending) : '—'
+        } catch {
+          document.getElementById('ingPendingCount').textContent = '—'
+        }
 
         const hRes = await fetch('/api/holdings')
         const hJ = await hRes.json()
@@ -549,6 +609,57 @@
         const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
         if (!res.ok) return ArthaUI.showToast('Save failed', 'error')
         ArthaUI.showToast('Integrations saved', 'ok')
+      })
+
+      document.getElementById('imapPassToggle').addEventListener('click', () => {
+        const el = document.getElementById('imapPass')
+        const btn = document.getElementById('imapPassToggle')
+        if (el.type === 'password') {
+          el.type = 'text'
+          btn.textContent = 'Hide'
+        } else {
+          el.type = 'password'
+          btn.textContent = 'Show'
+        }
+      })
+
+      document.getElementById('btnSaveEmailIng').addEventListener('click', async () => {
+        const body = {
+          autoIngestEmails: document.getElementById('autoIngestEmails').checked,
+          imapHost: document.getElementById('imapHost').value.trim() || null,
+          imapPort: Number(document.getElementById('imapPort').value) || 993,
+          imapUser: document.getElementById('imapUser').value.trim() || null,
+          imapPassword: document.getElementById('imapPass').value
+        }
+        const res = await fetch('/api/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        if (!res.ok) return ArthaUI.showToast('Email settings save failed', 'error')
+        ArthaUI.showToast('Email settings saved', 'ok')
+        load()
+      })
+
+      document.getElementById('btnImapTest').addEventListener('click', async () => {
+        const body = {
+          imapHost: document.getElementById('imapHost').value.trim(),
+          imapPort: Number(document.getElementById('imapPort').value) || 993,
+          imapUser: document.getElementById('imapUser').value.trim(),
+          imapPassword: document.getElementById('imapPass').value
+        }
+        const res = await fetch('/api/ingestion/test-connection', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) return ArthaUI.showToast(j.error || 'IMAP test failed', 'error')
+        ArthaUI.showToast('IMAP connection OK', 'ok')
+      })
+
+      document.getElementById('btnImapRun').addEventListener('click', async () => {
+        const res = await fetch('/api/ingestion/run', { method: 'POST' })
+        const j = await res.json().catch(() => ({}))
+        if (!res.ok) return ArthaUI.showToast(j.error || 'Run failed', 'error')
+        ArthaUI.showToast('Ingestion run finished', 'ok')
+        load()
       })
 
       document.getElementById('btnAddHolding').addEventListener('click', async () => {

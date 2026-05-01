@@ -194,6 +194,7 @@ app.get('/api/settings', async (_req, res) => {
     const safe = {
       ...s,
       smtpPass: '••••••',
+      imapPassword: s.imapPassword ? '••••••' : null,
       openaiApiKey: s.openaiApiKey ? 'sk-••••' : null,
       telegramBotToken: s.telegramBotToken ? '••••' : null
     }
@@ -209,6 +210,7 @@ app.post('/api/settings', async (req, res) => {
     const prevDemo = s?.demoModeEnabled ?? false
     const body = { ...req.body }
     if (body.smtpPass === '••••••') delete body.smtpPass
+    if (body.imapPassword === '••••••' || body.imapPassword === '******') delete body.imapPassword
     if (body.openaiApiKey?.startsWith('sk-••••')) delete body.openaiApiKey
     if (body.telegramBotToken === '••••') delete body.telegramBotToken
 
