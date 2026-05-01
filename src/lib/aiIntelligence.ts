@@ -9,6 +9,36 @@ import { num } from './money'
 import { ensureRowType } from './allocationRowTypes'
 import type { BuyRow, SellRow } from './allocationRowTypes'
 
+async function logAiSystemHealth(opts: {
+  checkName: string
+  status: string
+  message?: string
+  metadata?: object
+}) {
+  try {
+    const prisma = await getPrisma()
+    await prisma.systemHealth.create({
+      data: {
+        checkName: opts.checkName,
+        status: opts.status,
+        message: opts.message ?? null,
+        metadata: opts.metadata
+      }
+    })
+  } catch {
+    // logging must not break ask flow
+  }
+}
+
+async function maybeNotifyAiDegraded() {
+  try {
+    const { notifyAiDegradedIfNeeded } = await import('./telegram/bot')
+    await notifyAiDegradedIfNeeded()
+  } catch {
+    // ignore
+  }
+}
+
 function calculateBlendedReturn(portfolio: any): number {
   const a = portfolio?.allocation
   if (!a) return 8
@@ -279,23 +309,80 @@ CRITICAL RULES:
       })
       const b = msg.content[0]
       textOut = b && b.type === 'text' ? b.text : undefined
-    } catch {
+      const u = msg.usage
+      await logAiSystemHealth({
+        checkName: 'AI_CALL_SUCCESS',
+        status: 'PASS',
+        message: `Anthropic OK, ${u?.input_tokens ?? 0} in / ${u?.output_tokens ?? 0} out`,
+        metadata: {
+          provider: 'anthropic',
+          model: msg.model,
+          inputTokens: u?.input_tokens,
+          outputTokens: u?.output_tokens,
+          stopReason: msg.stop_reason
+        }
+      })
+    } catch (e: unknown) {
+      const err = e as { name?: string; message?: string; status?: number }
       textOut = undefined
+      await logAiSystemHealth({
+        checkName: 'AI_CALL_FAILURE',
+        status: 'FAIL',
+        message: `Anthropic call failed: ${err?.message ?? String(e)}`,
+        metadata: {
+          provider: 'anthropic',
+          errorType: err?.name,
+          errorCode: err?.status ?? null,
+          errorMessage: err?.message,
+          prompt_first_200: userPrompt.slice(0, 200)
+        }
+      })
+      await maybeNotifyAiDegraded()
     }
   }
 
   if (!textOut && openaiKey) {
-    const client = new OpenAI({ apiKey: openaiKey })
-    const res = await client.chat.completions.create({
-      model: modelOpenAI,
-      temperature: 0.3,
-      max_tokens: 800,
-      messages: [
-        { role: 'system', content: systemPrompt + '\nRespond as raw JSON only.' },
-        { role: 'user', content: userPrompt }
-      ]
-    })
-    textOut = res.choices[0]?.message?.content ?? undefined
+    try {
+      const client = new OpenAI({ apiKey: openaiKey })
+      const res = await client.chat.completions.create({
+        model: modelOpenAI,
+        temperature: 0.3,
+        max_tokens: 800,
+        messages: [
+          { role: 'system', content: systemPrompt + '\nRespond as raw JSON only.' },
+          { role: 'user', content: userPrompt }
+        ]
+      })
+      textOut = res.choices[0]?.message?.content ?? undefined
+      const u = res.usage
+      await logAiSystemHealth({
+        checkName: 'AI_CALL_SUCCESS',
+        status: 'PASS',
+        message: `OpenAI OK, ${u?.prompt_tokens ?? 0} in / ${u?.completion_tokens ?? 0} out`,
+        metadata: {
+          provider: 'openai',
+          model: res.model,
+          inputTokens: u?.prompt_tokens,
+          outputTokens: u?.completion_tokens
+        }
+      })
+    } catch (e: unknown) {
+      const err = e as { name?: string; message?: string; status?: number }
+      textOut = undefined
+      await logAiSystemHealth({
+        checkName: 'AI_CALL_FAILURE',
+        status: 'FAIL',
+        message: `OpenAI call failed: ${err?.message ?? String(e)}`,
+        metadata: {
+          provider: 'openai',
+          errorType: err?.name,
+          errorCode: err?.status ?? null,
+          errorMessage: err?.message,
+          prompt_first_200: userPrompt.slice(0, 200)
+        }
+      })
+      await maybeNotifyAiDegraded()
+    }
   }
 
   if (!textOut) {

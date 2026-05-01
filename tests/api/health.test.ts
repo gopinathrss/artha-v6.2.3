@@ -11,10 +11,10 @@ describe('api health', () => {
     if (hasTestDatabase()) await prisma.$disconnect()
   })
 
-  it('GET /api/health has 14 checks and trust score', async () => {
+  it('GET /api/health has 16 checks and trust score', async () => {
     const res = await request(app).get('/api/health').expect(200)
     const d = res.body.data
-    expect(d.checks.length).toBe(14)
+    expect(d.checks.length).toBe(16)
     expect(typeof d.trustScore).toBe('number')
     d.checks.forEach((c: { status: string }) => {
       expect(['PASS', 'WARN', 'FAIL']).toContain(c.status)

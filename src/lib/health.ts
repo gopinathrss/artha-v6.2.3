@@ -7,9 +7,9 @@ import { getRbiRepoRate, getStalestNREFDAge } from './indiaIntelligence'
 export type HealthRow = { name: string; status: 'PASS' | 'WARN' | 'FAIL'; message?: string }
 
 /** Spec target: named checks (trust score divides by this count). */
-export const HEALTH_CHECK_COUNT = 14
+export const HEALTH_CHECK_COUNT = 16
 
-/** When the DB is unreachable, return 14 named rows so `/api/health` stays JSON 200 (observability). */
+/** When the DB is unreachable, return named rows so `/api/health` stays JSON 200 (observability). */
 function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trustScore: number } {
   const rest: HealthRow['name'][] = [
     'FX_FRESHNESS',
@@ -24,6 +24,8 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
     'PLAN_COVERAGE',
     'ADHERENCE_KNOWN',
     'BACKUP_RECENT',
+    'AI_RECENT_FAILURES',
+    'CRON_HEALTH',
     'MEMORY_HEALTHY'
   ]
   const checks: HealthRow[] = [
@@ -39,7 +41,13 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
 
 export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustScore: number }> {
   const checks: HealthRow[] = []
-  const prisma = await getPrisma()
+  let prisma: Awaited<ReturnType<typeof getPrisma>>
+  try {
+    prisma = await getPrisma()
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Database unreachable'
+    return healthChecksWhenDbDown(msg)
+  }
 
   try {
     await prisma.$queryRaw`SELECT 1`
@@ -49,7 +57,12 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     return healthChecksWhenDbDown(msg)
   }
 
-  const fxAgeH = await getFxAgeHours()
+  let fxAgeH = Number.POSITIVE_INFINITY
+  try {
+    fxAgeH = await getFxAgeHours()
+  } catch {
+    fxAgeH = Number.POSITIVE_INFINITY
+  }
   const fxOk = Number.isFinite(fxAgeH)
   let fxSt: HealthRow['status'] = 'FAIL'
   let fxMsg = 'No FX rows'
@@ -277,6 +290,42 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     }
   } catch {
     checks.push({ name: 'BACKUP_RECENT', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const since = new Date(Date.now() - 24 * 3600000)
+    const failN = await prisma.systemHealth.count({
+      where: { checkName: 'AI_CALL_FAILURE', checkedAt: { gte: since } }
+    })
+    let aiSt: HealthRow['status'] = 'PASS'
+    let aiMsg = `${failN} AI failure(s) in 24h`
+    if (failN >= 4) aiSt = 'FAIL'
+    else if (failN >= 1) aiSt = 'WARN'
+    checks.push({ name: 'AI_RECENT_FAILURES', status: aiSt, message: aiMsg })
+  } catch {
+    checks.push({ name: 'AI_RECENT_FAILURES', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const seven = new Date(Date.now() - 7 * 86400000)
+    const fails = await prisma.cronExecution.count({
+      where: { status: 'FAILED', startedAt: { gte: seven } }
+    })
+    const anyOk = await prisma.cronExecution.findFirst({
+      where: { status: 'SUCCESS', startedAt: { gte: seven } }
+    })
+    let crSt: HealthRow['status'] = 'PASS'
+    let crMsg = 'Cron ledger OK'
+    if (fails >= 3) {
+      crSt = 'FAIL'
+      crMsg = `${fails} FAILED cron runs in 7d`
+    } else if (!anyOk) {
+      crSt = 'WARN'
+      crMsg = 'No successful cron in 7d (new install or scheduler idle)'
+    }
+    checks.push({ name: 'CRON_HEALTH', status: crSt, message: crMsg })
+  } catch {
+    checks.push({ name: 'CRON_HEALTH', status: 'WARN', message: 'Skip' })
   }
 
   try {
