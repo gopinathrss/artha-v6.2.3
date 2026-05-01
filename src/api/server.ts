@@ -123,6 +123,16 @@ app.get('/profile', (_req, res) => {
 
 registerCfoRoutes(app)
 
+app.get('/healthz', async (_req, res) => {
+  try {
+    await realPrisma.$queryRaw`SELECT 1`
+    res.status(200).type('text/plain').send('OK')
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    res.status(503).type('text/plain').send(`FAIL: ${msg}`)
+  }
+})
+
 app.get('/api/overview', async (_req, res) => {
   const { demo } = await isDemoMode()
   const result = await getPortfolioSummary()
@@ -153,7 +163,7 @@ app.get('/api/alerts', async (req, res) => {
     const q = req.query as Record<string, string | undefined>
     const includeDismissed = q.includeDismissed === '1' || q.includeDismissed === 'true'
     const alerts = await prisma.alertLog.findMany({
-      where: includeDismissed ? {} : { status: { not: 'DISMISSED' } },
+      where: includeDismissed ? undefined : { status: { not: 'DISMISSED' } },
       orderBy: { firedAt: 'desc' },
       take: 50
     })
