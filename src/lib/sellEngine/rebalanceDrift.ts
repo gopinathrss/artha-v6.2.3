@@ -109,9 +109,17 @@ export async function detectRebalanceSells(
   targetBondsPct: number,
   targetCashPct: number,
   indiaSlices: { equityCzk: number; bondsCzk: number; cashCzk: number } | null,
-  excludeIsins: Set<string>
+  excludeIsins: Set<string>,
+  indiaAccountSlices?: { bondsCzk: number; cashCzk: number } | null
 ): Promise<SellRow[]> {
-  const allocation = calculateAllocation(holdings as any[], targetEquityPct, targetBondsPct, targetCashPct, indiaSlices)
+  const allocation = calculateAllocation(
+    holdings as any[],
+    targetEquityPct,
+    targetBondsPct,
+    targetCashPct,
+    indiaSlices,
+    indiaAccountSlices ?? null
+  )
   const tval = allocation.equityCzk + allocation.bondsCzk + allocation.cashCzk
   if (tval <= 0) return []
 

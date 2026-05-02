@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { d, num } from './money'
 import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS } from './currency'
-import { accountToCzk } from './accountToCzk'
+import { accountToCzk, accountsToCzk, type FxSnapshot } from './accountToCzk'
 
 // XIRR
 export interface CashflowPoint {
@@ -233,6 +233,22 @@ export interface NetWorthResult {
 
 type MoneyScalar = number | Prisma.Decimal | null | undefined
 
+export function indiaAccountSlicesFromAccounts(accounts: any[], fxRates: FXRates): {
+  bondsCzk: number
+  cashCzk: number
+} {
+  const fx: FxSnapshot = { EURCZK: fxRates.EURCZK, EURINR: fxRates.EURINR }
+  const rows = (accounts || []).filter((a) => a?.isActive !== false)
+  const isInr = (a: any) => String(a?.currency || '').toUpperCase().trim() === 'INR'
+  const typ = (a: any) => String(a?.type || '').toUpperCase()
+  const fd = rows.filter((a) => isInr(a) && typ(a) === 'FIXED_DEPOSIT')
+  const cashLike = rows.filter((a) => isInr(a) && ['NRE', 'NRO', 'SAVINGS'].includes(typ(a)))
+  return {
+    bondsCzk: num(accountsToCzk(fd, fx)),
+    cashCzk: num(accountsToCzk(cashLike, fx))
+  }
+}
+
 function mfValueInr(m: {
   units?: MoneyScalar
   currentNavInr?: MoneyScalar
@@ -422,7 +438,8 @@ export function calculateAllocation(
   targetEquity: number,
   targetBonds: number,
   targetCash: number,
-  indiaFundSlices?: { equityCzk: number; bondsCzk: number; cashCzk: number } | null
+  indiaFundSlices?: { equityCzk: number; bondsCzk: number; cashCzk: number } | null,
+  indiaAccountSlices?: { bondsCzk: number; cashCzk: number } | null
 ): AllocationResult {
   const te = safeNum(targetEquity)
   const tb = safeNum(targetBonds)
@@ -442,6 +459,10 @@ export function calculateAllocation(
     equityCzk = equityCzk.plus(d(indiaFundSlices.equityCzk))
     bondsCzk = bondsCzk.plus(d(indiaFundSlices.bondsCzk))
     cashCzk = cashCzk.plus(d(indiaFundSlices.cashCzk))
+  }
+  if (indiaAccountSlices) {
+    bondsCzk = bondsCzk.plus(d(indiaAccountSlices.bondsCzk))
+    cashCzk = cashCzk.plus(d(indiaAccountSlices.cashCzk))
   }
   const tval = num(equityCzk.plus(bondsCzk).plus(cashCzk))
   if (tval <= 0) {
@@ -489,7 +510,8 @@ export function calculateHealth(
   holdings: any[],
   accounts: any[],
   snapshots: any[],
-  fxRatesAge: number
+  fxRatesAge: number,
+  options?: { fxRates?: FXRates | null; indiaMutualFunds?: any[] | null }
 ): HealthResult {
   const active = (holdings || []).filter((h) => h && h.status === 'ACTIVE')
   const withSip = active.filter((h) => safeNum(h.monthlySipCzk) > 0)
@@ -507,7 +529,20 @@ export function calculateHealth(
   const cats = new Set(active.map((h) => String(h?.category || '')))
   const diversification = Math.min(20, active.length * 1.2 + Math.max(0, cats.size) * 2.5)
 
-  const alloc = calculateAllocation(holdings || [], 65, 25, 10)
+  const fxOpt = options?.fxRates
+  const indiaFundSlices =
+    fxOpt && options?.indiaMutualFunds && options.indiaMutualFunds.length > 0
+      ? indiaMfAllocationPieces(options.indiaMutualFunds, fxOpt)
+      : null
+  const indiaAccountSlices = fxOpt ? indiaAccountSlicesFromAccounts(accounts, fxOpt) : null
+  const alloc = calculateAllocation(
+    holdings || [],
+    65,
+    25,
+    10,
+    indiaFundSlices,
+    indiaAccountSlices
+  )
   const gap = Math.sqrt(
     alloc.equityGap * alloc.equityGap + alloc.bondsGap * alloc.bondsGap + alloc.cashGap * alloc.cashGap
   )

@@ -8,6 +8,7 @@ import {
   calculateConfidence,
   computeHoldingsPriceAgeHours,
   indiaMfAllocationPieces,
+  indiaAccountSlicesFromAccounts,
   projectFutureValue,
   calculateTaxStatus
 } from './calculations'
@@ -47,12 +48,14 @@ export async function getPortfolioSummary() {
       cash: settings?.targetCashPct ?? 10
     }
     const indiaSlices = indiaMfAllocationPieces(indiaMutualFunds, fxRates)
+    const indiaAccountSlices = indiaAccountSlicesFromAccounts(accounts, fxRates)
     const allocation = calculateAllocation(
       holdings,
       num(tgt.equity),
       num(tgt.bonds),
       num(tgt.cash),
-      indiaSlices
+      indiaSlices,
+      indiaAccountSlices
     )
 
     const priceAgeHours = computeHoldingsPriceAgeHours(holdings)
@@ -62,7 +65,10 @@ export async function getPortfolioSummary() {
       holdings.filter((h) => !h.purchaseStartDate).length,
       snapshots.length
     )
-    const health = calculateHealth(holdings, accounts, snapshots, fxResult.ageHours)
+    const health = calculateHealth(holdings, accounts, snapshots, fxResult.ageHours, {
+      fxRates,
+      indiaMutualFunds
+    })
 
     const blendedReturn =
       (allocation.equityPct / 100) * 13 +

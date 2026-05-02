@@ -2,7 +2,12 @@ import type { AllocationPlan, ExpenseCommitment, Holding, IncomeEvent, UpcomingE
 import type { IndiaMutualFund } from '@prisma/client'
 import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
-import { calculateAllocation, calculateTaxStatus, indiaMfAllocationPieces } from './calculations'
+import {
+  calculateAllocation,
+  calculateTaxStatus,
+  indiaMfAllocationPieces,
+  indiaAccountSlicesFromAccounts
+} from './calculations'
 import { accountsToCzk } from './accountToCzk'
 import { loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import type { InstrumentLibrary } from '@prisma/client'
@@ -196,6 +201,7 @@ export async function buildMonthlyPlanPayload(
 
   const indiaSlices =
     Array.isArray(indiaFunds) && indiaFunds.length > 0 ? indiaMfAllocationPieces(indiaFunds, fxRates) : null
+  const indiaAccountSlices = indiaAccountSlicesFromAccounts(accounts, fxRates)
 
   const investedHoldings = holdings.filter((h) => h.status !== 'EXITED') as Holding[]
   const activeHoldings = holdings.filter((h) => h.status === 'ACTIVE') as Holding[]
@@ -212,7 +218,8 @@ export async function buildMonthlyPlanPayload(
     tgtBd,
     tgtCa,
     indiaSlices,
-    sellingIsins
+    sellingIsins,
+    indiaAccountSlices
   )
   for (const r of rebalanceSells) sellingIsins.add(r.isin)
 
@@ -367,7 +374,14 @@ export async function buildMonthlyPlanPayload(
 
   const buyRows = allocations.filter((r): r is BuyRow => r.type === 'BUY')
   const sellRows = allocations.filter((r): r is SellRow => r.type === 'SELL')
-  const allocation = calculateAllocation(investedHoldings as any[], tgtEq, tgtBd, tgtCa, indiaSlices)
+  const allocation = calculateAllocation(
+    investedHoldings as any[],
+    tgtEq,
+    tgtBd,
+    tgtCa,
+    indiaSlices,
+    indiaAccountSlices
+  )
   const holdRows = await generateHoldRows(investedHoldings, buyRows, sellRows, allocation, {
     targetEquityPct: tgtEq,
     targetBondsPct: tgtBd,

@@ -6,7 +6,8 @@ import {
   calculateRequiredSIP,
   calculateHealth,
   calculateConfidence,
-  calculateTaxStatus
+  calculateTaxStatus,
+  indiaAccountSlicesFromAccounts
 } from '../../src/lib/calculations'
 
 describe('XIRR', () => {
@@ -154,6 +155,53 @@ describe('calculateAllocation', () => {
       expect(sum).toBeGreaterThanOrEqual(99.99)
       expect(sum).toBeLessThanOrEqual(100.01)
     }
+  })
+
+  test('India account slices material (B)', () => {
+    const holdings = [{ status: 'ACTIVE', category: 'EQUITY', currentValueCzk: 20_000 }]
+    const a = calculateAllocation(holdings, 60, 30, 10, null, { bondsCzk: 100_000, cashCzk: 400_000 })
+    expect(a.equityCzk).toBeCloseTo(20_000, 4)
+    expect(a.bondsCzk).toBeCloseTo(100_000, 4)
+    expect(a.cashCzk).toBeCloseTo(400_000, 4)
+    const tot = a.equityCzk + a.bondsCzk + a.cashCzk
+    expect(tot).toBeCloseTo(520_000, 4)
+    expect(a.equityPct).toBeCloseTo((100 * 20_000) / 520_000, 4)
+    expect(a.bondsPct).toBeCloseTo((100 * 100_000) / 520_000, 4)
+    expect(a.cashPct).toBeCloseTo((100 * 400_000) / 520_000, 4)
+  })
+
+  test('Fund slices plus account slices (C)', () => {
+    const holdings = [{ status: 'ACTIVE', category: 'EQUITY', currentValueCzk: 20_000 }]
+    const a = calculateAllocation(holdings, 60, 30, 10, { equityCzk: 50_000, bondsCzk: 0, cashCzk: 0 }, {
+      bondsCzk: 100_000,
+      cashCzk: 200_000
+    })
+    expect(a.equityCzk).toBeCloseTo(70_000, 4)
+    expect(a.bondsCzk).toBeCloseTo(100_000, 4)
+    expect(a.cashCzk).toBeCloseTo(200_000, 4)
+    expect(a.equityCzk + a.bondsCzk + a.cashCzk).toBeCloseTo(370_000, 4)
+  })
+
+  test('omitting indiaAccountSlices matches explicit null (D)', () => {
+    const holdings = [{ status: 'ACTIVE', category: 'EQUITY', currentValueCzk: 10_000 }]
+    const a1 = calculateAllocation(holdings, 60, 30, 10)
+    const a2 = calculateAllocation(holdings, 60, 30, 10, null, null)
+    expect(a1).toEqual(a2)
+  })
+})
+
+describe('indiaAccountSlicesFromAccounts', () => {
+  test('classifies INR FD as bonds and NRE/NRO/SAVINGS as cash', () => {
+    const fx = { EURCZK: 25, EURINR: 100 }
+    const accounts = [
+      { type: 'FIXED_DEPOSIT', currency: 'INR', balanceLocal: 400_000, isActive: true },
+      { type: 'NRE', currency: 'INR', balanceLocal: 2_000_000, isActive: true },
+      { type: 'NRO', currency: 'INR', balanceLocal: 1_000_000, isActive: true },
+      { type: 'SAVINGS', currency: 'INR', balanceLocal: 500_000, isActive: true }
+    ]
+    const s = indiaAccountSlicesFromAccounts(accounts, fx)
+    expect(s.bondsCzk).toBeCloseTo(100_000, 4)
+    expect(s.cashCzk).toBeCloseTo(500_000 + 250_000 + 125_000, 4)
   })
 })
 
