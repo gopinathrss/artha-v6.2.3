@@ -144,6 +144,23 @@
           <section class="card">
             <div class="card-header">
               <div>
+                <h2 class="card-title">Fund lesson</h2>
+                <p class="card-subtitle">Latest backtest lesson extracted for an ISIN (from historical stats).</p>
+              </div>
+            </div>
+            <div class="form-row" style="flex-wrap: wrap; gap: var(--space-3); align-items: flex-end">
+              <div class="form-field" style="margin-bottom: 0; min-width: 200px">
+                <label class="form-field-label" for="lesson-isin">ISIN</label>
+                <input class="form-field-input" id="lesson-isin" type="text" placeholder="IE00BK5BQT80" />
+              </div>
+              <button class="btn btn-secondary" id="lesson-load" type="button">Load lesson</button>
+            </div>
+            <div id="lesson-panel" class="card-subtitle" style="margin-top: var(--space-3); white-space: pre-wrap"></div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
                 <h2 class="card-title">Recent runs</h2>
                 <p class="card-subtitle">Last 20 saved backtests (24h cache for identical configs).</p>
               </div>

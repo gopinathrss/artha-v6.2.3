@@ -979,6 +979,38 @@ export function registerCfoRoutes(app: Application) {
     }
   })
 
+  app.get('/api/lessons/recent', async (req, res) => {
+    const { demo } = await demoState()
+    try {
+      const limit = Math.min(Number(req.query.limit) || 20, 100)
+      const rows = await realPrisma.backtestLesson.findMany({
+        orderBy: { extractedAt: 'desc' },
+        take: limit
+      })
+      return res.json({ success: true, data: rows, demo })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/lessons/by-isin/:isin', async (req, res) => {
+    const { demo } = await demoState()
+    try {
+      const isin = String(req.params.isin || '').trim()
+      if (!isin) return res.status(400).json({ success: false, error: 'isin required', demo })
+      const rows = await realPrisma.backtestLesson.findMany({
+        where: { isin },
+        orderBy: { extractedAt: 'desc' },
+        take: 10
+      })
+      return res.json({ success: true, data: rows, demo })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
   app.post('/api/historical/import-all', async (_req, res) => {
     const { demo } = await demoState()
     try {

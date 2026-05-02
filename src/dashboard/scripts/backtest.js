@@ -214,6 +214,32 @@
   })
   document.getElementById('cb-run').addEventListener('click', runCustom)
 
+  document.getElementById('lesson-load').addEventListener('click', async () => {
+    const isin = String(document.getElementById('lesson-isin').value || '').trim()
+    const panel = document.getElementById('lesson-panel')
+    if (!isin) {
+      panel.textContent = 'Enter an ISIN.'
+      return
+    }
+    panel.textContent = 'Loading…'
+    try {
+      const res = await fetch('/api/lessons/by-isin/' + encodeURIComponent(isin)).then((r) => r.json())
+      if (!res.success) throw new Error(res.error || 'failed')
+      const rows = res.data || []
+      if (!rows.length) {
+        panel.textContent = 'No lessons for this ISIN yet. Run historical import, then generate a plan with a BUY to that fund.'
+        return
+      }
+      const L = rows[0]
+      panel.textContent =
+        (L.narrative || '') +
+        '\n\n' +
+        (L.patternIds && L.patternIds.length ? 'Patterns: ' + L.patternIds.join(', ') : '')
+    } catch (e) {
+      panel.textContent = String(e.message || e)
+    }
+  })
+
   setPeriodYears(3)
   document.getElementById('cb-start').value = document.getElementById('qc-start').value
   document.getElementById('cb-end').value = document.getElementById('qc-end').value

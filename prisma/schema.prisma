@@ -450,6 +450,26 @@ model HistoricalNavStats {
   computedAt     DateTime  @default(now())
 }
 
+/// Tier 3: compact lesson tied to historical stats + patterns (injected into plan BUY reasons).
+model BacktestLesson {
+  id              String   @id @default(cuid())
+  isin            String
+  fundName        String
+  extractedAt     DateTime @default(now())
+  asOfDate        DateTime
+  cagr5y          Decimal? @db.Decimal(7, 4)
+  maxDrawdown5y   Decimal? @db.Decimal(7, 4)
+  recoveryMonths  Int?
+  sharpe3y        Decimal? @db.Decimal(6, 4)
+  narrative       String   @db.Text
+  linkedPlanId    String?
+  linkedRowKey    String?
+  patternIds      String[]
+
+  @@index([isin, extractedAt])
+  @@index([linkedPlanId])
+}
+
 model HistoricalReturn {
   id          String    @id @default(cuid())
   isin        String

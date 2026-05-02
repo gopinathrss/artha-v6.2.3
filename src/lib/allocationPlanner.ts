@@ -420,7 +420,30 @@ export async function generateMonthlyPlan(
     }
   })
 
-  const tracked = p.allocations.filter((r) => r.type === 'BUY' || r.type === 'SELL')
+  const { extractLesson } = await import('./historical/lessonExtractor')
+  const nextAlloc: AllocationRow[] = JSON.parse(JSON.stringify(p.allocations)) as AllocationRow[]
+  for (let i = 0; i < nextAlloc.length; i++) {
+    const row = nextAlloc[i]!
+    if (row.type === 'BUY' && row.isin) {
+      const lesson = await extractLesson(row.isin, {
+        fundName: row.destination,
+        planId: plan.id,
+        rowKey: row.rowKey ?? `${row.type}-${row.isin}`
+      })
+      if (lesson) {
+        nextAlloc[i] = {
+          ...row,
+          reason: `${row.reason} ${lesson.narrative}`.trim()
+        } as AllocationRow
+      }
+    }
+  }
+  await prisma.allocationPlan.update({
+    where: { id: plan.id },
+    data: { allocations: nextAlloc as object }
+  })
+
+  const tracked = nextAlloc.filter((r) => r.type === 'BUY' || r.type === 'SELL')
   for (const row of tracked) {
     const fundName =
       row.type === 'BUY'
