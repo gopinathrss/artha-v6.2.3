@@ -24,7 +24,7 @@
 
 **F1.1 [CRITICAL] [DATA]** All monetary and NAV fields use IEEE `Float` in Prisma, not `Decimal`, causing cumulative rounding and comparison hazards for money and tax boundaries. **Status 2026-05-01:** `docs/F1.1_FIELD_AUDIT.md` added (field inventory); Prisma `Decimal` migration and TS arithmetic refactor (**Parts C–F**) **not yet applied** — remains open.
 
-- **Where:** `prisma/schema.prisma` — e.g. `Holding.units`, `Holding.nav`, `Holding.currentValueCzk` (lines 16–18), `Cashflow.amountCzk` (39), `Account.balanceLocal` / `balanceCzk` (50–52), `AllocationPlan` totals and `SipExecution.amountCzk` (306–308, 327), `FXRate.rate` (343), etc.
+- **Where:** `prisma/schema.prisma` — e.g. `Holding.units`, `Holding.nav`, `Holding.currentValueCzk` (lines 16–18), `Cashflow.amountCzk` (39), `Account.balanceLocal` / `balanceCzkSnapshot` (50–52; renamed from `balanceCzk` in V5.1 Area 1), `AllocationPlan` totals and `SipExecution.amountCzk` (306–308, 327), `FXRate.rate` (343), etc.
 - **Evidence:** Schema uses `Float` throughout money-like columns.
 - **Impact:** Silent cent-level drift; large portfolios amplify error; regulatory-style reporting is not bit-exact.
 

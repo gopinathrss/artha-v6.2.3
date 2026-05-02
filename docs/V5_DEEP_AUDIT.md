@@ -14,7 +14,15 @@
 - **MEDIUM:** 14  
 - **LOW:** 6  
 
-V5 successfully migrated core money columns to **`Decimal`** (no `double precision` columns in `public`). The largest remaining risks are **semantic**: India NRE is converted with live FX for net worth, but **allocation % and emergency-cash math still ignore most of the India book**; **`XIRR` can return extreme “estimate” values** that are easy to misread as annual returns; **`AllocationPlan.allocations` remains unversioned `Json`**; and **plan BUY text vs `BacktestLesson` rows can diverge** when plans are regenerated or ad-hoc test months exist. Browser UX, full failure-injection, and third-party availability tests are largely **SUSPECTED / unexecuted** here.
+V5 successfully migrated core money columns to **`Decimal`** (no `double precision` columns in `public`). **Update (V5.1 Area 1, 2026-05-02):** India **allocation %** and **emergency-cash math** now include the India account book where specified; NRE stale `balanceCzk` is removed in favor of **`balanceCzkSnapshot` + `accountToCzk`** (see `docs/V51_AREA1_REPORT.md`). Remaining executive-summary risks include **`XIRR` estimate path**, unversioned plan **`Json`**, and **plan vs `BacktestLesson` text** drift. Browser UX, full failure-injection, and third-party availability tests are largely **SUSPECTED / unexecuted** here.
+
+### V5.1 Area 1 — HIGH findings closed in code
+
+| ID | Title | Resolution (summary) |
+|----|--------|-------------------------|
+| F2.1 | Stale NRE `balanceCzk` | Shape B: `balanceCzkSnapshot` null for non-CZK; live CZK via `accountToCzk` |
+| F3.1 | Planner emergency used `balanceCzk` | `accountsToCzk` on SAVINGS+NRE with live FX |
+| F2.2 | Allocation ignored India accounts | `indiaAccountSlicesFromAccounts` + `calculateAllocation` optional slice |
 
 ## Findings by severity
 
