@@ -7,35 +7,40 @@ patterns:
     confidence: 0.95
     sources: ["Fidelity 2023 study","JP Morgan Guide to Markets"]
   - id: P-002
-    title: "Curated principle P-002"
-    principle: "Principle P-002: diversified portfolios benefit from discipline on allocation + rebalance. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Strategic asset allocation sets risk budget"
+    principle: "Academic and industry studies show that long-run portfolio returns are dominated by the policy mix of equities, bonds, and cash rather than tactical timing. A written target allocation anchors risk: it defines how much volatility you accept before markets move. Revisit targets when life goals change, not when headlines spike. Document weights, ranges, and who may approve deviations so household decisions stay consistent across years."
     tags: [allocation, rebalance]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.88
+    sources: ["Brinson et al. determinants of portfolio performance","CFA Institute portfolio management curriculum"]
+
   - id: P-003
-    title: "Curated principle P-003"
-    principle: "Principle P-003: diversified portfolios benefit from discipline on allocation + horizon. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Match risk to the liability timeline"
+    principle: "Money needed within two years should avoid equity-style drawdown paths, while goals more than a decade away can absorb equity volatility for higher expected return. The mismatch between asset volatility and spending timing is a leading cause of forced selling at lows. Translate each goal into years-to-cash and map sleeves accordingly. Revisit after major life events because horizons shorten faster than intuition suggests."
     tags: [allocation, horizon]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.9
+    sources: ["Vanguard Target Retirement framework","Morningstar glidepath research"]
+
   - id: P-004
-    title: "Curated principle P-004"
-    principle: "Principle P-004: diversified portfolios benefit from discipline on tax + czech. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Czech fund taxation favors patient holders"
+    principle: "Beyond the three-year exemption, Czech mutual fund reporting interacts with entry cost basis and reinvested distributions in ways that differ from brokerage ETFs abroad. Keep purchase confirmations and distributor statements so tax-free eligibility is provable. When in doubt, model the after-tax outcome of a sale versus deferral. Coordinate with your accountant before year-end trades that might crystallize gains unnecessarily."
     tags: [tax, czech]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.87
+    sources: ["Czech Financial Administration guidance","Big4 Czech investor guides"]
+
   - id: P-005
-    title: "Curated principle P-005"
-    principle: "Principle P-005: diversified portfolios benefit from discipline on tax + india. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "India capital gains rules reward holding periods"
+    principle: "Equity-oriented funds in India distinguish short-term versus long-term gains with different rates and holding thresholds that change with legislation. Indexation benefits on some debt categories add complexity for NRIs filing abroad. Track purchase dates, bonus units, and switches that reset clocks. Pair AMFI statements with contract notes so foreign tax filings can claim treaty positions accurately without double counting."
     tags: [tax, india]
-    confidence: 0.9199999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.86
+    sources: ["Income Tax Act India","CBDT circulars"]
+
   - id: P-006
-    title: "Curated principle P-006"
-    principle: "Principle P-006: diversified portfolios benefit from discipline on tax + cross-border. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Treat residency facts as first-class data"
+    principle: "Cross-border investors face different definitions of residence, tie-breaker tests, and sourcing rules than domestic-only portfolios. Banks and brokers do not optimize your treaty story. Maintain a dated residency narrative, days-count summaries, and certificates where applicable. When income spans jurisdictions, reconcile withholding, advance tax, and final returns so credits actually attach to the right boxes."
     tags: [tax, cross-border]
-    confidence: 0.94
-    sources: ["Artha curated pattern library"]
+    confidence: 0.89
+    sources: ["OECD Model Tax Convention","India–Czech DTAA"]
+
   - id: P-007
     title: "Equity for >5y horizons, bonds for <2y"
     principle: "Historical data shows equity nearly always outperforms bonds over rolling 10-year periods, but exhibits frequent drawdowns over 1-2 year periods. Match instrument volatility to time horizon: long goals can withstand drawdowns, short goals cannot."
@@ -43,41 +48,47 @@ patterns:
     confidence: 0.93
     sources: ["MSCI long-horizon studies"]
   - id: P-008
-    title: "Curated principle P-008"
-    principle: "Principle P-008: diversified portfolios benefit from discipline on rebalance + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Tax-aware rebalancing beats calendar-only rules"
+    principle: "Calendar rebalances ignore whether trades push gains into taxable events or harvest losses. A threshold-based approach combined with lot selection and deferral near tax-free windows usually dominates naive monthly trims. Quantify the tax drag of each candidate sell before executing. Where gains would be taxed, prefer funding new contributions to underweight sleeves instead of selling winners."
     tags: [rebalance, tax]
     confidence: 0.84
-    sources: ["Artha curated pattern library"]
+    sources: ["Arnott & Kasriel tax-aware investing","Vanguard tax-managed funds whitepapers"]
+
   - id: P-009
-    title: "Curated principle P-009"
-    principle: "Principle P-009: diversified portfolios benefit from discipline on sip + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Automate contributions before optimizing funds"
+    principle: "Behavioral friction destroys more wealth than picking the second-best index fund. Automating transfers on pay day removes willpower from the equation and enforces pay-yourself-first discipline. Once automation is reliable, optimize fund selection and fees. If automation fails even once, diagnose cashflow timing rather than increasing risk to chase returns."
     tags: [sip, allocation]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.87
+    sources: ["Thaler Save More Tomorrow","Defined contribution plan research"]
+
   - id: P-010
-    title: "Curated principle P-010"
-    principle: "Principle P-010: diversified portfolios benefit from discipline on sip + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Commitment devices beat good intentions"
+    principle: "Humans overweight present pleasure versus future security. Locking contributions, naming accounts by goal, and removing app shortcuts to trading reduce impulse changes. Pair automation with a quarterly read-only review instead of daily price checking. Evidence from retirement plans shows participants who touch allocations rarely outperform frequent traders after fees and taxes."
     tags: [sip, behavioral]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.85
+    sources: ["Richard Thaler behavioral economics","Dalbar QAIB"]
+
   - id: P-011
-    title: "Curated principle P-011"
-    principle: "Principle P-011: diversified portfolios benefit from discipline on behavioral + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Written policy beats memory in stress"
+    principle: "During drawdowns, memory reconstructs narratives that justify abandoning the plan. A one-page investment policy records why sleeves exist, rebalance bands, and what evidence would be required to change course. It is most valuable when it feels unnecessary. Update it only with deliberation, not after one volatile week."
     tags: [behavioral, allocation]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.86
+    sources: ["CFP Board practice standards","Institutional allocator playbooks"]
+
   - id: P-012
-    title: "Curated principle P-012"
-    principle: "Principle P-012: diversified portfolios benefit from discipline on behavioral + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Ignore short-term noise in recurring buys"
+    principle: "Systematic purchases will sometimes feel foolish in real time because media narratives peak at fear. The point of a schedule is to remove that decision. Track rolling five-year averages of unit prices acquired, not month-to-month regret. If fundamentals of a fund structurally change, replace the fund, not the discipline of contributing."
     tags: [behavioral, sip]
-    confidence: 0.9199999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.88
+    sources: ["Constantinides lifecycle models","Vanguard investor behavior research"]
+
   - id: P-013
-    title: "Curated principle P-013"
-    principle: "Principle P-013: diversified portfolios benefit from discipline on india + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Diversify India exposure across AMC concentration"
+    principle: "Indian mutual fund investors often cluster in a few large AMCs and overlapping benchmarks, creating hidden factor concentration. Review underlying indices, active share, and overlap across folios. For NRIs, also consider repatriability, taxation in residence country, and remittance costs when sizing India sleeves versus global ETFs held abroad."
     tags: [india, allocation]
-    confidence: 0.94
-    sources: ["Artha curated pattern library"]
+    confidence: 0.83
+    sources: ["SEBI mutual fund categorization","AMFI investor education"]
+
   - id: P-014
     title: "The 3-year Czech tax-free rule"
     principle: "Czech residents holding mutual funds or ETFs for >3 years pay 0% capital gains tax on disposal. This makes Czech holdings dramatically more valuable to hold to maturity than US/UK equivalents. Selling a Czech fund 2 years 11 months in costs 15% of gains; selling 3 years 1 day in costs nothing. Track every Czech holding tax-free date."
@@ -85,29 +96,33 @@ patterns:
     confidence: 1
     sources: ["§4(1)(w) Czech Income Tax Act"]
   - id: P-015
-    title: "Curated principle P-015"
-    principle: "Principle P-015: diversified portfolios benefit from discipline on czech + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Czech koruna cash is not risk-free over long horizons"
+    principle: "Inflation and negative real rates can erode CZK cash balances earmarked for distant goals. Emergency funds belong in low-volatility instruments, but long horizons deserve inflation-aware instruments. Match instrument currency to spending where possible to avoid accidental FX bets. Review real yields annually because central bank cycles move quickly."
     tags: [czech, allocation]
-    confidence: 0.84
-    sources: ["Artha curated pattern library"]
+    confidence: 0.82
+    sources: ["Czech National Bank inflation reports","IMF country desk notes"]
+
   - id: P-016
-    title: "Curated principle P-016"
-    principle: "Principle P-016: diversified portfolios benefit from discipline on czech + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Document Erste and bank statements for basis"
+    principle: "Czech accumulation products may not provide brokerage-grade lot accounting. Export periodic statements and SIP confirmations so future disposals can be matched to subscriptions. If you switch platforms, request full history before closing old access. This habit prevents unpleasant surprises when tax-free tests or cost basis questions arise years later."
     tags: [czech, tax]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.85
+    sources: ["Erste investor communications","MFCR tax guidance"]
+
   - id: P-017
-    title: "Curated principle P-017"
-    principle: "Principle P-017: diversified portfolios benefit from discipline on cross-border + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Map treaty articles to income types"
+    principle: "DTAA articles differ for dividends, interest, capital gains, and pensions. A single generic treaty claim invites disallowance. Build a simple matrix of income sources, withholding observed, foreign tax paid, and the article relied upon. Keep certificates of residence dated within requested windows. This structure speeds professional review and reduces filing errors."
     tags: [cross-border, tax]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.9
+    sources: ["India–Czech DTAA text","OECD commentary"]
+
   - id: P-018
-    title: "Curated principle P-018"
-    principle: "Principle P-018: diversified portfolios benefit from discipline on cross-border + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "FX is a sleeve, not an afterthought"
+    principle: "When expenses are in CZK but assets are global, currency moves change real spending power independently of fund performance. Decide explicitly how much unhedged FX risk you want as part of the policy mix. For near-term CZK expenses, consider instruments or weights that reduce mismatch. Revisit after large moves because static weights drift in risk space."
     tags: [cross-border, allocation]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.8
+    sources: ["CFA currency management primer","IMF COFER data context"]
+
   - id: P-019
     title: "Currency hedging cost vs hedge benefit"
     principle: "For long-horizon (>5y) equity holdings, currency hedging cost (typically 1-2% annually) usually exceeds the volatility-reduction benefit. For short-horizon or fixed-income holdings, hedging often pays off. NRIs should generally NOT hedge equity exposure."
@@ -115,17 +130,19 @@ patterns:
     confidence: 0.78
     sources: ["CFA currency hedging literature"]
   - id: P-020
-    title: "Curated principle P-020"
-    principle: "Principle P-020: diversified portfolios benefit from discipline on ai + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Treat AI output as draft until numbers reconcile"
+    principle: "Large language models can summarize positions but may hallucinate figures or miss recent trades. Always reconcile AI narrative against authoritative sources like your ledger, broker CSVs, and tax documents. Use AI for scenario explanation and checklist generation, not as a substitute for accounting sign-off. Log prompts and answers when decisions are material."
     tags: [ai, behavioral]
-    confidence: 0.94
-    sources: ["Artha curated pattern library"]
+    confidence: 0.81
+    sources: ["NIST AI risk management","IOSCO retail advisory warnings"]
+
   - id: P-021
-    title: "Curated principle P-021"
-    principle: "Principle P-021: diversified portfolios benefit from discipline on allocation + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Increase equity only with longer horizons"
+    principle: "Raising equity targets without extending time horizon is a hidden risk increase. If retirement moved closer, equity should often fall even if markets feel attractive. Tie each equity change to a dated liability schedule. Document the assumption so future-you understands why the mix looked aggressive or conservative."
     tags: [allocation, sip]
-    confidence: 0.82
-    sources: ["Artha curated pattern library"]
+    confidence: 0.86
+    sources: ["Bodie pension finance","Glidepath research"]
+
   - id: P-022
     title: "Don't sell into a tax window"
     principle: "If a holding is within 90 days of becoming tax-free and has positive gains, the cost of selling now (15% on gains) almost always exceeds the rebalancing benefit. Defer sells of late-window holdings."
@@ -133,65 +150,75 @@ patterns:
     confidence: 0.92
     sources: ["P-014 derived"]
   - id: P-023
-    title: "Curated principle P-023"
-    principle: "Principle P-023: diversified portfolios benefit from discipline on allocation + rebalance. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Rebalance sells winners and buys laggards mechanically"
+    principle: "Threshold rebalancing sells what went up relative to policy and buys what lagged, enforcing buy-low sell-high in slow motion. Taxes and transaction costs are the friction; thresholds balance drift control with turnover. Pair thresholds with tax lot awareness where sells are taxable. Review annually whether bands still fit volatility of chosen funds."
     tags: [allocation, rebalance]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.87
+    sources: ["Perold Sharpe dynamic strategy","Vanguard band rebalancing"]
+
   - id: P-024
-    title: "Curated principle P-024"
-    principle: "Principle P-024: diversified portfolios benefit from discipline on allocation + horizon. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Young investors still need liquidity buffers"
+    principle: "Long horizon does not eliminate short liquidity shocks like job loss or relocation. A separate cash sleeve prevents equity sales at bad times. Size the buffer to fixed commitments and local norms, not just a round number. Replenish the buffer after draws before boosting risk assets again."
     tags: [allocation, horizon]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
-  - id: P-025
-    title: "Curated principle P-025"
-    principle: "Principle P-025: diversified portfolios benefit from discipline on tax + czech. Use checklists, automate where possible, and revisit assumptions annually."
-    tags: [tax, czech]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
-  - id: P-026
-    title: "Curated principle P-026"
-    principle: "Principle P-026: diversified portfolios benefit from discipline on tax + india. Use checklists, automate where possible, and revisit assumptions annually."
-    tags: [tax, india]
-    confidence: 0.9199999999999999
-    sources: ["Artha curated pattern library"]
-  - id: P-027
-    title: "Curated principle P-027"
-    principle: "Principle P-027: diversified portfolios benefit from discipline on tax + cross-border. Use checklists, automate where possible, and revisit assumptions annually."
-    tags: [tax, cross-border]
-    confidence: 0.94
-    sources: ["Artha curated pattern library"]
-  - id: P-028
-    title: "Curated principle P-028"
-    principle: "Principle P-028: diversified portfolios benefit from discipline on rebalance + allocation. Use checklists, automate where possible, and revisit assumptions annually."
-    tags: [rebalance, allocation]
-    confidence: 0.82
-    sources: ["Artha curated pattern library"]
-  - id: P-029
-    title: "Curated principle P-029"
-    principle: "Principle P-029: diversified portfolios benefit from discipline on rebalance + tax. Use checklists, automate where possible, and revisit assumptions annually."
-    tags: [rebalance, tax]
     confidence: 0.84
-    sources: ["Artha curated pattern library"]
+    sources: ["Household finance liquidity research","Emergency fund guidelines"]
+
+  - id: P-025
+    title: "Harvest losses only with a repurchase plan"
+    principle: "Tax-loss harvesting in jurisdictions that allow it still requires avoiding wash-sale or superficial loss rules where applicable. Model the present value of the deduction versus tracking error if you temporarily hold a substitute fund. For Czech three-year funds, harvesting interacts badly with clock resets—avoid accidental restarts."
+    tags: [tax, czech]
+    confidence: 0.79
+    sources: ["US IRC wash sale analogy","Czech fund tax mechanics"]
+
+  - id: P-026
+    title: "NRIs watch TRC and Form 67 timelines"
+    principle: "Claiming foreign tax credit in India or treaty benefits often needs a tax residency certificate dated correctly relative to the income year. Missing deadlines can strand withholding in limbo. Build a calendar for TRC renewal, DTAA disclosures, and Czech filing dates together. Keep digital copies of bank advice for interest and dividend withholding."
+    tags: [tax, india]
+    confidence: 0.88
+    sources: ["CBDT instructions","Indian income tax portal"]
+
+  - id: P-027
+    title: "Separate permanent move from portfolio tourism"
+    principle: "Changing tax residence has legal tests and continuity-of-life implications beyond brokerage forms. Portfolio changes should follow the move, not precede it without advice. Document employment contracts, leases, and family ties that support the timeline. Rushing asset location changes ahead of stable facts invites challenge from either revenue authority."
+    tags: [tax, cross-border]
+    confidence: 0.83
+    sources: ["OECD tie-breaker tests","National residency rulings"]
+
+  - id: P-028
+    title: "Cash sleeves reduce forced equity sales"
+    principle: "Holding some low-volatility assets allows rebalancing buys during equity drawdowns without external cash. The drag from cash is the premium for optionality. Size cash as a function of mandatory spending in the next twenty four months, not market forecasts. Revisit after large withdrawals or income changes."
+    tags: [rebalance, allocation]
+    confidence: 0.84
+    sources: ["Bbucket strategy literature","Kitces cash wedge"]
+
+  - id: P-029
+    title: "Defer realizing income when rates are uncertain"
+    principle: "When statutory rates or treaty positions may change, deferring discretionary realizations can preserve option value. This is not market timing; it is tax timing anchored to legislation calendars. Model both branches when amounts are large. Document assumptions so you execute promptly once law is clear."
+    tags: [rebalance, tax]
+    confidence: 0.78
+    sources: ["Scholes-Wolfson tax planning","Public finance calendars"]
+
   - id: P-030
-    title: "Curated principle P-030"
-    principle: "Principle P-030: diversified portfolios benefit from discipline on sip + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "SIP amount should track income, not markets"
+    principle: "Raising SIPs after raises and trimming after income shocks keeps savings rate stable in lifecycle terms. Market level should not dictate contribution changes for most accumulators. If you must adjust, change future allocations rather than stopping contributions entirely. Pausing SIPs is one of the largest wealth leaks in retail data."
     tags: [sip, allocation]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.87
+    sources: ["Behavioral personal finance studies","DC plan auto-escalation evidence"]
+
   - id: P-031
-    title: "Curated principle P-031"
-    principle: "Principle P-031: diversified portfolios benefit from discipline on sip + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Use rules to pre-decide small trades"
+    principle: "Micro decisions exhaust willpower and invite inconsistent outcomes. Rules like always investing windfalls over a threshold, or never checking prices daily, protect cognition for big choices. Write them when calm. Exceptions should be rare and logged so patterns of exceptions do not become the new rule."
     tags: [sip, behavioral]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.82
+    sources: ["Baumeister ego depletion research","James Clear habit framing"]
+
   - id: P-032
-    title: "Curated principle P-032"
-    principle: "Principle P-032: diversified portfolios benefit from discipline on behavioral + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Overconfidence peaks after winning streaks"
+    principle: "Recent outperformance increases risk tolerance even when fundamentals unchanged. After strong quarters, verify that leverage, concentration, and liquidity still match policy. Consider automatic de-risk triggers tied to allocation, not feelings. Historical crashes follow periods of complacency more often than periods of fear."
     tags: [behavioral, allocation]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.8
+    sources: ["Barber & Odean trading study","JP Morgan GUIDE"]
+
   - id: P-033
     title: "10pp drift threshold for rebalancing"
     principle: "Rebalancing more often than ~10 percentage points of drift adds tax cost without meaningful return improvement. Letting allocation drift more than 10pp risks correlated losses. The 10pp threshold is a useful default for personal portfolios."
@@ -199,47 +226,54 @@ patterns:
     confidence: 0.85
     sources: ["Vanguard rebalancing whitepaper 2010"]
   - id: P-034
-    title: "Curated principle P-034"
-    principle: "Principle P-034: diversified portfolios benefit from discipline on india + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "India debt funds carry credit and rate risk"
+    principle: "Not all Indian debt categories behave like deposits. Credit events, rate shocks, and liquidity gates can appear simultaneously. Read scheme factsheets for average maturity, credit quality buckets, and exit loads. NRIs should map interest taxation in both countries before sizing large positions."
     tags: [india, allocation]
-    confidence: 0.94
-    sources: ["Artha curated pattern library"]
+    confidence: 0.81
+    sources: ["RBI financial stability report","SEBI riskometer"]
+
   - id: P-035
-    title: "Curated principle P-035"
-    principle: "Principle P-035: diversified portfolios benefit from discipline on india + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "NRIs file where residency facts support"
+    principle: "Income may be taxable in India, the residence country, or both with credits depending on facts. Software defaults are dangerous for NRE interest, India dividends, and Czech employment together. Maintain a single timeline document updated annually. Engage a cross-border accountant before first year with material two-country income."
     tags: [india, tax]
-    confidence: 0.82
-    sources: ["Artha curated pattern library"]
+    confidence: 0.9
+    sources: ["Income Tax Act India","Czech Income Tax Act"]
+
   - id: P-036
-    title: "Curated principle P-036"
-    principle: "Principle P-036: diversified portfolios benefit from discipline on czech + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Czech inflation-linked goals need real metrics"
+    principle: "Nominal CZK targets become easier or harder as inflation moves. Rebase long goals to real spending estimates periodically. Use conservative real return assumptions for funded status checks. Link emergency fund targets to months of observed expenses, not static nominal amounts forever."
     tags: [czech, allocation]
-    confidence: 0.84
-    sources: ["Artha curated pattern library"]
+    confidence: 0.83
+    sources: ["CZSO CPI releases","Czech National Bank forecasts"]
+
   - id: P-037
-    title: "Curated principle P-037"
-    principle: "Principle P-037: diversified portfolios benefit from discipline on czech + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Gift and inheritance planning interacts with portfolio"
+    principle: "Large portfolio shifts sometimes coincide with family transfers. Czech rules differ from Indian Hindu succession norms and from common-law jurisdictions. Document intent and valuations at transfer dates. Poor sequencing can accelerate tax events or break holding periods needed for exemptions."
     tags: [czech, tax]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.76
+    sources: ["Czech Civil Code overview","Cross-border estate primers"]
+
   - id: P-038
-    title: "Curated principle P-038"
-    principle: "Principle P-038: diversified portfolios benefit from discipline on cross-border + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Withholding is not final tax"
+    principle: "Banks withhold at default rates that may not match treaty outcomes. True liability emerges at return filing. Track withholding certificates and reconcile to income lines. If refunds are slow, model cash impact before budgeting the spend. Carryforward credits where allowed instead of losing them."
     tags: [cross-border, tax]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.88
+    sources: ["Treaty withholding tables","Practical compliance guides"]
+
   - id: P-039
-    title: "Curated principle P-039"
-    principle: "Principle P-039: diversified portfolios benefit from discipline on cross-border + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Domicile choice affects fund access and reporting"
+    principle: "Some funds distribute only in specific jurisdictions or have different share classes by domicile. Changing residence may alter available products and tax reporting forms. Before moving large balances, confirm KYC refresh timelines and whether positions must be switched. Plan transitions to avoid blackout periods."
     tags: [cross-border, allocation]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.77
+    sources: ["UCITS distribution rules","KYC/CDD practice"]
+
   - id: P-040
-    title: "Curated principle P-040"
-    principle: "Principle P-040: diversified portfolios benefit from discipline on horizon + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Sequence-of-returns risk rises near spending"
+    principle: "Negative returns hurt more when withdrawals start because there is less time to recover. Glidepaths reduce equity automatically in many pension designs; personal investors should mimic the idea manually. Increase cash and bond weights as the first withdrawal date approaches unless liabilities are fully matched elsewhere."
     tags: [horizon, allocation]
-    confidence: 0.9199999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.89
+    sources: ["Kitces sequence risk","Pfau retirement research"]
+
   - id: P-041
     title: "Adherence matters more than strategy choice"
     principle: "Research on retirement accounts shows that consistency of contribution (adherence) correlates more strongly with end wealth than the choice between reasonable strategies (e.g., 60/40 vs 70/30). A mediocre plan followed beats an optimal plan abandoned."
@@ -247,23 +281,26 @@ patterns:
     confidence: 0.93
     sources: ["Dalbar QAIB studies 2010-2023"]
   - id: P-042
-    title: "Curated principle P-042"
-    principle: "Principle P-042: diversified portfolios benefit from discipline on allocation + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Front-load learning, back-load complexity"
+    principle: "Early in wealth building, simple diversified funds plus automation beat complex structures. Add satellite sleeves only when tracking error and taxes are understood. Complexity should correlate with net worth and problem difficulty, not with boredom. Each new instrument should justify its monitoring cost."
     tags: [allocation, sip]
     confidence: 0.82
-    sources: ["Artha curated pattern library"]
+    sources: ["Swensen endowment lessons adapted retail","Bogle simple investing"]
+
   - id: P-043
-    title: "Curated principle P-043"
-    principle: "Principle P-043: diversified portfolios benefit from discipline on allocation + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "TER and trading costs compound silently"
+    principle: "A one percent all-in cost drag over decades can consume a double-digit share of terminal wealth. TER, bid-ask spreads, and tax turnover belong in one dashboard number. Prefer broad, cheap building blocks unless skill and time truly justify satellites. Revisit after fund mergers or fee changes."
     tags: [allocation, tax]
-    confidence: 0.84
-    sources: ["Artha curated pattern library"]
+    confidence: 0.91
+    sources: ["SPIVA persistence of fees","Morningstar fee research"]
+
   - id: P-044
-    title: "Curated principle P-044"
-    principle: "Principle P-044: diversified portfolios benefit from discipline on allocation + rebalance. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Correlations spike in crises—diversification fails briefly"
+    principle: "Diversification reduces average covariance but not the tails where many assets correlate to one. Liquidity and liability management matter more in those weeks than precise weights. Stress-test portfolios with 2008-style equity and credit shocks even if you were not invested then. Keep an explicit crisis playbook."
     tags: [allocation, rebalance]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.84
+    sources: ["Ang factor investing","Risk parity crisis notes"]
+
   - id: P-045
     title: "Inactive funds are unrealized decisions"
     principle: "Holdings you stopped buying but haven't sold are pending decisions. They drift, age into and out of tax windows, and silently change allocation. Review inactive funds quarterly: hold for tax timing, consolidate into active picks, or exit."
@@ -271,17 +308,19 @@ patterns:
     confidence: 0.85
     sources: ["Artha practice note"]
   - id: P-046
-    title: "Curated principle P-046"
-    principle: "Principle P-046: diversified portfolios benefit from discipline on tax + czech. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Model Czech spouse joint accounts clearly"
+    principle: "Joint ownership and income attribution can affect who reports what. Investment income may follow beneficial ownership rules rather than bank titling. Align broker account names with intended tax reporting before large subscriptions. Document gifts between spouses where relevant to holding periods."
     tags: [tax, czech]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.74
+    sources: ["Czech income tax commentary","Notarial practice notes"]
+
   - id: P-047
-    title: "Curated principle P-047"
-    principle: "Principle P-047: diversified portfolios benefit from discipline on tax + india. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "India rupee volatility affects repatriation timing"
+    principle: "Large repatriations interact with FX spreads, bank policies, and LRS limits where applicable. Splitting transfers can smooth rates but increases fees—model total cost. Pair transfers with documented investment purpose for compliance. Avoid ad hoc wires without matching tax paperwork."
     tags: [tax, india]
-    confidence: 0.9199999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.8
+    sources: ["RBI FEMA overview","Bank FX desk disclosures"]
+
   - id: P-048
     title: "NRE FD interest is tax-free in India"
     principle: "For Indian non-residents (NRIs), interest earned on NRE deposits is exempt from Indian income tax under §10(4)(ii). This makes NRE FDs uniquely tax-efficient for Indian investments. Note: still taxable in country of residence (e.g. Czech Republic)."
@@ -289,11 +328,12 @@ patterns:
     confidence: 1
     sources: ["Income Tax Act India"]
   - id: P-049
-    title: "Curated principle P-049"
-    principle: "Principle P-049: diversified portfolios benefit from discipline on rebalance + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Rebalance after large cash flows"
+    principle: "Bonuses, inheritance, or property sales move weights abruptly. Invest or rebalance in one planful step rather than dribbling without a target. Large inflows are a good moment to tax-loss harvest if applicable and to restore policy weights. Log the pre and post allocation snapshot."
     tags: [rebalance, allocation]
-    confidence: 0.82
-    sources: ["Artha curated pattern library"]
+    confidence: 0.83
+    sources: ["Institutional cash flow best practices","CFP rebalancing guidance"]
+
   - id: P-050
     title: "DTAA prevents double taxation"
     principle: "The India-Czech Republic Double Taxation Avoidance Agreement allows Indian-source income (FD interest, dividends) to be credited against Czech tax liability. Keep tax residency certificates current and maintain Form 67 documentation when filing in either jurisdiction."
@@ -301,29 +341,33 @@ patterns:
     confidence: 1
     sources: ["India–Czech DTAA"]
   - id: P-051
-    title: "Curated principle P-051"
-    principle: "Principle P-051: diversified portfolios benefit from discipline on sip + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Increase SIPs with real wage growth"
+    principle: "If contributions stay flat while income rises, savings rate silently falls. Index SIPs to inflation at minimum and to promotions when possible. Automate percentage-of-salary rules where payroll allows. Small increases early compound dramatically because they extend over long horizons."
     tags: [sip, allocation]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.85
+    sources: ["Thaler behavioral savings","Defined contribution auto-escalation"]
+
   - id: P-052
-    title: "Curated principle P-052"
-    principle: "Principle P-052: diversified portfolios benefit from discipline on sip + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Avoid checking balances on bad news days"
+    principle: "Media cycles correlate with emotional account checks and rash changes. Batch reviews to scheduled dates. If you must look after headlines, read only the policy document first. Evidence links frequent app usage to worse timing decisions in retail brokerage datasets."
     tags: [sip, behavioral]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.8
+    sources: ["Barber & Odean attention study","Fintech usage papers"]
+
   - id: P-053
-    title: "Curated principle P-053"
-    principle: "Principle P-053: diversified portfolios benefit from discipline on behavioral + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Name accounts to goals to reduce mental fungibility"
+    principle: "Mental accounting can be harnessed: named sub-accounts reduce the temptation to raid long money for short wants. Keep legal ownership simple—naming is psychological, not a tax shortcut. Refresh names when goals complete so funds do not float without purpose."
     tags: [behavioral, allocation]
-    confidence: 0.8999999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.78
+    sources: ["Thaler mental accounting","Goal-based investing practice"]
+
   - id: P-054
-    title: "Curated principle P-054"
-    principle: "Principle P-054: diversified portfolios benefit from discipline on behavioral + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Peer returns are a poor benchmark"
+    principle: "Comparing your portfolio to anecdotes from colleagues mixes different risk, leverage, and timing. Use policy-appropriate blended indices and inflation-adjusted outcomes. Social comparison spikes churn. Write down your benchmark stack and ignore alternatives unless your policy changes."
     tags: [behavioral, sip]
-    confidence: 0.9199999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.82
+    sources: ["Mauboussin success equation","CFA GIPS spirit for individuals"]
+
   - id: P-055
     title: "SIP day consistency reduces timing bias"
     principle: "Investing on a fixed day of the month (e.g., the 14th) regardless of market conditions removes emotional decision points. If the market is down on your SIP day, you buy more units; if it is up, fewer. Over years this dollar-cost-averaging mechanically smooths entry price."
@@ -331,29 +375,33 @@ patterns:
     confidence: 0.88
     sources: ["Vanguard DCA research"]
   - id: P-056
-    title: "Curated principle P-056"
-    principle: "Principle P-056: diversified portfolios benefit from discipline on india + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "AMFI codes change—track ISIN mapping"
+    principle: "Scheme mergers and name changes can alter codes while economic exposure stays similar. Maintain ISIN as primary key in your ledger and refresh AMFI downloads after corporate actions. Stale codes break automated NAV ingestion and can mis-tag tax lots."
     tags: [india, tax]
-    confidence: 0.82
-    sources: ["Artha curated pattern library"]
+    confidence: 0.79
+    sources: ["AMFI scheme merger notices","MF utility standards"]
+
   - id: P-057
-    title: "Curated principle P-057"
-    principle: "Principle P-057: diversified portfolios benefit from discipline on czech + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Czech pension pillars interact with liquidity"
+    principle: "Different pillars have different liquidity, fees, and tax treatments. Before increasing voluntary contributions, model opportunity cost versus taxable brokerage paths. Locking too much in illiquid wrappers can block opportunistic moves like tax-aware sells. Update the model when contribution limits change."
     tags: [czech, allocation]
-    confidence: 0.84
-    sources: ["Artha curated pattern library"]
+    confidence: 0.77
+    sources: ["Czech pension system guides","MFCR pension pages"]
+
   - id: P-058
-    title: "Curated principle P-058"
-    principle: "Principle P-058: diversified portfolios benefit from discipline on czech + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Interest deductibility has boundaries"
+    principle: "Investment loans and margin interact with purpose tests and caps that differ by country. Do not assume interest is deductible against all income types. Keep loan purpose documentation and trace use of proceeds. Cross-border interest adds FX and withholding layers."
     tags: [czech, tax]
-    confidence: 0.86
-    sources: ["Artha curated pattern library"]
+    confidence: 0.75
+    sources: ["Czech Income Tax Act interest articles","OECD interest limitation context"]
+
   - id: P-059
-    title: "Curated principle P-059"
-    principle: "Principle P-059: diversified portfolios benefit from discipline on cross-border + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    title: "Document substance for treaty tie-breaker claims"
+    principle: "Treaty tie-breaker tests look at habitual abode, center of vital interests, and nationality sequence. Random travel does not prove residence. Keep leases, school enrollment, employment contracts, and healthcare enrollment consistent with claims. Weak documentation invites dual assessment."
     tags: [cross-border, tax]
-    confidence: 0.8799999999999999
-    sources: ["Artha curated pattern library"]
+    confidence: 0.86
+    sources: ["OECD Model Article 4","National tax rulings"]
+
   - id: P-060
     title: "Behavioral skip patterns reveal misalignment"
     principle: "If a user repeatedly skips the same recommendation (e.g., 3 months of skipping a rebalance sell), the recommendation likely doesn't fit their actual preferences. Either the threshold is too aggressive, the explanation lacks resonance, or the user has constraints the system doesn't know about. Adapt rather than repeat."
