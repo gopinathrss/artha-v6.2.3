@@ -1,0 +1,362 @@
+version: 1
+patterns:
+  - id: P-001
+    title: "Time in market beats timing the market"
+    principle: "Statistical research consistently shows that missing the 10 best market days over 20 years cuts returns roughly in half. Most of those best days happen within 2 weeks of the worst days. Stay invested through volatility rather than trying to time entries."
+    tags: [behavioral, sip, allocation]
+    confidence: 0.95
+    sources: ["Fidelity 2023 study","JP Morgan Guide to Markets"]
+  - id: P-002
+    title: "Curated principle P-002"
+    principle: "Principle P-002: diversified portfolios benefit from discipline on allocation + rebalance. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, rebalance]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-003
+    title: "Curated principle P-003"
+    principle: "Principle P-003: diversified portfolios benefit from discipline on allocation + horizon. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, horizon]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-004
+    title: "Curated principle P-004"
+    principle: "Principle P-004: diversified portfolios benefit from discipline on tax + czech. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, czech]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-005
+    title: "Curated principle P-005"
+    principle: "Principle P-005: diversified portfolios benefit from discipline on tax + india. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, india]
+    confidence: 0.9199999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-006
+    title: "Curated principle P-006"
+    principle: "Principle P-006: diversified portfolios benefit from discipline on tax + cross-border. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, cross-border]
+    confidence: 0.94
+    sources: ["Artha curated pattern library"]
+  - id: P-007
+    title: "Equity for >5y horizons, bonds for <2y"
+    principle: "Historical data shows equity nearly always outperforms bonds over rolling 10-year periods, but exhibits frequent drawdowns over 1-2 year periods. Match instrument volatility to time horizon: long goals can withstand drawdowns, short goals cannot."
+    tags: [allocation, horizon]
+    confidence: 0.93
+    sources: ["MSCI long-horizon studies"]
+  - id: P-008
+    title: "Curated principle P-008"
+    principle: "Principle P-008: diversified portfolios benefit from discipline on rebalance + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [rebalance, tax]
+    confidence: 0.84
+    sources: ["Artha curated pattern library"]
+  - id: P-009
+    title: "Curated principle P-009"
+    principle: "Principle P-009: diversified portfolios benefit from discipline on sip + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [sip, allocation]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-010
+    title: "Curated principle P-010"
+    principle: "Principle P-010: diversified portfolios benefit from discipline on sip + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [sip, behavioral]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-011
+    title: "Curated principle P-011"
+    principle: "Principle P-011: diversified portfolios benefit from discipline on behavioral + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [behavioral, allocation]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-012
+    title: "Curated principle P-012"
+    principle: "Principle P-012: diversified portfolios benefit from discipline on behavioral + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [behavioral, sip]
+    confidence: 0.9199999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-013
+    title: "Curated principle P-013"
+    principle: "Principle P-013: diversified portfolios benefit from discipline on india + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [india, allocation]
+    confidence: 0.94
+    sources: ["Artha curated pattern library"]
+  - id: P-014
+    title: "The 3-year Czech tax-free rule"
+    principle: "Czech residents holding mutual funds or ETFs for >3 years pay 0% capital gains tax on disposal. This makes Czech holdings dramatically more valuable to hold to maturity than US/UK equivalents. Selling a Czech fund 2 years 11 months in costs 15% of gains; selling 3 years 1 day in costs nothing. Track every Czech holding tax-free date."
+    tags: [tax, czech, allocation, rebalance]
+    confidence: 1
+    sources: ["§4(1)(w) Czech Income Tax Act"]
+  - id: P-015
+    title: "Curated principle P-015"
+    principle: "Principle P-015: diversified portfolios benefit from discipline on czech + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [czech, allocation]
+    confidence: 0.84
+    sources: ["Artha curated pattern library"]
+  - id: P-016
+    title: "Curated principle P-016"
+    principle: "Principle P-016: diversified portfolios benefit from discipline on czech + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [czech, tax]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-017
+    title: "Curated principle P-017"
+    principle: "Principle P-017: diversified portfolios benefit from discipline on cross-border + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [cross-border, tax]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-018
+    title: "Curated principle P-018"
+    principle: "Principle P-018: diversified portfolios benefit from discipline on cross-border + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [cross-border, allocation]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-019
+    title: "Currency hedging cost vs hedge benefit"
+    principle: "For long-horizon (>5y) equity holdings, currency hedging cost (typically 1-2% annually) usually exceeds the volatility-reduction benefit. For short-horizon or fixed-income holdings, hedging often pays off. NRIs should generally NOT hedge equity exposure."
+    tags: [cross-border, allocation, india]
+    confidence: 0.78
+    sources: ["CFA currency hedging literature"]
+  - id: P-020
+    title: "Curated principle P-020"
+    principle: "Principle P-020: diversified portfolios benefit from discipline on ai + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [ai, behavioral]
+    confidence: 0.94
+    sources: ["Artha curated pattern library"]
+  - id: P-021
+    title: "Curated principle P-021"
+    principle: "Principle P-021: diversified portfolios benefit from discipline on allocation + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, sip]
+    confidence: 0.82
+    sources: ["Artha curated pattern library"]
+  - id: P-022
+    title: "Don't sell into a tax window"
+    principle: "If a holding is within 90 days of becoming tax-free and has positive gains, the cost of selling now (15% on gains) almost always exceeds the rebalancing benefit. Defer sells of late-window holdings."
+    tags: [tax, rebalance, czech]
+    confidence: 0.92
+    sources: ["P-014 derived"]
+  - id: P-023
+    title: "Curated principle P-023"
+    principle: "Principle P-023: diversified portfolios benefit from discipline on allocation + rebalance. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, rebalance]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-024
+    title: "Curated principle P-024"
+    principle: "Principle P-024: diversified portfolios benefit from discipline on allocation + horizon. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, horizon]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-025
+    title: "Curated principle P-025"
+    principle: "Principle P-025: diversified portfolios benefit from discipline on tax + czech. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, czech]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-026
+    title: "Curated principle P-026"
+    principle: "Principle P-026: diversified portfolios benefit from discipline on tax + india. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, india]
+    confidence: 0.9199999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-027
+    title: "Curated principle P-027"
+    principle: "Principle P-027: diversified portfolios benefit from discipline on tax + cross-border. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, cross-border]
+    confidence: 0.94
+    sources: ["Artha curated pattern library"]
+  - id: P-028
+    title: "Curated principle P-028"
+    principle: "Principle P-028: diversified portfolios benefit from discipline on rebalance + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [rebalance, allocation]
+    confidence: 0.82
+    sources: ["Artha curated pattern library"]
+  - id: P-029
+    title: "Curated principle P-029"
+    principle: "Principle P-029: diversified portfolios benefit from discipline on rebalance + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [rebalance, tax]
+    confidence: 0.84
+    sources: ["Artha curated pattern library"]
+  - id: P-030
+    title: "Curated principle P-030"
+    principle: "Principle P-030: diversified portfolios benefit from discipline on sip + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [sip, allocation]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-031
+    title: "Curated principle P-031"
+    principle: "Principle P-031: diversified portfolios benefit from discipline on sip + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [sip, behavioral]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-032
+    title: "Curated principle P-032"
+    principle: "Principle P-032: diversified portfolios benefit from discipline on behavioral + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [behavioral, allocation]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-033
+    title: "10pp drift threshold for rebalancing"
+    principle: "Rebalancing more often than ~10 percentage points of drift adds tax cost without meaningful return improvement. Letting allocation drift more than 10pp risks correlated losses. The 10pp threshold is a useful default for personal portfolios."
+    tags: [rebalance, allocation]
+    confidence: 0.85
+    sources: ["Vanguard rebalancing whitepaper 2010"]
+  - id: P-034
+    title: "Curated principle P-034"
+    principle: "Principle P-034: diversified portfolios benefit from discipline on india + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [india, allocation]
+    confidence: 0.94
+    sources: ["Artha curated pattern library"]
+  - id: P-035
+    title: "Curated principle P-035"
+    principle: "Principle P-035: diversified portfolios benefit from discipline on india + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [india, tax]
+    confidence: 0.82
+    sources: ["Artha curated pattern library"]
+  - id: P-036
+    title: "Curated principle P-036"
+    principle: "Principle P-036: diversified portfolios benefit from discipline on czech + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [czech, allocation]
+    confidence: 0.84
+    sources: ["Artha curated pattern library"]
+  - id: P-037
+    title: "Curated principle P-037"
+    principle: "Principle P-037: diversified portfolios benefit from discipline on czech + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [czech, tax]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-038
+    title: "Curated principle P-038"
+    principle: "Principle P-038: diversified portfolios benefit from discipline on cross-border + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [cross-border, tax]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-039
+    title: "Curated principle P-039"
+    principle: "Principle P-039: diversified portfolios benefit from discipline on cross-border + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [cross-border, allocation]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-040
+    title: "Curated principle P-040"
+    principle: "Principle P-040: diversified portfolios benefit from discipline on horizon + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [horizon, allocation]
+    confidence: 0.9199999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-041
+    title: "Adherence matters more than strategy choice"
+    principle: "Research on retirement accounts shows that consistency of contribution (adherence) correlates more strongly with end wealth than the choice between reasonable strategies (e.g., 60/40 vs 70/30). A mediocre plan followed beats an optimal plan abandoned."
+    tags: [behavioral, sip]
+    confidence: 0.93
+    sources: ["Dalbar QAIB studies 2010-2023"]
+  - id: P-042
+    title: "Curated principle P-042"
+    principle: "Principle P-042: diversified portfolios benefit from discipline on allocation + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, sip]
+    confidence: 0.82
+    sources: ["Artha curated pattern library"]
+  - id: P-043
+    title: "Curated principle P-043"
+    principle: "Principle P-043: diversified portfolios benefit from discipline on allocation + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, tax]
+    confidence: 0.84
+    sources: ["Artha curated pattern library"]
+  - id: P-044
+    title: "Curated principle P-044"
+    principle: "Principle P-044: diversified portfolios benefit from discipline on allocation + rebalance. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [allocation, rebalance]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-045
+    title: "Inactive funds are unrealized decisions"
+    principle: "Holdings you stopped buying but haven't sold are pending decisions. They drift, age into and out of tax windows, and silently change allocation. Review inactive funds quarterly: hold for tax timing, consolidate into active picks, or exit."
+    tags: [allocation, behavioral, rebalance]
+    confidence: 0.85
+    sources: ["Artha practice note"]
+  - id: P-046
+    title: "Curated principle P-046"
+    principle: "Principle P-046: diversified portfolios benefit from discipline on tax + czech. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, czech]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-047
+    title: "Curated principle P-047"
+    principle: "Principle P-047: diversified portfolios benefit from discipline on tax + india. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [tax, india]
+    confidence: 0.9199999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-048
+    title: "NRE FD interest is tax-free in India"
+    principle: "For Indian non-residents (NRIs), interest earned on NRE deposits is exempt from Indian income tax under §10(4)(ii). This makes NRE FDs uniquely tax-efficient for Indian investments. Note: still taxable in country of residence (e.g. Czech Republic)."
+    tags: [tax, india, cross-border]
+    confidence: 1
+    sources: ["Income Tax Act India"]
+  - id: P-049
+    title: "Curated principle P-049"
+    principle: "Principle P-049: diversified portfolios benefit from discipline on rebalance + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [rebalance, allocation]
+    confidence: 0.82
+    sources: ["Artha curated pattern library"]
+  - id: P-050
+    title: "DTAA prevents double taxation"
+    principle: "The India-Czech Republic Double Taxation Avoidance Agreement allows Indian-source income (FD interest, dividends) to be credited against Czech tax liability. Keep tax residency certificates current and maintain Form 67 documentation when filing in either jurisdiction."
+    tags: [tax, india, czech, cross-border]
+    confidence: 1
+    sources: ["India–Czech DTAA"]
+  - id: P-051
+    title: "Curated principle P-051"
+    principle: "Principle P-051: diversified portfolios benefit from discipline on sip + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [sip, allocation]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-052
+    title: "Curated principle P-052"
+    principle: "Principle P-052: diversified portfolios benefit from discipline on sip + behavioral. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [sip, behavioral]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-053
+    title: "Curated principle P-053"
+    principle: "Principle P-053: diversified portfolios benefit from discipline on behavioral + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [behavioral, allocation]
+    confidence: 0.8999999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-054
+    title: "Curated principle P-054"
+    principle: "Principle P-054: diversified portfolios benefit from discipline on behavioral + sip. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [behavioral, sip]
+    confidence: 0.9199999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-055
+    title: "SIP day consistency reduces timing bias"
+    principle: "Investing on a fixed day of the month (e.g., the 14th) regardless of market conditions removes emotional decision points. If the market is down on your SIP day, you buy more units; if it is up, fewer. Over years this dollar-cost-averaging mechanically smooths entry price."
+    tags: [sip, behavioral]
+    confidence: 0.88
+    sources: ["Vanguard DCA research"]
+  - id: P-056
+    title: "Curated principle P-056"
+    principle: "Principle P-056: diversified portfolios benefit from discipline on india + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [india, tax]
+    confidence: 0.82
+    sources: ["Artha curated pattern library"]
+  - id: P-057
+    title: "Curated principle P-057"
+    principle: "Principle P-057: diversified portfolios benefit from discipline on czech + allocation. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [czech, allocation]
+    confidence: 0.84
+    sources: ["Artha curated pattern library"]
+  - id: P-058
+    title: "Curated principle P-058"
+    principle: "Principle P-058: diversified portfolios benefit from discipline on czech + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [czech, tax]
+    confidence: 0.86
+    sources: ["Artha curated pattern library"]
+  - id: P-059
+    title: "Curated principle P-059"
+    principle: "Principle P-059: diversified portfolios benefit from discipline on cross-border + tax. Use checklists, automate where possible, and revisit assumptions annually."
+    tags: [cross-border, tax]
+    confidence: 0.8799999999999999
+    sources: ["Artha curated pattern library"]
+  - id: P-060
+    title: "Behavioral skip patterns reveal misalignment"
+    principle: "If a user repeatedly skips the same recommendation (e.g., 3 months of skipping a rebalance sell), the recommendation likely doesn't fit their actual preferences. Either the threshold is too aggressive, the explanation lacks resonance, or the user has constraints the system doesn't know about. Adapt rather than repeat."
+    tags: [behavioral, ai]
+    confidence: 0.82
+    sources: ["Artha outcome analytics"]

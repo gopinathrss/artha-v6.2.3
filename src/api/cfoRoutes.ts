@@ -19,6 +19,7 @@ import {
   type BacktestStrategyKind
 } from '../lib/backtest/engine'
 import { Prisma } from '@prisma/client'
+import { getPatternById, loadPatterns, searchPatterns } from '../lib/patterns/loader'
 
 /** Request JSON uses `currentNav` / `avgNav`; DB columns are `currentNavInr` / `avgNavInr`. */
 function indiaMfNavFromBody(b: Record<string, unknown>): {
@@ -914,7 +915,7 @@ export function registerCfoRoutes(app: Application) {
       const limit = Math.min(Number(req.query.limit) || 20, 100)
       const outcomes = await prisma.recommendationOutcome.findMany({
         where: { status: { in: ['EXECUTED_90D', 'SKIPPED'] } },
-        orderBy: [{ evaluatedAt90d: 'desc' }, { updatedAt: 'desc' }],
+        orderBy: { evaluatedAt90d: 'desc' },
         take: limit
       })
       return res.json({ success: true, data: outcomes })
@@ -1127,6 +1128,42 @@ export function registerCfoRoutes(app: Application) {
       return res.json({ success: true, data: { current, allEquity, balanced } })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Compare failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/patterns/search', async (req, res) => {
+    try {
+      const q = req.query as Record<string, string | undefined>
+      const tags = String(q.tags || '')
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+      const text = String(q.q || '')
+      return res.json({ success: true, data: searchPatterns(text, tags) })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Search failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/patterns', async (_req, res) => {
+    try {
+      return res.json({ success: true, data: loadPatterns() })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/patterns/:id', async (req, res) => {
+    try {
+      const id = String(req.params.id || '')
+      const p = getPatternById(id)
+      if (!p) return res.status(404).json({ success: false, error: 'Pattern not found' })
+      return res.json({ success: true, data: p })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Lookup failed'
       return res.status(500).json({ success: false, error: m })
     }
   })

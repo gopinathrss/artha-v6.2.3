@@ -94,7 +94,8 @@ const PAGES = [
   '/settings',
   '/intelligence',
   '/library',
-  '/backtest'
+  '/backtest',
+  '/patterns'
 ]
 const PAGE_FILES: Record<string, string> = {
   '/': 'index.html',
@@ -109,7 +110,8 @@ const PAGE_FILES: Record<string, string> = {
   '/settings': 'settings.html',
   '/intelligence': 'intelligence.html',
   '/library': 'library.html',
-  '/backtest': 'backtest.html'
+  '/backtest': 'backtest.html',
+  '/patterns': 'patterns.html'
 }
 
 PAGES.forEach((route) => {
