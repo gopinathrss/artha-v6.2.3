@@ -590,5 +590,7 @@ model GeneratedReport {
   dataSnapshot Json
   token        String   @unique
   audience     String   @default("INTERNAL") // INTERNAL | CLIENT
+  title        String?
+  htmlContent  String?  @db.Text
   createdAt    DateTime @default(now())
 }

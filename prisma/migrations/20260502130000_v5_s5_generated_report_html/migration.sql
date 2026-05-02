@@ -1,0 +1,2 @@
+ALTER TABLE "GeneratedReport" ADD COLUMN IF NOT EXISTS "title" TEXT;
+ALTER TABLE "GeneratedReport" ADD COLUMN IF NOT EXISTS "htmlContent" TEXT;

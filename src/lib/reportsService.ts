@@ -92,7 +92,12 @@ export function renderReportViewHtml(row: {
   dataSnapshot: unknown
   audience?: string | null
   createdAt: Date
+  htmlContent?: string | null
+  title?: string | null
 }): string {
+  if (row.htmlContent && String(row.htmlContent).trim().length > 0) {
+    return String(row.htmlContent)
+  }
   const snap = row.dataSnapshot as { version?: number; sections?: { id: string; title: string; html: string }[] } | null
   if (snap && snap.version === 3) {
     return renderPremiumReportHtml(snap)

@@ -548,13 +548,85 @@ export function registerCfoRoutes(app: Application) {
   app.post('/api/reports/generate', async (req, res) => {
     const { demo } = await demoState()
     try {
-      const b = req.body as { type?: string; monthYear?: string; audience?: string }
+      const b = req.body as {
+        type?: string
+        monthYear?: string
+        audience?: string
+        period?: { start?: string; end?: string }
+      }
       const aud = b?.audience === 'CLIENT' ? 'CLIENT' : 'INTERNAL'
+      const t = String(b?.type || 'CFO_10').toUpperCase()
+      if (t === 'MONTHLY' || t === 'QUARTERLY' || t === 'TAX_YEAR') {
+        const { generateSmartReport } = await import('../lib/reports/generator')
+        const crypto = await import('crypto')
+        const prisma = await getPrisma()
+        const period =
+          b.period?.start && b.period?.end
+            ? { start: new Date(b.period.start), end: new Date(b.period.end) }
+            : undefined
+        const { html, metadata } = await generateSmartReport(t as 'MONTHLY' | 'QUARTERLY' | 'TAX_YEAR', period)
+        const meta = metadata as { title?: string; period?: { start: string; end: string } }
+        const token = crypto.randomBytes(24).toString('hex')
+        const periodLabel =
+          meta.period?.start && meta.period?.end
+            ? `${meta.period.start.slice(0, 10)} → ${meta.period.end.slice(0, 10)}`
+            : new Date().toISOString().slice(0, 10)
+        const row = await prisma.generatedReport.create({
+          data: {
+            type: t,
+            periodLabel,
+            monthYear: b.monthYear ?? null,
+            dataSnapshot: { ...metadata, smart: true } as object,
+            token,
+            audience: aud,
+            title: meta.title ?? t,
+            htmlContent: html
+          }
+        })
+        return res.json({
+          success: true,
+          data: {
+            reportId: row.id,
+            html,
+            metadata,
+            viewUrl: `/reports/view/${row.id}?token=${token}`,
+            audience: aud
+          },
+          demo
+        })
+      }
       const { id, viewUrl } = await createReport(b?.type || 'CFO_10', b?.monthYear, aud)
       return res.json({ success: true, data: { id, viewUrl, audience: aud }, demo })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Report failed'
       return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/reports/:id', async (req, res) => {
+    const { demo } = await demoState()
+    try {
+      const row = await (await getPrisma()).generatedReport.findUnique({
+        where: { id: String(req.params.id) }
+      })
+      if (!row) return res.status(404).json({ success: false, error: 'Not found', demo })
+      return res.json({ success: true, data: row, demo })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'error'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/reports/:id/html', async (req, res) => {
+    try {
+      const row = await (await getPrisma()).generatedReport.findUnique({
+        where: { id: String(req.params.id) }
+      })
+      if (!row) return res.status(404).type('text').send('Not found')
+      const html = row.htmlContent && String(row.htmlContent).trim().length > 0 ? String(row.htmlContent) : renderReportViewHtml(row)
+      return res.type('html').send(html)
+    } catch {
+      return res.status(500).type('text').send('Error')
     }
   })
 
