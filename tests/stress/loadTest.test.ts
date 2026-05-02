@@ -63,7 +63,9 @@ describe('stress: load (no production traffic — in-process)', () => {
     prismaMock.holding.findMany.mockResolvedValue([] as never)
     prismaMock.indiaMutualFund.findMany.mockResolvedValue([] as never)
     prismaMock.indiaFixedDeposit.findMany.mockResolvedValue([] as never)
-    prismaMock.account.findMany.mockResolvedValue([{ type: 'SAVINGS', balanceCzk: 0, isActive: true, balanceLocal: 0, currency: 'CZK' }] as never)
+    prismaMock.account.findMany.mockResolvedValue([
+      { type: 'SAVINGS', balanceCzkSnapshot: 0, isActive: true, balanceLocal: 0, currency: 'CZK' }
+    ] as never)
     for (let j = 0; j < 100; j++) {
       const p = await buildMonthlyPlanPayload('2026-01')
       expect(p.allocations.length).toBeGreaterThan(0)

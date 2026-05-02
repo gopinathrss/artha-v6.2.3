@@ -85,7 +85,7 @@ export async function wipeAndSeedDemoDb(persona: string): Promise<void> {
       institution: 'Demo Bank',
       balanceLocal: portfolio.netWorth.czechSavingsCzk,
       currency: 'CZK',
-      balanceCzk: portfolio.netWorth.czechSavingsCzk,
+      balanceCzkSnapshot: portfolio.netWorth.czechSavingsCzk,
       country: 'CZ',
       isActive: true
     }
@@ -98,7 +98,7 @@ export async function wipeAndSeedDemoDb(persona: string): Promise<void> {
       institution: portfolio.indiaAccounts.nre.bank,
       balanceLocal: portfolio.indiaAccounts.nre.balanceInr,
       currency: 'INR',
-      balanceCzk: portfolio.indiaAccounts.nre.balanceCzk,
+      balanceCzkSnapshot: null,
       country: 'IN',
       isActive: true
     }

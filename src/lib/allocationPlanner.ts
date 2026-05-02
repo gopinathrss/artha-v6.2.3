@@ -3,6 +3,7 @@ import type { IndiaMutualFund } from '@prisma/client'
 import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { calculateAllocation, calculateTaxStatus, indiaMfAllocationPieces } from './calculations'
+import { accountsToCzk } from './accountToCzk'
 import { loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import type { InstrumentLibrary } from '@prisma/client'
 import { getFXRates } from './fetchers'
@@ -179,24 +180,22 @@ export async function buildMonthlyPlanPayload(
   const fixed = monthlyFixedCzk(expRows, ref)
   const reservedEvents = reservedForEventsCzk(evRows, ref)
 
-  const cashCzk = accounts
-    .filter((a) => a.type === 'SAVINGS' || a.type === 'NRE')
-    .reduce((s, a) => s + num(a.balanceCzk), 0)
+  const tgtEq = num(settings?.targetEquityPct ?? 65)
+  const tgtBd = num(settings?.targetBondsPct ?? 25)
+  const tgtCa = num(settings?.targetCashPct ?? 10)
+
+  const fx = await getFXRates().catch(() => ({ EURCZK: 24.5, EURINR: 89.0, source: 'fallback', ageHours: 0 }))
+  const fxRates = { EURCZK: fx.EURCZK, EURINR: fx.EURINR }
+  const emergencyLiquidityAccounts = accounts.filter((a) => a.type === 'SAVINGS' || a.type === 'NRE')
+  const cashCzk = num(accountsToCzk(emergencyLiquidityAccounts, fxRates))
   const targetEmerg = num(profile.emergencyFundTarget) || fixed * 6
   const gap = Math.max(0, targetEmerg - cashCzk)
   const emergencyTopup = gap > 0 ? Math.min(gap / 12, totalIncome * 0.15) : 0
 
   let investable = totalIncome - fixed - reservedEvents - emergencyTopup
 
-  const tgtEq = num(settings?.targetEquityPct ?? 65)
-  const tgtBd = num(settings?.targetBondsPct ?? 25)
-  const tgtCa = num(settings?.targetCashPct ?? 10)
-
-  const fx = await getFXRates().catch(() => ({ EURCZK: 24.5, EURINR: 89.0, source: 'fallback', ageHours: 0 }))
   const indiaSlices =
-    Array.isArray(indiaFunds) && indiaFunds.length > 0
-      ? indiaMfAllocationPieces(indiaFunds, { EURCZK: fx.EURCZK, EURINR: fx.EURINR })
-      : null
+    Array.isArray(indiaFunds) && indiaFunds.length > 0 ? indiaMfAllocationPieces(indiaFunds, fxRates) : null
 
   const investedHoldings = holdings.filter((h) => h.status !== 'EXITED') as Holding[]
   const activeHoldings = holdings.filter((h) => h.status === 'ACTIVE') as Holding[]

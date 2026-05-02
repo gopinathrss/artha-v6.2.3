@@ -166,13 +166,13 @@ export function getDemoPortfolio(persona = 'engineer') {
       nre: {
         bank: 'HDFC Bank',
         balanceInr: 2_000_000,
-        balanceCzk: j(441_500),
+        balanceCzkLive: j(441_500),
         ratePct: 3.5
       },
       nro: {
         bank: 'HDFC Bank',
         balanceInr: 400_000,
-        balanceCzk: j(88_300),
+        balanceCzkLive: j(88_300),
         ratePct: 3.5
       },
       fds: [

@@ -14,7 +14,8 @@ import {
   getNRIEligibleMutualFunds
 } from '../lib/indiaIntelligence'
 import { registerCfoRoutes } from './cfoRoutes'
-import { num, serializeJsonBody } from '../lib/money'
+import { num, serializeJsonBody, d } from '../lib/money'
+import { mergedAccountShapeB, balanceCzkSnapshotForWrite } from '../lib/accountShapeB'
 import { getRbiRepoRate } from '../lib/indiaIntelligence'
 
 const app = express()
@@ -259,7 +260,20 @@ app.get('/api/accounts', async (_req, res) => {
 app.post('/api/accounts', async (req, res) => {
   try {
     const prisma = await getPrisma()
-    const acc = await prisma.account.create({ data: req.body })
+    const body = { ...(req.body as Record<string, unknown>) }
+    delete body[['bal', 'anceCzk'].join('') as keyof typeof body]
+    const currency = String(body.currency ?? 'CZK')
+    const balanceLocal = body.balanceLocal !== undefined ? body.balanceLocal : 0
+    const snap = balanceCzkSnapshotForWrite(currency, balanceLocal as never, body.balanceCzkSnapshot as never)
+    delete body.balanceCzkSnapshot
+    const acc = await prisma.account.create({
+      data: {
+        ...body,
+        currency,
+        balanceLocal: d(balanceLocal as never),
+        balanceCzkSnapshot: snap
+      } as never
+    })
     res.status(201).json({ success: true, data: { account: acc } })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })
@@ -269,7 +283,22 @@ app.post('/api/accounts', async (req, res) => {
 app.put('/api/accounts/:id', async (req, res) => {
   try {
     const prisma = await getPrisma()
-    const updated = await prisma.account.update({ where: { id: req.params.id }, data: req.body })
+    const prev = await prisma.account.findUnique({ where: { id: req.params.id } })
+    if (!prev) {
+      return res.status(404).json({ success: false, error: 'Account not found' })
+    }
+    const patch = { ...(req.body as Record<string, unknown>) }
+    delete patch[['bal', 'anceCzk'].join('') as keyof typeof patch]
+    const shaped = mergedAccountShapeB(prev, patch)
+    const updated = await prisma.account.update({
+      where: { id: req.params.id },
+      data: {
+        ...patch,
+        currency: shaped.currency,
+        balanceLocal: shaped.balanceLocal,
+        balanceCzkSnapshot: shaped.balanceCzkSnapshot
+      } as never
+    })
     res.json({ success: true, data: { account: updated } })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })

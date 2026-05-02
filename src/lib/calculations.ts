@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { d, num } from './money'
 import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS } from './currency'
+import { accountToCzk } from './accountToCzk'
 
 // XIRR
 export interface CashflowPoint {
@@ -232,18 +233,6 @@ export interface NetWorthResult {
 
 type MoneyScalar = number | Prisma.Decimal | null | undefined
 
-function accountToCzk(
-  a: { type: string; balanceLocal: MoneyScalar; balanceCzk: MoneyScalar; currency: string },
-  fx: FXRates
-): Prisma.Decimal {
-  const cur = (a.currency || 'CZK').toUpperCase()
-  const local = d(a.balanceLocal)
-  if (cur === 'CZK') return local
-  if (cur === 'EUR') return local.mul(d(fx.EURCZK))
-  if (cur === 'INR') return local.mul(d(fx.EURCZK).div(d(fx.EURINR)))
-  return local
-}
-
 function mfValueInr(m: {
   units?: MoneyScalar
   currentNavInr?: MoneyScalar
@@ -343,9 +332,7 @@ export function calculateNetWorth(
     const t = String(a?.type || '').toUpperCase()
     const czk = accountToCzk(
       {
-        type: t,
         balanceLocal: a?.balanceLocal,
-        balanceCzk: a?.balanceCzk,
         currency: (a?.currency || 'CZK') as string
       },
       fx

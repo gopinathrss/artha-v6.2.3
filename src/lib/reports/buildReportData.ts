@@ -7,6 +7,7 @@ import { loadAllLibrary, findBestAlternative, compareFundToETF } from '../instru
 import { calculateTaxStatus } from '../calculations'
 import { indiaMfTaxBadge } from '../indiaTax'
 import { num } from '../money'
+import { accountToCzk } from '../accountToCzk'
 import { ensureRowType } from '../allocationRowTypes'
 
 export type ReportAudience = 'INTERNAL' | 'CLIENT'
@@ -440,10 +441,26 @@ export async function buildReportData(
     czechHoldings,
     india: {
       nre: nreA
-        ? { inr: num(nreA.balanceLocal), czk: num(nreA.balanceCzk) }
+        ? {
+            inr: num(nreA.balanceLocal),
+            czk: num(
+              accountToCzk(
+                { balanceLocal: nreA.balanceLocal, currency: nreA.currency || 'INR' },
+                { EURCZK: eurczk, EURINR: eurinr }
+              )
+            )
+          }
         : null,
       nro: nroA
-        ? { inr: num(nroA.balanceLocal), czk: num(nroA.balanceCzk) }
+        ? {
+            inr: num(nroA.balanceLocal),
+            czk: num(
+              accountToCzk(
+                { balanceLocal: nroA.balanceLocal, currency: nroA.currency || 'INR' },
+                { EURCZK: eurczk, EURINR: eurinr }
+              )
+            )
+          }
         : null,
       mfs: mfsData,
       fds: fdsData

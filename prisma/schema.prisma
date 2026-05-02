@@ -51,9 +51,10 @@ model Account {
   type            String // SAVINGS | PENSION | NRE | NRO | FIXED_DEPOSIT
   name            String
   institution     String?
-  balanceLocal    Decimal  @default(0) @db.Decimal(14, 2)
-  currency        String   @default("CZK")
-  balanceCzk      Decimal  @default(0) @db.Decimal(14, 2)
+  balanceLocal           Decimal  @default(0) @db.Decimal(14, 2)
+  currency               String   @default("CZK")
+  /** Shape B: set only for CZK accounts (= balanceLocal). Always null for non-CZK (derive CZK via accountToCzk). */
+  balanceCzkSnapshot     Decimal? @db.Decimal(14, 2)
   interestRatePct Decimal? @db.Decimal(7, 4)
   maturityDate    DateTime?
   country         String   @default("CZ")

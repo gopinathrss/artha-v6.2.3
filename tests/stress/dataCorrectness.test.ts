@@ -75,7 +75,7 @@ describe('stress: data correctness (hand checks)', () => {
     prismaMock.indiaMutualFund.findMany.mockResolvedValue([] as never)
     prismaMock.indiaFixedDeposit.findMany.mockResolvedValue([] as never)
     prismaMock.account.findMany.mockResolvedValue([
-      { type: 'SAVINGS', balanceCzk: 200_000, isActive: true, balanceLocal: 200_000, currency: 'CZK' }
+      { type: 'SAVINGS', balanceCzkSnapshot: 200_000, isActive: true, balanceLocal: 200_000, currency: 'CZK' }
     ] as never)
     const p = await buildMonthlyPlanPayload('2026-06')
     expect(p.investableCzk).toBeCloseTo(30_000, -1)
