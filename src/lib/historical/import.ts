@@ -13,20 +13,65 @@ export interface ImportSummary {
 const DAILY_CUTOFF_YEARS = 3
 const MONTHLY_HISTORY_YEARS = 10
 
-const KNOWN_YAHOO: Record<string, string> = {
+/**
+ * Yahoo Finance chart API often returns "delisted" for Xetra `.DE` symbols while the
+ * same line trades as `.L` (London). A few `.DE` listings still stream (allowlist).
+ */
+const YAHOO_CHART_DE_ALLOWLIST = new Set(['VUSA.DE', 'VWCE.DE', 'IUSN.DE'])
+
+/** Definitive chart symbols by ISIN (library seed + bonds / gold). */
+const YAHOO_BY_ISIN: Record<string, string> = {
   IE00B4L5Y983: 'SWDA.L',
   IE00BK5BQT80: 'VWCE.DE',
-  IE00B3XXRP09: 'VUSA.L',
+  IE00B3XXRP09: 'VUSA.DE',
   IE00B5BMR087: 'IGLN.L',
   IE00B3F81409: 'IHYG.L',
-  IE00BDBRDM35: 'AGGG.L'
+  IE00BDBRDM35: 'AGGG.L',
+  IE00BZ163G84: 'IUSN.DE',
+  IE00B6R52259: 'ISAC.L',
+  IE00B4ND3602: 'IGOV',
+  IE00BJ0KDQ92: 'XMME.DE',
+  IE00BFNM3J75: 'MEUD.PA',
+  IE00B6R52036: 'IUSA.L',
+  IE00B52MJY50: 'CSPX.L',
+  IE00B4L5YC18: 'CSPX.L',
+  IE00B3VVMM84: 'VWRL.L',
+  IE00B53QG562: 'CNDX.L',
+  IE00BKM4GZ66: 'EIMI.L',
+  IE00B4X0QJ59: 'IMEU.L',
+  IE00B52VJ196: 'IMEU.L',
+  IE00BFY0GT14: 'WLDS.L',
+  IE00B6TLBW47: 'SUWS.L',
+  IE00B8X9K012: 'IWQU.L',
+  IE00B1C2PL88: 'SE15.L',
+  IE00B0M91N52: 'COMM.L',
+  IE00B3F81H35: 'IEAC.L',
+  IE00B1C1HY88: 'XBLC.L',
+  IE00BYWQWR46: 'AGGH.L',
+  IE00B4WXJJ64: 'CRPH.L',
+  IE00B14X4S71: 'IFFF.L',
+  IE00B1FZS350: 'IBTM.L',
+  IE00B14X4T88: 'IBGX.L',
+  IE00B3RBWM25: 'VEVE.L',
+  IE00B66F4759: 'IJPA.L',
+  IE00B2Q88X52: 'IGLN.L',
+  LU1681043599: 'LCWD.L',
+  LU0908500753: 'C5E.PA'
 }
 
 async function isinToYahooTicker(isin: string): Promise<string | null> {
-  if (KNOWN_YAHOO[isin]) return KNOWN_YAHOO[isin]
+  if (YAHOO_BY_ISIN[isin]) return YAHOO_BY_ISIN[isin]
   const lib = await prisma.instrumentLibrary.findUnique({ where: { isin } })
-  if (lib?.ticker) return lib.ticker.replace(/^LSE:/, '').trim()
-  return null
+  if (!lib?.ticker) return null
+  let t = lib.ticker.replace(/^LSE:/i, '').trim()
+  if (!t) return null
+  if (!t.includes('.')) return `${t}.L`
+  const upper = t.toUpperCase()
+  if (upper.endsWith('.DE') && !YAHOO_CHART_DE_ALLOWLIST.has(upper)) {
+    const base = t.slice(0, -3)
+    return `${base}.L`
+  }
+  return t
 }
 
 async function fetchYahooDaily(isin: string): Promise<Array<{ date: Date; nav: number }>> {
