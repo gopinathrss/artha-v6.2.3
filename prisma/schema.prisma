@@ -416,6 +416,40 @@ model NavHistory {
   @@index([isin])
 }
 
+/// Tier 2: long NAV history at Option Z resolution (daily last 3y + monthly older).
+model HistoricalNavSummary {
+  id         String   @id @default(cuid())
+  isin       String
+  date       DateTime
+  nav        Decimal  @db.Decimal(14, 6)
+  resolution String // DAILY | MONTHLY
+  source     String // ERSTE | YAHOO | AMFI
+  importedAt DateTime @default(now())
+
+  @@unique([isin, date])
+  @@index([isin, date])
+  @@index([resolution])
+}
+
+model HistoricalNavStats {
+  isin           String    @id
+  asOfDate       DateTime
+  cagr1y         Decimal?  @db.Decimal(7, 4)
+  cagr3y         Decimal?  @db.Decimal(7, 4)
+  cagr5y         Decimal?  @db.Decimal(7, 4)
+  cagr10y        Decimal?  @db.Decimal(7, 4)
+  maxDrawdown1y  Decimal?  @db.Decimal(7, 4)
+  maxDrawdown3y  Decimal?  @db.Decimal(7, 4)
+  maxDrawdown5y  Decimal?  @db.Decimal(7, 4)
+  maxDrawdownAll Decimal?  @db.Decimal(7, 4)
+  volatility1y   Decimal?  @db.Decimal(7, 4)
+  sharpe3y       Decimal?  @db.Decimal(6, 4)
+  recoveryMonths Int?
+  dataPointCount Int
+  oldestDate     DateTime?
+  computedAt     DateTime  @default(now())
+}
+
 model HistoricalReturn {
   id          String    @id @default(cuid())
   isin        String

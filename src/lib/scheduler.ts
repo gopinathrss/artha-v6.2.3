@@ -290,6 +290,24 @@ export function startScheduler() {
     { timezone: 'Europe/Prague' }
   )
 
+  cron.schedule(
+    '0 3 1 1,4,7,10 *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Historical NAV refresh (quarterly, Tier 2)…')
+      await runCronJob('historical-nav-refresh-quarterly', async () => {
+        const { importAllHistoricalNavs } = await import('./historical/import')
+        const r = await importAllHistoricalNavs()
+        if (r.errors.length) {
+          // eslint-disable-next-line no-console
+          console.error('[Scheduler] Historical import errors (sample):', r.errors.slice(0, 5))
+        }
+        return { itemsProcessed: r.processed }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
   // eslint-disable-next-line no-console
   console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
   // eslint-disable-next-line no-console
@@ -302,4 +320,6 @@ export function startScheduler() {
   console.log('[Scheduler] Library scores cron registered (1st of month 02:00 Europe/Prague)')
   // eslint-disable-next-line no-console
   console.log('[Scheduler] Email ingestion cron registered (hourly 09:00–21:00 Europe/Prague)')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Historical NAV bulk refresh registered (quarterly 03:00 Europe/Prague)')
 }

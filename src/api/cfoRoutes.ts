@@ -979,6 +979,56 @@ export function registerCfoRoutes(app: Application) {
     }
   })
 
+  app.post('/api/historical/import-all', async (_req, res) => {
+    const { demo } = await demoState()
+    try {
+      const { runCronJob } = await import('../lib/cronWrapper')
+      const { importAllHistoricalNavs } = await import('../lib/historical/import')
+      const result = await runCronJob('historical-nav-import-all', async () => {
+        const r = await importAllHistoricalNavs()
+        return { itemsProcessed: r.processed, processed: r.processed, errors: r.errors }
+      })
+      return res.json({ success: true, data: result, demo })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'import failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.post('/api/historical/import/:isin', async (req, res) => {
+    const { demo } = await demoState()
+    try {
+      const isin = String(req.params.isin || '').trim()
+      if (!isin) return res.status(400).json({ success: false, error: 'isin required' })
+      const b = (req.body || {}) as { source?: string }
+      const src =
+        b.source === 'ERSTE' || b.source === 'YAHOO' || b.source === 'AMFI'
+          ? b.source
+          : isin.startsWith('CZ')
+            ? 'ERSTE'
+            : 'YAHOO'
+      const { importHistoricalNavs } = await import('../lib/historical/import')
+      const r = await importHistoricalNavs(isin, src)
+      return res.json({ success: true, data: r, demo })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'import failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/historical/stats/:isin', async (req, res) => {
+    const { demo } = await demoState()
+    try {
+      const isin = String(req.params.isin || '').trim()
+      const row = await realPrisma.historicalNavStats.findUnique({ where: { isin } })
+      if (!row) return res.status(404).json({ success: false, error: 'no stats', demo })
+      return res.json({ success: true, data: row, demo })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'stats failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
   function parseBacktestBody(body: Record<string, unknown>): BacktestConfig {
     const strategy = String(body.strategy || 'CURRENT_PORTFOLIO') as BacktestStrategyKind
     const holdings = Array.isArray(body.holdings)
