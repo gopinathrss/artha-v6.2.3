@@ -79,6 +79,62 @@
             </div>
           </section>
 
+          <section class="card" id="track-record" style="margin-bottom: var(--space-5)">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Track record (90-day outcomes)</h2>
+                <p class="card-subtitle">
+                  Real follow-through on recommendations after 30/90 day evaluation windows.
+                </p>
+              </div>
+            </div>
+            <div style="padding: 0 var(--space-5) var(--space-5)">
+              <div class="hero-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-4)">
+                <div class="hero-stat">
+                  <div class="hero-stat-label">Total recommendations</div>
+                  <div class="hero-stat-value" id="ot-total">—</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="hero-stat-label">Followed (90d)</div>
+                  <div class="hero-stat-value" id="ot-followed">—</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="hero-stat-label">Avg gain (followed)</div>
+                  <div class="hero-stat-value" id="ot-avg-f">—</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="hero-stat-label">Avg gain (skipped)</div>
+                  <div class="hero-stat-value" id="ot-avg-s">—</div>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="table" id="outcomes-table">
+                  <thead>
+                    <tr>
+                      <th>Fund</th>
+                      <th>Type</th>
+                      <th class="num">Recommended CZK</th>
+                      <th>Executed?</th>
+                      <th class="num">90d gain %</th>
+                      <th>Verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody id="outcomes-tbody">
+                    <tr>
+                      <td colspan="6" class="empty-state">
+                        <div class="empty-state-message">Loading…</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="form-field-help" style="margin-top: var(--space-4)">
+                Outcomes evaluated automatically 30 and 90 days after each recommendation. The number you see is
+                real performance — not a simulation.
+              </p>
+            </div>
+          </section>
+
           <section class="card">
             <div class="card-header">
               <div>

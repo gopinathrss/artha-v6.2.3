@@ -42,6 +42,56 @@
 
   let currentPlan = null
 
+  async function loadPriorMonthCard() {
+    const slot = document.getElementById('prior-month-slot')
+    if (!slot) return
+    try {
+      const res = await fetch('/api/outcomes/prior-month-summary').then((r) => r.json())
+      const d = res?.data
+      if (!d?.show) {
+        slot.innerHTML = ''
+        return
+      }
+      const pct = d.followedPct != null ? `${d.followedPct}%` : '—'
+      const best =
+        d.best != null
+          ? `${escapeHtml(d.best.fundName)} (${Number(d.best.gainPct).toFixed(1)}%)`
+          : '—'
+      const worst =
+        d.worst != null
+          ? `${escapeHtml(d.worst.fundName)} (${Number(d.worst.gainPct).toFixed(1)}%)`
+          : '—'
+      slot.innerHTML = `
+        <section class="card" style="margin-top: var(--space-5);">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Last month’s plan — how it played out</h2>
+              <p class="card-subtitle">Plan ${escapeHtml(d.monthYear || '')} · ${Number(d.evaluatedCount) || 0} evaluated rows</p>
+            </div>
+          </div>
+          <div style="padding: 0 var(--space-5) var(--space-5)">
+            <div class="hero-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: var(--space-4)">
+              <div class="hero-stat">
+                <div class="hero-stat-label">Followed</div>
+                <div class="hero-stat-value">${pct}</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Best outcome</div>
+                <div class="hero-stat-value" style="font-size: var(--text-sm)">${best}</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-label">Worst outcome</div>
+                <div class="hero-stat-value" style="font-size: var(--text-sm)">${worst}</div>
+              </div>
+            </div>
+            <a class="btn btn-secondary btn-sm" href="/reports#track-record">View full track record →</a>
+          </div>
+        </section>`
+    } catch {
+      slot.innerHTML = ''
+    }
+  }
+
   async function load() {
     try {
       const res = await fetch('/api/this-month').then((r) => r.json())
@@ -49,12 +99,15 @@
       currentPlan = plan
       if (!plan || !Array.isArray(plan.allocations)) {
         renderEmpty()
+        await loadPriorMonthCard()
         return
       }
       renderSummary(plan)
       renderRows(plan)
+      await loadPriorMonthCard()
     } catch (e) {
       renderEmpty()
+      await loadPriorMonthCard()
     }
   }
 

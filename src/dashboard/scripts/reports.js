@@ -41,6 +41,60 @@
     })
   }
 
+  function fmtPct(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '—'
+    return (Number(n) >= 0 ? '+' : '') + Number(n).toFixed(1) + '%'
+  }
+
+  function verdictClass(g) {
+    if (g == null || !Number.isFinite(Number(g))) return 'badge-neutral'
+    if (Number(g) > 0.5) return 'badge-positive'
+    if (Number(g) < -0.5) return 'badge-negative'
+    return 'badge-neutral'
+  }
+
+  async function loadOutcomes() {
+    const tbody = document.getElementById('outcomes-tbody')
+    try {
+      const [sumRes, recRes] = await Promise.all([
+        fetch('/api/outcomes/summary').then((r) => r.json()),
+        fetch('/api/outcomes/recent?limit=20').then((r) => r.json())
+      ])
+      const s = sumRes?.data || {}
+      document.getElementById('ot-total').textContent = String(s.totalRecommendations ?? '—')
+      document.getElementById('ot-followed').textContent =
+        s.followedPct != null ? `${s.followedPct}% (${s.followedCount ?? 0})` : '—'
+      document.getElementById('ot-avg-f').textContent = fmtPct(s.avgGainFollowed90d)
+      document.getElementById('ot-avg-s').textContent = fmtPct(s.avgGainSkipped90d)
+
+      const rows = recRes?.data || []
+      if (rows.length === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="6" class="empty-state"><div class="empty-state-message">No evaluated outcomes yet.</div></td></tr>`
+        return
+      }
+      tbody.innerHTML = rows
+        .map((o) => {
+          const g = o.gainPctAt90d != null ? Number(o.gainPctAt90d) : null
+          const v = g == null ? 'Pending' : g > 0.5 ? 'Positive' : g < -0.5 ? 'Negative' : 'Neutral'
+          const ex = o.wasExecuted === true ? 'Yes' : o.wasExecuted === false ? 'No' : '—'
+          return `
+          <tr>
+            <td><strong>${escapeHtml(o.fundName)}</strong></td>
+            <td><span class="badge badge-info">${escapeHtml(o.rowType || '—')}</span></td>
+            <td class="num">${escapeHtml(String(Math.round(Number(o.recommendedAmountCzk) || 0)))}</td>
+            <td>${escapeHtml(ex)}</td>
+            <td class="num">${g == null ? '—' : g.toFixed(1) + '%'}</td>
+            <td><span class="badge ${verdictClass(g)}">${escapeHtml(v)}</span></td>
+          </tr>`
+        })
+        .join('')
+    } catch {
+      tbody.innerHTML =
+        '<tr><td colspan="6" class="empty-state"><div class="empty-state-message">Could not load outcomes.</div></td></tr>'
+    }
+  }
+
   async function load() {
     let reports = []
     try {
@@ -50,6 +104,7 @@
 
     renderHero(reports)
     renderTable(reports)
+    loadOutcomes()
   }
 
   function renderHero(reports) {

@@ -871,13 +871,105 @@ export function registerCfoRoutes(app: Application) {
         const k = String(o.outcomeScore)
         scoreDistribution[k] = (scoreDistribution[k] ?? 0) + 1
       }
+
+      const milestone = all.filter((o) => o.status === 'EXECUTED_90D' || o.status === 'SKIPPED')
+      const followedRows = milestone.filter((o) => o.wasExecuted === true)
+      const skippedRows = milestone.filter((o) => o.wasExecuted === false)
+      const followedPct =
+        milestone.length > 0 ? Math.round((followedRows.length / milestone.length) * 100) : null
+      const gainsFollowed = followedRows
+        .map((o) => (o.gainPctAt90d != null ? Number(o.gainPctAt90d) : null))
+        .filter((x): x is number => x != null && Number.isFinite(x))
+      const gainsSkipped = skippedRows
+        .map((o) => (o.gainPctAt90d != null ? Number(o.gainPctAt90d) : null))
+        .filter((x): x is number => x != null && Number.isFinite(x))
+      const avgGainFollowed90d =
+        gainsFollowed.length > 0 ? gainsFollowed.reduce((a, b) => a + b, 0) / gainsFollowed.length : null
+      const avgGainSkipped90d =
+        gainsSkipped.length > 0 ? gainsSkipped.reduce((a, b) => a + b, 0) / gainsSkipped.length : null
+
       return res.json({
         success: true,
         data: {
           totalRecommendations,
           executed90d,
           averageGain90d,
-          scoreDistribution
+          scoreDistribution,
+          followedPct,
+          avgGainFollowed90d,
+          avgGainSkipped90d,
+          followedCount: followedRows.length,
+          skippedCount: skippedRows.length
+        }
+      })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Summary failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/outcomes/recent', async (req, res) => {
+    try {
+      const prisma = await getPrisma()
+      const limit = Math.min(Number(req.query.limit) || 20, 100)
+      const outcomes = await prisma.recommendationOutcome.findMany({
+        where: { status: { in: ['EXECUTED_90D', 'SKIPPED'] } },
+        orderBy: [{ evaluatedAt90d: 'desc' }, { updatedAt: 'desc' }],
+        take: limit
+      })
+      return res.json({ success: true, data: outcomes })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/outcomes/prior-month-summary', async (_req, res) => {
+    try {
+      const prisma = await getPrisma()
+      const now = new Date()
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const monthYear = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`
+      const lastDayPrev = new Date(now.getFullYear(), now.getMonth(), 0)
+      const daysSinceEndPrev = (now.getTime() - lastDayPrev.getTime()) / 86_400_000
+      if (daysSinceEndPrev < 30) {
+        return res.json({ success: true, data: { show: false, monthYear } })
+      }
+
+      const plan = await prisma.allocationPlan.findFirst({
+        where: { monthYear },
+        orderBy: { generatedAt: 'desc' }
+      })
+      if (!plan) {
+        return res.json({ success: true, data: { show: false, monthYear } })
+      }
+
+      const outcomes = await prisma.recommendationOutcome.findMany({ where: { planId: plan.id } })
+      const actionable = outcomes.filter((o) => o.rowType === 'BUY' || o.rowType === 'SELL')
+      const done = actionable.filter((o) => o.wasExecuted === true).length
+      const followedPct =
+        actionable.length > 0 ? Math.round((done / actionable.length) * 100) : null
+
+      const withGain = outcomes.filter((o) => o.gainPctAt90d != null)
+      let best: { fundName: string; gainPct: number } | null = null
+      let worst: { fundName: string; gainPct: number } | null = null
+      for (const o of withGain) {
+        const g = Number(o.gainPctAt90d)
+        if (!best || g > best.gainPct) best = { fundName: o.fundName, gainPct: g }
+        if (!worst || g < worst.gainPct) worst = { fundName: o.fundName, gainPct: g }
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          show: true,
+          monthYear,
+          planId: plan.id,
+          followedPct,
+          best,
+          worst,
+          evaluatedCount: outcomes.filter((o) => o.status === 'EXECUTED_90D' || o.status === 'SKIPPED')
+            .length
         }
       })
     } catch (e: unknown) {

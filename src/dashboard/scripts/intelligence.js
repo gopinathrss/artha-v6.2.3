@@ -161,7 +161,28 @@
       .join('')
   }
 
+  async function loadTrackRecordCallout() {
+    const el = document.getElementById('track-record-callout')
+    if (!el) return
+    try {
+      const res = await fetch('/api/outcomes/summary').then((r) => r.json())
+      const d = res?.data || {}
+      const adh = d.followedPct != null ? `${d.followedPct}%` : '—'
+      const avg =
+        d.avgGainFollowed90d != null && Number.isFinite(Number(d.avgGainFollowed90d))
+          ? `${Number(d.avgGainFollowed90d).toFixed(1)}%`
+          : '—'
+      el.style.display = 'block'
+      el.innerHTML = `<strong>ARTHA’s recent track record:</strong> ${escapeHtml(adh)} adherence on evaluated rows · ${escapeHtml(
+        avg
+      )} avg 90d gain (followed). See <a href="/reports#track-record">Reports → Track record</a> for detail.`
+    } catch {
+      el.style.display = 'none'
+    }
+  }
+
   renderSuggestions()
+  loadTrackRecordCallout()
   loadHistory()
 
   send.addEventListener('click', ask)
