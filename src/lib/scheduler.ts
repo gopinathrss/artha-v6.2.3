@@ -308,6 +308,48 @@ export function startScheduler() {
     { timezone: 'Europe/Prague' }
   )
 
+  cron.schedule(
+    '20 6 1 * *',
+    async () => {
+      await runCronJob('monthly-report-smart', async () => {
+        const { generateSmartReport } = await import('./reports/generator')
+        const { deliverReport } = await import('./reports/delivery')
+        const r = await generateSmartReport('MONTHLY')
+        await deliverReport(r, { type: 'MONTHLY' })
+        return { itemsProcessed: 1 }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
+    '30 6 1 1,4,7,10 *',
+    async () => {
+      await runCronJob('quarterly-report-smart', async () => {
+        const { generateSmartReport } = await import('./reports/generator')
+        const { deliverReport } = await import('./reports/delivery')
+        const r = await generateSmartReport('QUARTERLY')
+        await deliverReport(r, { type: 'QUARTERLY' })
+        return { itemsProcessed: 1 }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
+    '0 7 1 4 *',
+    async () => {
+      await runCronJob('tax-year-report-smart', async () => {
+        const { generateSmartReport } = await import('./reports/generator')
+        const { deliverReport } = await import('./reports/delivery')
+        const r = await generateSmartReport('TAX_YEAR')
+        await deliverReport(r, { type: 'TAX_YEAR' })
+        return { itemsProcessed: 1 }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
   // eslint-disable-next-line no-console
   console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
   // eslint-disable-next-line no-console
@@ -322,4 +364,6 @@ export function startScheduler() {
   console.log('[Scheduler] Email ingestion cron registered (hourly 09:00–21:00 Europe/Prague)')
   // eslint-disable-next-line no-console
   console.log('[Scheduler] Historical NAV bulk refresh registered (quarterly 03:00 Europe/Prague)')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Smart reports: monthly 06:20, quarterly 06:30 (quarter months), tax-year Apr 1 07:00')
 }

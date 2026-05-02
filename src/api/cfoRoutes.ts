@@ -610,7 +610,8 @@ export function registerCfoRoutes(app: Application) {
         where: { id: String(req.params.id) }
       })
       if (!row) return res.status(404).json({ success: false, error: 'Not found', demo })
-      return res.json({ success: true, data: row, demo })
+      const { token: _omit, ...safe } = row
+      return res.json({ success: true, data: safe, demo })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'error'
       return res.status(500).json({ success: false, error: m })
@@ -619,11 +620,15 @@ export function registerCfoRoutes(app: Application) {
 
   app.get('/api/reports/:id/html', async (req, res) => {
     try {
+      const token = String((req.query as { token?: string }).token || '')
       const row = await (await getPrisma()).generatedReport.findUnique({
         where: { id: String(req.params.id) }
       })
-      if (!row) return res.status(404).type('text').send('Not found')
-      const html = row.htmlContent && String(row.htmlContent).trim().length > 0 ? String(row.htmlContent) : renderReportViewHtml(row)
+      if (!row || row.token !== token) return res.status(404).type('text').send('Not found')
+      const html =
+        row.htmlContent && String(row.htmlContent).trim().length > 0
+          ? String(row.htmlContent)
+          : renderReportViewHtml(row)
       return res.type('html').send(html)
     } catch {
       return res.status(500).type('text').send('Error')

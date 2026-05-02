@@ -153,20 +153,54 @@
             '?token=' + encodeURIComponent(r.token || '')
           : '#'
         const downloadHref = base.includes('?') ? base + '&print=1' : base + '?print=1'
+        const htmlOnly =
+          r.id && r.token
+            ? '/api/reports/' + encodeURIComponent(r.id) + '/html?token=' + encodeURIComponent(r.token)
+            : '#'
+        const typeLabel = r.title ? escapeHtml(r.title) : escapeHtml(r.type || 'CFO_10')
         return `
           <tr>
             <td><span class="text-secondary">${escapeHtml(whenStr(r.createdAt))}</span></td>
-            <td><strong>${escapeHtml(r.type || 'CFO_10')}</strong></td>
+            <td><strong>${typeLabel}</strong>${r.type && r.title && r.type !== r.title ? ` <span class="text-secondary">(${escapeHtml(r.type)})</span>` : ''}</td>
             <td><span class="badge ${audienceBadge}">${audienceLabel}</span></td>
             <td><span class="text-secondary">${escapeHtml(r.periodLabel || r.monthYear || '—')}</span></td>
             <td>
               <a class="btn btn-secondary btn-sm" href="${escapeHtml(base)}" target="_blank" rel="noopener">View</a>
+              <a class="btn btn-ghost btn-sm" href="${escapeHtml(htmlOnly)}" target="_blank" rel="noopener">HTML</a>
               <a class="btn btn-ghost btn-sm" href="${escapeHtml(downloadHref)}" target="_blank" rel="noopener">Print</a>
             </td>
           </tr>
         `
       })
       .join('')
+  }
+
+  async function generateSmart(type) {
+    const map = { MONTHLY: 'smart-monthly', QUARTERLY: 'smart-quarterly', TAX_YEAR: 'smart-taxyear' }
+    const labels = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', TAX_YEAR: 'Tax year' }
+    const btn = document.getElementById(map[type])
+    if (btn) {
+      btn.disabled = true
+      btn.textContent = '…'
+    }
+    try {
+      const res = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, audience: 'INTERNAL' })
+      }).then((r) => r.json())
+      if (!res.success) throw new Error(res.error || 'generate failed')
+      const url = res?.data?.viewUrl
+      if (url) window.open(url, '_blank', 'noopener')
+      await load()
+    } catch (e) {
+      alert(String(e.message || e))
+    } finally {
+      if (btn) {
+        btn.disabled = false
+        btn.textContent = labels[type]
+      }
+    }
   }
 
   async function generate(audience) {
@@ -201,6 +235,9 @@
   document.getElementById('refresh-btn')?.addEventListener('click', () => location.reload())
   document.getElementById('generate-internal')?.addEventListener('click', () => generate('INTERNAL'))
   document.getElementById('generate-client')?.addEventListener('click', () => generate('CLIENT'))
+  document.getElementById('smart-monthly')?.addEventListener('click', () => generateSmart('MONTHLY'))
+  document.getElementById('smart-quarterly')?.addEventListener('click', () => generateSmart('QUARTERLY'))
+  document.getElementById('smart-taxyear')?.addEventListener('click', () => generateSmart('TAX_YEAR'))
 
   load()
 })()
