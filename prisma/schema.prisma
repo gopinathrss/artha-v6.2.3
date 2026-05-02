@@ -507,6 +507,27 @@ model IndiaFixedDeposit {
   updatedAt       DateTime @updatedAt
 }
 
+/// Deterministic backtest run (cached up to 24h in API layer).
+model BacktestRun {
+  id               String    @id @default(cuid())
+  strategyName     String
+  startDate        DateTime
+  endDate          DateTime
+  initialValueCzk  Decimal   @db.Decimal(14, 2)
+  finalValueCzk    Decimal?  @db.Decimal(14, 2)
+  cagrPct          Decimal?  @db.Decimal(7, 4)
+  maxDrawdownPct   Decimal?  @db.Decimal(7, 4)
+  sharpeRatio      Decimal?  @db.Decimal(6, 4)
+  configJson       Json
+  resultJson       Json?
+  status           String    @default("PENDING") // PENDING | COMPLETE | FAILED
+  errorMessage     String?
+  startedAt        DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@index([strategyName, startDate])
+}
+
 model GeneratedReport {
   id           String   @id @default(cuid())
   type         String

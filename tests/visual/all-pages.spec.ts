@@ -31,7 +31,8 @@ const PAGES = [
   { route: '/alerts', slug: 'alerts' },
   { route: '/finances', slug: 'finances' },
   { route: '/settings', slug: 'settings' },
-  { route: '/onboarding', slug: 'onboarding' }
+  { route: '/onboarding', slug: 'onboarding' },
+  { route: '/backtest', slug: 'backtest' }
 ] as const
 
 const SIZES = [

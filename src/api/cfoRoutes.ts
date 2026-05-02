@@ -12,6 +12,13 @@ import { getMonthlyPlanOutcomes } from '../lib/planHistory'
 import { countPendingInPlan, markAllPendingRowsDone } from '../lib/followThrough'
 import { markPlanRowDone } from '../lib/planRowUpdate'
 import { num } from '../lib/money'
+import {
+  runBacktest,
+  backtestConfigFingerprint,
+  type BacktestConfig,
+  type BacktestStrategyKind
+} from '../lib/backtest/engine'
+import { Prisma } from '@prisma/client'
 
 /** Request JSON uses `currentNav` / `avgNav`; DB columns are `currentNavInr` / `avgNavInr`. */
 function indiaMfNavFromBody(b: Record<string, unknown>): {
@@ -875,6 +882,159 @@ export function registerCfoRoutes(app: Application) {
       })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Summary failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  function parseBacktestBody(body: Record<string, unknown>): BacktestConfig {
+    const strategy = String(body.strategy || 'CURRENT_PORTFOLIO') as BacktestStrategyKind
+    const holdings = Array.isArray(body.holdings)
+      ? (body.holdings as { isin?: string; weightPct?: number }[]).map((h) => ({
+          isin: String(h.isin || ''),
+          weightPct: Number(h.weightPct) || 0
+        }))
+      : undefined
+    return {
+      strategy,
+      holdings,
+      startDate: new Date(String(body.startDate || '2023-01-01')),
+      endDate: new Date(String(body.endDate || new Date().toISOString().slice(0, 10))),
+      initialValueCzk: Number(body.initialValueCzk) || 100_000,
+      rebalanceFrequencyDays: Number(body.rebalanceFrequencyDays) || 0,
+      monthlySipCzk: Number(body.monthlySipCzk) || 0
+    }
+  }
+
+  app.post('/api/backtest/run', async (req, res) => {
+    try {
+      const body = (req.body || {}) as Record<string, unknown>
+      const cfg = parseBacktestBody(body)
+      const fp = backtestConfigFingerprint(cfg)
+      const prisma = await getPrisma()
+      const since = new Date(Date.now() - 86_400_000)
+      const recent = await prisma.backtestRun.findMany({
+        where: { status: 'COMPLETE', startedAt: { gte: since } },
+        orderBy: { startedAt: 'desc' },
+        take: 25
+      })
+      for (const row of recent) {
+        const prev = row.configJson as unknown
+        if (typeof prev === 'object' && prev != null) {
+          try {
+            const p = parseBacktestBody(prev as Record<string, unknown>)
+            if (backtestConfigFingerprint(p) === fp && row.resultJson != null) {
+              const rj = row.resultJson as Record<string, unknown>
+              return res.json({
+                success: true,
+                data: {
+                  runId: row.id,
+                  cached: true,
+                  monthlyValues: rj.monthlyValues,
+                  cagr: Number(rj.cagr),
+                  maxDrawdown: Number(rj.maxDrawdown),
+                  sharpe: rj.sharpe == null ? null : Number(rj.sharpe),
+                  totalContributedCzk: Number(rj.totalContributedCzk),
+                  finalValueCzk: Number(rj.finalValueCzk),
+                  warnings: (rj.warnings as string[]) || []
+                }
+              })
+            }
+          } catch {
+            /* continue */
+          }
+        }
+      }
+
+      const result = await runBacktest(cfg)
+      const run = await prisma.backtestRun.create({
+        data: {
+          strategyName: cfg.strategy,
+          startDate: cfg.startDate,
+          endDate: cfg.endDate,
+          initialValueCzk: new Prisma.Decimal(cfg.initialValueCzk),
+          finalValueCzk: new Prisma.Decimal(result.finalValueCzk),
+          cagrPct: new Prisma.Decimal(result.cagr),
+          maxDrawdownPct: new Prisma.Decimal(result.maxDrawdown),
+          sharpeRatio:
+            result.sharpe == null ? null : new Prisma.Decimal(Number(result.sharpe.toFixed(4))),
+          configJson: cfg as object,
+          resultJson: result as object,
+          status: 'COMPLETE',
+          completedAt: new Date()
+        }
+      })
+      return res.json({
+        success: true,
+        data: {
+          runId: run.id,
+          cached: false,
+          monthlyValues: result.monthlyValues,
+          cagr: result.cagr,
+          maxDrawdown: result.maxDrawdown,
+          sharpe: result.sharpe,
+          totalContributedCzk: result.totalContributedCzk,
+          finalValueCzk: result.finalValueCzk,
+          warnings: result.warnings
+        }
+      })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Backtest failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/backtest/runs', async (_req, res) => {
+    try {
+      const prisma = await getPrisma()
+      const runs = await prisma.backtestRun.findMany({
+        orderBy: { startedAt: 'desc' },
+        take: 20
+      })
+      return res.json({ success: true, data: runs })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'List failed'
+      return res.status(500).json({ success: false, error: m })
+    }
+  })
+
+  app.get('/api/backtest/compare', async (req, res) => {
+    try {
+      const q = req.query as Record<string, string | undefined>
+      const startDate = new Date(q.startDate || '2023-01-01')
+      const endDate = new Date(q.endDate || new Date().toISOString().slice(0, 10))
+      const initial = Number(q.initialValueCzk) || 100_000
+      const sip = Number(q.monthlySipCzk) || 0
+      const reb = Number(q.rebalanceFrequencyDays) || 0
+
+      const base: Omit<BacktestConfig, 'strategy' | 'holdings'> = {
+        startDate,
+        endDate,
+        initialValueCzk: initial,
+        monthlySipCzk: sip,
+        rebalanceFrequencyDays: reb
+      }
+
+      const [current, allEquity, balanced] = await Promise.all([
+        runBacktest({ ...base, strategy: 'CURRENT_PORTFOLIO' }),
+        runBacktest({ ...base, strategy: 'ALL_EQUITY_VWCE' }),
+        runBacktest({
+          startDate,
+          endDate,
+          initialValueCzk: initial,
+          monthlySipCzk: sip,
+          strategy: 'CUSTOM',
+          holdings: [
+            { isin: 'IE00BK5BQT80', weightPct: 60 },
+            { isin: 'IE00BDBRDM35', weightPct: 30 },
+            { isin: 'CZ0008472271', weightPct: 10 }
+          ],
+          rebalanceFrequencyDays: 90
+        })
+      ])
+
+      return res.json({ success: true, data: { current, allEquity, balanced } })
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : 'Compare failed'
       return res.status(500).json({ success: false, error: m })
     }
   })

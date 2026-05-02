@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en" class="preload">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ARTHA — Backtest Lab</title>
+    <script src="/scripts/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="topbar-menu-trigger" aria-label="Open menu" id="menu-toggle" type="button">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Backtest Lab</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-primary btn-sm" id="btn-quick-compare" type="button">Run quick compare</button>
+            <button class="btn btn-ghost btn-sm" id="btn-refresh" type="button">Refresh</button>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="card" style="margin-bottom: var(--space-5)">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Quick comparison</h2>
+                <p class="card-subtitle">
+                  Current portfolio vs all-equity (VWCE) vs 60/30/10 (quarterly rebalance) on real NAV history.
+                </p>
+              </div>
+            </div>
+            <div style="padding: 0 var(--space-5) var(--space-5)">
+              <div class="form-row" style="margin-bottom: var(--space-4)">
+                <div>
+                  <div class="form-field-label">Period</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-2)">
+                    <button type="button" class="btn btn-secondary btn-sm period-preset" data-years="1">Last 1y</button>
+                    <button type="button" class="btn btn-secondary btn-sm period-preset" data-years="3">Last 3y</button>
+                    <button type="button" class="btn btn-secondary btn-sm period-preset" data-years="5">Last 5y</button>
+                  </div>
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="qc-start">Start</label>
+                  <input class="form-field-input" id="qc-start" type="date" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="qc-end">End</label>
+                  <input class="form-field-input" id="qc-end" type="date" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="qc-initial">Initial (CZK)</label>
+                  <input class="form-field-input" id="qc-initial" type="number" value="100000" min="0" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="qc-sip">Monthly SIP (CZK)</label>
+                  <input class="form-field-input" id="qc-sip" type="number" value="0" min="0" />
+                </div>
+              </div>
+              <button class="btn btn-primary" id="qc-run" type="button">Run comparison</button>
+              <div id="qc-results" style="margin-top: var(--space-5)"></div>
+              <div id="qc-chart" style="margin-top: var(--space-4)"></div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5)">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Custom backtest</h2>
+                <p class="card-subtitle">Single strategy run with optional SIP and rebalance cadence.</p>
+              </div>
+            </div>
+            <div style="padding: 0 var(--space-5) var(--space-5)">
+              <div class="form-row">
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="cb-strategy">Strategy</label>
+                  <select class="form-field-select" id="cb-strategy">
+                    <option value="CURRENT_PORTFOLIO">Current portfolio</option>
+                    <option value="ALL_EQUITY_VWCE">All-equity (VWCE)</option>
+                    <option value="CUSTOM">Custom weights</option>
+                  </select>
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="cb-start">Start</label>
+                  <input class="form-field-input" id="cb-start" type="date" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="cb-end">End</label>
+                  <input class="form-field-input" id="cb-end" type="date" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="cb-initial">Initial (CZK)</label>
+                  <input class="form-field-input" id="cb-initial" type="number" value="100000" min="0" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="cb-sip">Monthly SIP</label>
+                  <input class="form-field-input" id="cb-sip" type="number" value="0" min="0" />
+                </div>
+                <div class="form-field" style="margin-bottom: 0">
+                  <label class="form-field-label" for="cb-reb">Rebalance</label>
+                  <select class="form-field-select" id="cb-reb">
+                    <option value="0">None</option>
+                    <option value="90">Quarterly (90d)</option>
+                    <option value="365">Annual (365d)</option>
+                  </select>
+                </div>
+              </div>
+              <div id="custom-holdings-wrap" style="display: none; margin: var(--space-4) 0">
+                <p class="card-subtitle" style="margin-bottom: var(--space-2)">ISIN + weight % (sum ~100)</p>
+                <div id="custom-holdings-rows"></div>
+                <button type="button" class="btn btn-ghost btn-sm" id="cb-add-row">Add row</button>
+              </div>
+              <button class="btn btn-primary" id="cb-run" type="button" style="margin-top: var(--space-3)">
+                Run backtest
+              </button>
+              <div id="cb-result" style="margin-top: var(--space-4)"></div>
+              <div id="cb-chart"></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">Recent runs</h2>
+                <p class="card-subtitle">Last 20 saved backtests (24h cache for identical configs).</p>
+              </div>
+            </div>
+            <div style="overflow-x: auto">
+              <table class="table holdings-table" style="min-width: 640px">
+                <thead>
+                  <tr>
+                    <th>Strategy</th>
+                    <th>Period</th>
+                    <th class="num">CAGR %</th>
+                    <th class="num">Final (CZK)</th>
+                    <th>Run date</th>
+                  </tr>
+                </thead>
+                <tbody id="runs-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/chart.js"></script>
+    <script src="/scripts/backtest.js"></script>
+  </body>
+</html>
