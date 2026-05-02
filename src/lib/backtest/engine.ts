@@ -34,21 +34,11 @@ export function getNavOnOrBefore(
   return result
 }
 
-function synthesizeMonthlyNavs(
-  start: Date,
-  end: Date,
-  annualReturnDecimal: number
-): Array<{ date: Date; nav: number }> {
-  const months: Array<{ date: Date; nav: number }> = []
-  let nav = 100
-  const cur = new Date(start.getFullYear(), start.getMonth(), 1)
-  const endT = end.getTime()
-  while (cur.getTime() <= endT) {
-    months.push({ date: new Date(cur), nav })
-    nav *= Math.pow(1 + annualReturnDecimal, 1 / 12)
-    cur.setMonth(cur.getMonth() + 1)
-  }
-  return months
+/** First point if target is before series start (Tier-2 window may start mid-series). */
+function navForValuation(navs: Array<{ date: Date; nav: number }>, target: Date): number | null {
+  if (navs.length === 0) return null
+  if (target.getTime() < navs[0]!.date.getTime()) return navs[0]!.nav
+  return getNavOnOrBefore(navs, target)
 }
 
 /** Stable JSON for 24h cache matching (POST /api/backtest/run). */
@@ -114,28 +104,50 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
   }
 
   const navData = new Map<string, Array<{ date: Date; nav: number }>>()
+  const skippedIsins = new Set<string>()
   for (const h of holdings) {
-    const navs = await prisma.navHistory.findMany({
-      where: { isin: h.isin, date: { lte: config.endDate } },
+    const navs = await prisma.historicalNavSummary.findMany({
+      where: {
+        isin: h.isin,
+        date: { gte: config.startDate, lte: config.endDate }
+      },
       orderBy: { date: 'asc' }
     })
     if (navs.length < 2) {
       warnings.push(
-        `Insufficient NAV history for ${h.isin} — using library return3yr approximation where available`
+        `Insufficient Tier-2 historical NAVs for ${h.isin} in selected period — holding excluded (import historical data first)`
       )
-      const lib = await prisma.instrumentLibrary.findUnique({ where: { isin: h.isin } })
-      const r3 = lib?.return3yr != null ? Number(lib.return3yr) / 100 : null
-      if (r3 != null && Number.isFinite(r3)) {
-        navData.set(h.isin, synthesizeMonthlyNavs(config.startDate, config.endDate, r3))
-      } else {
-        navData.set(h.isin, synthesizeMonthlyNavs(config.startDate, config.endDate, 0))
-        warnings.push(`No return3yr for ${h.isin} — using 0% synthetic NAV series`)
-      }
-    } else {
-      navData.set(
-        h.isin,
-        navs.map((n) => ({ date: new Date(n.date), nav: Number(n.nav) }))
-      )
+      skippedIsins.add(h.isin)
+      continue
+    }
+    navData.set(
+      h.isin,
+      navs.map((n) => ({ date: new Date(n.date), nav: Number(n.nav) }))
+    )
+  }
+
+  holdings = holdings.filter((h) => !skippedIsins.has(h.isin))
+  const wsum = holdings.reduce((s, h) => s + h.weightPct, 0)
+  if (holdings.length > 0 && wsum > 0 && Math.abs(wsum - 100) > 0.01) {
+    holdings = holdings.map((h) => ({ ...h, weightPct: (h.weightPct / wsum) * 100 }))
+  }
+
+  if (holdings.length === 0) {
+    const initial = Math.max(0, config.initialValueCzk)
+    const monthlyValues: Array<{ date: string; valueCzk: number }> = []
+    const cur = new Date(config.startDate.getFullYear(), config.startDate.getMonth(), 1)
+    while (cur <= config.endDate) {
+      monthlyValues.push({ date: cur.toISOString().slice(0, 10), valueCzk: Math.round(initial) })
+      cur.setMonth(cur.getMonth() + 1)
+    }
+    return {
+      monthlyValues,
+      cagr: 0,
+      maxDrawdown: 0,
+      sharpe: null,
+      totalContributedCzk: initial,
+      finalValueCzk: initial,
+      warnings
     }
   }
 
@@ -149,7 +161,8 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
 
   const units = new Map<string, number>()
   for (const h of holdings) {
-    const navAtStart = getNavOnOrBefore(navData.get(h.isin) || [], cur) ?? 1
+    const series = navData.get(h.isin) || []
+    const navAtStart = navForValuation(series, cur) ?? 1
     const allocCzk = (initial * h.weightPct) / 100
     units.set(h.isin, navAtStart > 0 ? allocCzk / navAtStart : 0)
   }
@@ -159,7 +172,7 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
   function portfolioValue(at: Date): number {
     let v = 0
     for (const h of holdings) {
-      const nav = getNavOnOrBefore(navData.get(h.isin) || [], at) ?? 0
+      const nav = navForValuation(navData.get(h.isin) || [], at) ?? 0
       v += (units.get(h.isin) || 0) * nav
     }
     return v
@@ -171,7 +184,7 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
     if (sip > 0) {
       totalContributed += sip
       for (const h of holdings) {
-        const nav = getNavOnOrBefore(navData.get(h.isin) || [], cur) ?? 1
+        const nav = navForValuation(navData.get(h.isin) || [], cur) ?? 1
         const sipCzk = (sip * h.weightPct) / 100
         const addUnits = nav > 0 ? sipCzk / nav : 0
         units.set(h.isin, (units.get(h.isin) || 0) + addUnits)
@@ -186,7 +199,7 @@ export async function runBacktest(config: BacktestConfig): Promise<BacktestResul
       if (daysSince >= rebFreq) {
         const totalV = portfolioValue(cur)
         for (const h of holdings) {
-          const nav = getNavOnOrBefore(navData.get(h.isin) || [], cur) ?? 1
+          const nav = navForValuation(navData.get(h.isin) || [], cur) ?? 1
           const targetCzk = (totalV * h.weightPct) / 100
           units.set(h.isin, nav > 0 ? targetCzk / nav : 0)
         }
