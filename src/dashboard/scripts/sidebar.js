@@ -39,6 +39,10 @@
       '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5 5 H11 M5 8 H11 M5 11 H8"/></svg>',
     alerts:
       '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12 H13 L12 7 A4 4 0 0 0 4 7 Z M6.5 12.5 A1.5 1.5 0 0 0 9.5 12.5"/></svg>',
+    backtest:
+      '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 14 V3 M3 11 L7 7 L10 10 L13 5 M13 5 H10 M13 5 V8"/></svg>',
+    patterns:
+      '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 2 H10 A3 3 0 0 1 13 5 V14 H6 A3 3 0 0 1 3 11 Z M6 14 A3 3 0 0 0 3 11"/></svg>',
     settings:
       '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2"/><path d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15 M2.5 2.5 L4 4 M12 12 L13.5 13.5 M2.5 13.5 L4 12 M12 4 L13.5 2.5"/></svg>'
   }
@@ -69,6 +73,8 @@
       <ul class="sidebar-nav">
         ${navItem('/intelligence', 'intelligence', 'Ask Artha')}
         ${navItem('/library', 'library', 'Library')}
+        ${navItem('/backtest', 'backtest', 'Backtest Lab')}
+        ${navItem('/patterns', 'patterns', 'Patterns')}
         ${navItem('/reports', 'reports', 'Reports')}
         ${navItem('/alerts', 'alerts', 'Alerts')}
       </ul>

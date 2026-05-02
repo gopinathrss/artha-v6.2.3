@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import type { AIMemory } from '@prisma/client'
 import { getPrisma } from './prisma'
+import { getPatternsByTags } from './patterns/loader'
 import { projectFutureValue, calculateRequiredSIP } from './calculations'
 import { findBestAlternative, loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import { getBestNREFDRate, getRbiRepoRate } from './indiaIntelligence'
@@ -119,10 +120,25 @@ ${patterns.length > 0 ? '\n   PATTERN DETECTED:\n' + patterns.map((p) => `    * 
   `
 }
 
+export function classifyQueryTags(query: string): string[] {
+  const tags: string[] = []
+  const q = query.toLowerCase()
+  if (/\b(allocate|allocation|target|equity|bond|bonds|cash|drift)\b/.test(q)) tags.push('allocation')
+  if (/\b(tax|3.year|tax.free|capital.gain|gains)\b/.test(q)) tags.push('tax')
+  if (/\b(rebalance|sell|exit|drift)\b/.test(q)) tags.push('rebalance')
+  if (/\b(sip|systematic|monthly|invest|recurring)\b/.test(q)) tags.push('sip')
+  if (/\b(india|nre|nro|amfi|rbi|fd)\b/.test(q)) tags.push('india')
+  if (/\b(czech|cz|erste|george)\b/.test(q)) tags.push('czech')
+  if (/\b(should|skip|miss|behavior)\b/.test(q)) tags.push('behavioral')
+  if (tags.length === 0) tags.push('allocation', 'behavioral')
+  return [...new Set(tags)]
+}
+
 export async function buildFullContext(
   portfolio: any,
   library: any[],
-  india: { rbi: number; rbiVerifiedDays: number; best1yr: number; dtaa: any }
+  india: { rbi: number; rbiVerifiedDays: number; best1yr: number; dtaa: any },
+  opts?: { userQuery?: string }
 ): Promise<string> {
   const nw = portfolio?.netWorth || {}
   const parts = [
@@ -142,7 +158,53 @@ export async function buildFullContext(
   const base = parts.join(' ') + libS
   const baseTrimmed = base.length > 2800 ? base.slice(0, 2800) + '...' : base
   const exec = await buildExecutionHistoryAppendix()
-  return baseTrimmed + exec
+
+  let wisdom = ''
+  const userQuery = opts?.userQuery?.trim()
+  if (userQuery) {
+    const patternTags = classifyQueryTags(userQuery)
+    const patterns = getPatternsByTags(patternTags, 5)
+    const patternsSection =
+      patterns.length > 0
+        ? `\n\nRELEVANT PRINCIPLES (cite by id when applicable):\n` +
+          patterns
+            .map((p) => {
+              const oneLine = p.principle.replace(/\s+/g, ' ').trim().slice(0, 200)
+              return `- [${p.id}] ${p.title}: ${oneLine}`
+            })
+            .join('\n')
+        : ''
+
+    const prisma = await getPrisma()
+    const recentOutcomes = await prisma.recommendationOutcome.findMany({
+      where: { status: 'EXECUTED_90D' },
+      orderBy: { evaluatedAt90d: 'desc' },
+      take: 10
+    })
+    const outcomesSection =
+      recentOutcomes.length > 0
+        ? `\n\nRECENT 90-DAY OUTCOMES (real performance):\n` +
+          recentOutcomes
+            .map((o) => {
+              const amt = Number(o.recommendedAmountCzk)
+              const g =
+                o.gainPctAt90d != null && Number.isFinite(Number(o.gainPctAt90d))
+                  ? `${Number(o.gainPctAt90d).toFixed(1)}% 90d gain`
+                  : 'no measurement'
+              const ex = o.wasExecuted === true ? 'executed' : o.wasExecuted === false ? 'skipped' : 'unknown'
+              return `- ${o.fundName} ${o.rowType} ${amt.toFixed(0)} CZK: ${ex}, ${g}`
+            })
+            .join('\n')
+        : ''
+
+    wisdom = patternsSection + outcomesSection
+
+    if (process.env.ARTHA_DEBUG_AI_CONTEXT === '1') {
+      console.log('[buildFullContext] wisdom appendix:', wisdom.slice(0, 2000))
+    }
+  }
+
+  return baseTrimmed + exec + wisdom
 }
 
 function detectQuestionType(q: string): string {
@@ -261,7 +323,8 @@ export async function askArtha(question: string, portfolio: any, keys: AskKeys):
   const context = await buildFullContext(
     { ...portfolio, aiHints: await lastMemories(3) },
     library,
-    { rbi, rbiVerifiedDays: rbiInfo.ageInDays, best1yr: best1, dtaa }
+    { rbi, rbiVerifiedDays: rbiInfo.ageInDays, best1yr: best1, dtaa },
+    { userQuery: question }
   )
   let pre: any = {}
   if (type === 'RETIREMENT') pre = analyzeRetirement(portfolio)
@@ -273,7 +336,12 @@ export async function askArtha(question: string, portfolio: any, keys: AskKeys):
 for an Indian professional living in Czech Republic.
 CRITICAL RULES:
 - Every number you must derive from the context and pre-computed analysis only
-- Be specific. Max 4 short paragraphs. JSON output only, no markdown.`
+- Be specific. Max 4 short paragraphs. JSON output only, no markdown.
+When advising, you MUST:
+- Cite the most relevant principle by [P-XXX] id when it directly supports your reasoning. Example: "Per [P-014], Czech 3-year tax rule means selling Sporobond now would cost 15% on gains."
+- Reference past outcomes when relevant. Example: "Last quarter you skipped 2 of 3 rebalance sells; the unsold positions averaged +2% while the sold one averaged -1%, so your skip pattern paid off this time. But this was tactical luck, not strategy."
+- Be honest when no pattern applies — don't force citations.
+- Never invent principle IDs.`
 
   const userPrompt = `PORTFOLIO CONTEXT:\n${context}\n\nPRE-COMPUTED:\n${JSON.stringify(pre)}\n\nQUESTION: ${question}\n\nRespond as raw JSON: {"answer":"","keyNumbers":[],"topAction":"","confidence":70,"followUp":[]}`
 
