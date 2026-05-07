@@ -19,7 +19,7 @@ import { loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import type { InstrumentLibrary } from '@prisma/client'
 import { getFXRates } from './fetchers'
 import { detectTaxFreeExitOpportunities } from './sellEngine/taxFreeExit'
-import { detectRebalanceSells } from './sellEngine/rebalanceDrift'
+import { detectRebalanceSells, driftThresholdPpForRiskProfile } from './sellEngine/rebalanceDrift'
 import { detectFdMaturityActions } from './sellEngine/fdMaturity'
 import { generateHoldRows } from './sellEngine/holdReasoning'
 import type { AllocationRow, BuyRow, HoldRow, SellRow } from './allocationRowTypes'
@@ -214,6 +214,7 @@ export async function buildMonthlyPlanPayload(
   const tgtEq = merged.targetEquityPct
   const tgtBd = merged.targetBondsPct
   const tgtCa = merged.targetCashPct
+  const driftThrPp = driftThresholdPpForRiskProfile(merged.riskProfile)
   const taxWindowAllowsBuy = merged.taxFreeWindowAllowsBuy === true
 
   const fx = await getFXRates().catch(() => ({ EURCZK: 24.5, EURINR: 89.0, source: 'fallback', ageHours: 0 }))
@@ -250,7 +251,8 @@ export async function buildMonthlyPlanPayload(
     tgtCa,
     indiaSlices,
     sellingIsins,
-    indiaAccountSlices
+    indiaAccountSlices,
+    driftThrPp
   )
   for (const r of rebalanceSells) sellingIsins.add(r.isin)
 
@@ -470,7 +472,8 @@ export async function buildMonthlyPlanPayload(
   const holdRows = await generateHoldRows(investedHoldings, buyRows, sellRows, allocation, {
     targetEquityPct: tgtEq,
     targetBondsPct: tgtBd,
-    targetCashPct: tgtCa
+    targetCashPct: tgtCa,
+    driftThresholdPp: driftThrPp
   })
   for (const h of holdRows) {
     // STRATEGY GUARD — same effect as running before AT_TARGET inside generateHoldRows: approved

@@ -74,6 +74,19 @@ export type MergedSettings = {
   aiDebugLogging: boolean
 }
 
+/** Finances / UserProfile risk wins over AppSettings copy of legacy Settings (Area 2). */
+export function mergeRiskProfileLayers(
+  userProfileRisk: string | null | undefined,
+  appRisk: string | null | undefined,
+  legacyRisk: string | null | undefined
+): string {
+  const u = userProfileRisk?.trim()
+  if (u) return u
+  const a = appRisk?.trim()
+  if (a) return a
+  return legacyRisk?.trim() || 'MODERATE'
+}
+
 /** Allocation + toggles: AppSettings wins when present; falls back to legacy Settings. */
 export async function getMergedSettings(prisma: PrismaClient): Promise<MergedSettings> {
   await ensureAppSettings(prisma)
@@ -83,7 +96,15 @@ export async function getMergedSettings(prisma: PrismaClient): Promise<MergedSet
   } catch {
     app = null
   }
-  const leg = await prisma.settings.findFirst({ orderBy: { createdAt: 'asc' } })
+  const userProfilePromise =
+    typeof prisma.userProfile?.findUnique === 'function'
+      ? prisma.userProfile.findUnique({ where: { id: 'default' } }).catch(() => null)
+      : Promise.resolve(null)
+  const [leg, userProfile] = await Promise.all([
+    prisma.settings.findFirst({ orderBy: { createdAt: 'asc' } }),
+    userProfilePromise
+  ])
+  const mergedRisk = mergeRiskProfileLayers(userProfile?.riskProfile, app?.riskProfile, leg?.riskProfile)
   if (!app) {
     return {
       targetEquityPct: num(leg?.targetEquityPct ?? 65),
@@ -91,7 +112,7 @@ export async function getMergedSettings(prisma: PrismaClient): Promise<MergedSet
       targetCashPct: num(leg?.targetCashPct ?? 10),
       targetWealthCzk: leg?.targetWealthCzk != null ? num(leg.targetWealthCzk) : null,
       targetDate: leg?.targetDate ?? null,
-      riskProfile: leg?.riskProfile || 'MODERATE',
+      riskProfile: mergedRisk,
       demoModeEnabled: leg?.demoModeEnabled ?? false,
       demoPersona: leg?.demoPersona ?? 'engineer',
       alertsEnabled: leg?.alertsEnabled ?? true,
@@ -121,7 +142,7 @@ export async function getMergedSettings(prisma: PrismaClient): Promise<MergedSet
     targetCashPct: num(app.targetCashPct ?? leg?.targetCashPct ?? 10),
     targetWealthCzk: app.targetWealthCzk != null ? num(app.targetWealthCzk) : leg?.targetWealthCzk != null ? num(leg.targetWealthCzk) : null,
     targetDate: app.targetDate ?? leg?.targetDate ?? null,
-    riskProfile: app.riskProfile || leg?.riskProfile || 'MODERATE',
+    riskProfile: mergedRisk,
     demoModeEnabled: app.demoModeEnabled,
     demoPersona: app.demoPersona || 'engineer',
     alertsEnabled: app.alertsEnabled,

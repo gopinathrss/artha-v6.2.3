@@ -25,7 +25,8 @@
     "db:deploy:all": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs scripts/migrate-all.ts",
     "migrate:secrets": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs scripts/migrate-plaintext-secrets.ts",
     "migrate:v52": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs scripts/migrate-settings-to-v52.ts",
-    "v52-smoke": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs scripts/v52-smoke.ts"
+    "v52-smoke": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs scripts/v52-smoke.ts",
+    "seed:vanguard-stats": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs scripts/seedVanguardStats.ts"
   },
   "keywords": [],
   "author": "",

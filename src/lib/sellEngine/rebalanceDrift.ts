@@ -5,7 +5,16 @@ import { num } from '../money'
 import { calculateAllocation, calculateTaxStatus, mapCategoryToBuckets } from '../calculations'
 import { costBasisCzk } from './taxFreeExit'
 
+/** @deprecated use driftThresholdPpForRiskProfile — kept for backward compatibility */
 export const DRIFT_THRESHOLD_PP = 10
+
+/** Drift tolerance (percentage points) before REBALANCE_DRIFT sells; wider for higher risk appetite. */
+export function driftThresholdPpForRiskProfile(riskProfileRaw: string | null | undefined): number {
+  const u = String(riskProfileRaw || 'MODERATE').trim().toUpperCase()
+  if (u === 'CONSERVATIVE') return 10
+  if (u === 'AGGRESSIVE') return 20
+  return 15
+}
 
 const CZ_GAIN_TAX = 0.15
 
@@ -110,7 +119,8 @@ export async function detectRebalanceSells(
   targetCashPct: number,
   indiaSlices: { equityCzk: number; bondsCzk: number; cashCzk: number } | null,
   excludeIsins: Set<string>,
-  indiaAccountSlices?: { bondsCzk: number; cashCzk: number } | null
+  indiaAccountSlices?: { bondsCzk: number; cashCzk: number } | null,
+  driftThresholdPp: number = driftThresholdPpForRiskProfile('MODERATE')
 ): Promise<SellRow[]> {
   const allocation = calculateAllocation(
     holdings as any[],
@@ -128,10 +138,16 @@ export async function detectRebalanceSells(
   const overCash = allocation.cashPct - targetCashPct
 
   const rows: SellRow[] = []
-  const overBuckets: { bucket: 'EQUITY' | 'BONDS' | 'CASH'; overPct: number }[] = []
-  if (overEquity > DRIFT_THRESHOLD_PP) overBuckets.push({ bucket: 'EQUITY', overPct: overEquity })
-  if (overBonds > DRIFT_THRESHOLD_PP) overBuckets.push({ bucket: 'BONDS', overPct: overBonds })
-  if (overCash > DRIFT_THRESHOLD_PP) overBuckets.push({ bucket: 'CASH', overPct: overCash })
+  const overBuckets: { bucket: 'EQUITY' | 'BONDS' | 'CASH'; overPct: number; rawOverPp: number }[] = []
+  if (overEquity > driftThresholdPp) {
+    overBuckets.push({ bucket: 'EQUITY', overPct: overEquity - driftThresholdPp, rawOverPp: overEquity })
+  }
+  if (overBonds > driftThresholdPp) {
+    overBuckets.push({ bucket: 'BONDS', overPct: overBonds - driftThresholdPp, rawOverPp: overBonds })
+  }
+  if (overCash > driftThresholdPp) {
+    overBuckets.push({ bucket: 'CASH', overPct: overCash - driftThresholdPp, rawOverPp: overCash })
+  }
 
   const used = new Set(excludeIsins)
 
@@ -150,7 +166,7 @@ export async function detectRebalanceSells(
         currentValueCzk: Math.round(c.currentValue),
         unitsToSell: c.unitsToSell ?? undefined,
         reason:
-          `${over.bucket} allocation ${over.overPct.toFixed(1)}pp over target. ` +
+          `${over.bucket} allocation ${over.rawOverPp.toFixed(1)}pp over target (${over.overPct.toFixed(1)}pp above ${driftThresholdPp}pp tolerance). ` +
           `Sell ~${c.sellAmount.toFixed(0)} CZK from ${c.name} to rebalance.` +
           (c.estimatedTax > 0 ? ` Estimated tax: ~${c.estimatedTax.toFixed(0)} CZK.` : ''),
         executionStatus: 'PENDING',

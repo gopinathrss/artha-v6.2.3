@@ -114,5 +114,41 @@ describe('strategyProposer', () => {
     expect(out.monthsToTarget).toBeGreaterThan(0)
     expect(Number.isInteger(out.monthsToTarget)).toBe(true)
   })
+
+  it('Case G — truncated NAV history: suppresses CAGR in reasoning, MEDIUM confidence', () => {
+    const out = proposeStrategy(
+      baseInput({
+        backtestStats: {
+          cagrPct5yr: null,
+          maxDrawdownPct: 7.8,
+          sharpeRatio: null,
+          recoveryMonths: 6,
+          dataPointCount: 6,
+          isTruncated: true
+        }
+      })
+    )
+    expect(out.confidence).toBe('MEDIUM')
+    expect(out.proposalReasoning).toMatch(/Limited price history/)
+    expect(out.proposalReasoning).not.toMatch(/CAGR -0\.2/)
+    expect(out.keyMetrics.cagrPct5yr).toBeNull()
+  })
+
+  it('Case H — adequate data points: HIGH confidence with library + full backtest', () => {
+    const out = proposeStrategy(
+      baseInput({
+        backtestStats: {
+          cagrPct5yr: 11.9,
+          maxDrawdownPct: 23.5,
+          sharpeRatio: 1.5,
+          recoveryMonths: 8,
+          dataPointCount: 30,
+          isTruncated: false
+        }
+      })
+    )
+    expect(out.confidence).toBe('HIGH')
+    expect(out.proposalReasoning).toContain('CAGR 11.9')
+  })
 })
 

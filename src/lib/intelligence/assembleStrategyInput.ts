@@ -3,6 +3,7 @@ import type { StrategyInput } from './types'
 import { num } from '../money'
 import { costBasisCzk } from '../sellEngine/taxFreeExit'
 import { getMergedSettings } from '../appSettingsMerge'
+import { MIN_DATA_POINTS_FOR_CAGR } from './strategyConstants'
 
 function toNumDec(v: unknown): number {
   return num(v as never)
@@ -31,13 +32,26 @@ export async function assembleStrategyInput(holdingId: string, prisma: PrismaCli
     })
     .catch(() => null)
 
+  const dp = backtestRow?.dataPointCount ?? 0
+  const hasEnoughData = dp >= MIN_DATA_POINTS_FOR_CAGR
   const backtestStats = backtestRow
-    ? {
-        cagrPct5yr: backtestRow.cagr5y != null ? toNumDec(backtestRow.cagr5y) : null,
-        maxDrawdownPct: backtestRow.maxDrawdownAll != null ? toNumDec(backtestRow.maxDrawdownAll) : null,
-        sharpeRatio: backtestRow.sharpe3y != null ? toNumDec(backtestRow.sharpe3y) : null,
-        recoveryMonths: backtestRow.recoveryMonths ?? null
-      }
+    ? hasEnoughData
+      ? {
+          cagrPct5yr: backtestRow.cagr5y != null ? toNumDec(backtestRow.cagr5y) : null,
+          maxDrawdownPct: backtestRow.maxDrawdownAll != null ? toNumDec(backtestRow.maxDrawdownAll) : null,
+          sharpeRatio: backtestRow.sharpe3y != null ? toNumDec(backtestRow.sharpe3y) : null,
+          recoveryMonths: backtestRow.recoveryMonths ?? null,
+          dataPointCount: dp,
+          isTruncated: false
+        }
+      : {
+          cagrPct5yr: null,
+          maxDrawdownPct: backtestRow.maxDrawdownAll != null ? toNumDec(backtestRow.maxDrawdownAll) : null,
+          sharpeRatio: null,
+          recoveryMonths: backtestRow.recoveryMonths ?? null,
+          dataPointCount: dp,
+          isTruncated: true
+        }
     : null
 
   const libraryRow = await prisma.instrumentLibrary

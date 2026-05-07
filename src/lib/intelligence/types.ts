@@ -16,6 +16,10 @@ export type StrategyInput = {
     maxDrawdownPct: number | null
     sharpeRatio: number | null
     recoveryMonths: number | null
+    /** NAV sample count when stats row exists (months or points per importer). */
+    dataPointCount?: number | null
+    /** True when row exists but sample too small for meaningful CAGR/Sharpe. */
+    isTruncated?: boolean
   } | null
   libraryScore: {
     score: number | null

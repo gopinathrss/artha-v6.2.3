@@ -1,4 +1,7 @@
 import type { StrategyInput, StrategyProposal } from './types'
+import { MIN_DATA_POINTS_FOR_CAGR } from './strategyConstants'
+
+export { MIN_DATA_POINTS_FOR_CAGR }
 
 const DRAWDOWN_GUARDRAIL: Record<string, number> = {
   CONSERVATIVE: 15,
@@ -22,14 +25,19 @@ function roundTo(n: number, step: number): number {
   return Math.round(n / step) * step
 }
 
-function determineConfidence(input: StrategyInput): 'HIGH' | 'MEDIUM' | 'LOW' {
-  const hasBacktest =
+export function determineConfidence(input: StrategyInput): 'HIGH' | 'MEDIUM' | 'LOW' {
+  const hasFullBacktest =
     input.backtestStats?.cagrPct5yr != null &&
     input.backtestStats?.maxDrawdownPct != null &&
     input.backtestStats?.sharpeRatio != null
+  const hasPartialBacktest =
+    !hasFullBacktest &&
+    input.backtestStats?.maxDrawdownPct != null &&
+    (input.backtestStats?.isTruncated === true || input.backtestStats?.cagrPct5yr == null)
   const hasLibrary = input.libraryScore?.score != null
-  if (hasBacktest && hasLibrary) return 'HIGH'
-  if (hasLibrary) return 'MEDIUM'
+  if (hasFullBacktest && hasLibrary) return 'HIGH'
+  if (hasFullBacktest || (hasPartialBacktest && hasLibrary)) return 'MEDIUM'
+  if (hasLibrary || hasPartialBacktest) return 'MEDIUM'
   return 'LOW'
 }
 
@@ -128,8 +136,15 @@ export function proposeStrategy(input: StrategyInput): StrategyProposal {
         backtestStats.recoveryMonths ?? '?'
       } months.`
     )
+  } else if (backtestStats?.isTruncated) {
+    reasoningParts.push(
+      `Limited price history (${backtestStats.dataPointCount ?? 0} data points) — CAGR suppressed until ${MIN_DATA_POINTS_FOR_CAGR} months of data available. ` +
+        `Drawdown data: ${backtestStats.maxDrawdownPct != null ? safeNum(backtestStats.maxDrawdownPct).toFixed(1) : '?'}% max.`
+    )
   } else {
-    reasoningParts.push(`No backtest history available — strategy uses library score and profile only. Confidence is ${confidence}.`)
+    reasoningParts.push(
+      `No backtest history available — strategy uses library score and profile only. Confidence is ${confidence}.`
+    )
   }
 
   if (libraryScore?.score != null) {
@@ -180,6 +195,8 @@ export function proposeStrategy(input: StrategyInput): StrategyProposal {
     maxDrawdownPct: backtestStats?.maxDrawdownPct ?? null,
     sharpeRatio: backtestStats?.sharpeRatio ?? null,
     recoveryMonths: backtestStats?.recoveryMonths ?? null,
+    dataPointCount: backtestStats?.dataPointCount ?? null,
+    backtestTruncated: backtestStats?.isTruncated === true,
     libraryScore: libraryScore?.score ?? null,
     terPct: libraryScore?.terPct ?? null,
     sleeveGapPp,

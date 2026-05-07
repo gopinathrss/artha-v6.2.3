@@ -5,6 +5,14 @@ import { calculateTaxStatus, mapCategoryToBuckets } from '../calculations'
 import { num } from '../money'
 import { DRIFT_THRESHOLD_PP } from './rebalanceDrift'
 
+type HoldTargets = {
+  targetEquityPct: number
+  targetBondsPct: number
+  targetCashPct: number
+  /** When set, must match planner / rebalance drift tolerance (Area 2). */
+  driftThresholdPp?: number
+}
+
 /**
  * Explicit HOLD rows for non-EXITED holdings not already in BUY/SELL recommendations.
  */
@@ -13,7 +21,7 @@ export async function generateHoldRows(
   buyRows: BuyRow[],
   sellRows: SellRow[],
   allocation: Pick<AllocationResult, 'equityPct' | 'bondsPct' | 'cashPct'>,
-  targets: { targetEquityPct: number; targetBondsPct: number; targetCashPct: number }
+  targets: HoldTargets
 ): Promise<HoldRow[]> {
   const recommendedIsins = new Set<string>([
     ...buyRows.map((r) => r.isin).filter(Boolean) as string[],
@@ -26,12 +34,13 @@ export async function generateHoldRows(
   const overEq = allocation.equityPct - targets.targetEquityPct
   const overBd = allocation.bondsPct - targets.targetBondsPct
   const overCa = allocation.cashPct - targets.targetCashPct
+  const driftThr = targets.driftThresholdPp ?? DRIFT_THRESHOLD_PP
 
   function bucketDriftOk(h: Holding): boolean {
     const w = mapCategoryToBuckets(h.category)
-    if (w.eq >= 0.5 && w.bd < 0.5) return overEq <= DRIFT_THRESHOLD_PP
-    if (w.bd >= 0.5) return overBd <= DRIFT_THRESHOLD_PP
-    return overCa <= DRIFT_THRESHOLD_PP
+    if (w.eq >= 0.5 && w.bd < 0.5) return overEq <= driftThr
+    if (w.bd >= 0.5) return overBd <= driftThr
+    return overCa <= driftThr
   }
 
   for (const h of activeHoldings) {
