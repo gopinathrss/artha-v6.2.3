@@ -37,15 +37,24 @@ export function registerAppSettingsRoutes(app: Express): void {
         const m = await getMergedSettings(realPrisma)
         return res.json({
           success: true,
-          data: { settings: { ...m, hasDashboardBootstrapKey: false }, source: 'legacy-merge' }
+          data: {
+            settings: { ...m, hasDashboardBootstrapKey: false },
+            effectiveRiskProfile: m.riskProfile,
+            source: 'legacy-merge'
+          }
         })
       }
       const hasDashboardBootstrapKey = !!(row as { dashboardBootstrapKeyHash?: string | null })
         .dashboardBootstrapKeyHash
       const settings = omitDashboardAuthSecrets(row as Record<string, unknown>) as Record<string, unknown>
+      const m = await getMergedSettings(realPrisma)
       res.json({
         success: true,
-        data: { settings: { ...settings, hasDashboardBootstrapKey }, source: 'app' }
+        data: {
+          settings: { ...settings, hasDashboardBootstrapKey },
+          effectiveRiskProfile: m.riskProfile,
+          source: 'app'
+        }
       })
     } catch (e: unknown) {
       res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) })

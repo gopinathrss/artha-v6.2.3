@@ -120,7 +120,8 @@ export async function detectRebalanceSells(
   indiaSlices: { equityCzk: number; bondsCzk: number; cashCzk: number } | null,
   excludeIsins: Set<string>,
   indiaAccountSlices?: { bondsCzk: number; cashCzk: number } | null,
-  driftThresholdPp: number = driftThresholdPpForRiskProfile('MODERATE')
+  driftThresholdPp: number = driftThresholdPpForRiskProfile('MODERATE'),
+  minSellThresholdCzk: number = 1000
 ): Promise<SellRow[]> {
   const allocation = calculateAllocation(
     holdings as any[],
@@ -155,13 +156,15 @@ export async function detectRebalanceSells(
     const sellAmountCzk = (over.overPct / 100) * tval
     const candidates = await selectSellCandidates(over.bucket, sellAmountCzk, used)
     for (const c of candidates) {
+      const amt = Math.round(c.sellAmount)
+      if (amt < minSellThresholdCzk) continue
       used.add(c.isin)
       rows.push({
         type: 'SELL',
         source: c.name,
         isin: c.isin,
         sellSubtype: 'REBALANCE_DRIFT',
-        amountCzk: Math.round(c.sellAmount),
+        amountCzk: amt,
         taxImpactCzk: Math.round(c.estimatedTax),
         currentValueCzk: Math.round(c.currentValue),
         unitsToSell: c.unitsToSell ?? undefined,

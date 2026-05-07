@@ -57,6 +57,12 @@ export function validateAppSettingsPatch(body: Record<string, unknown>): AppSett
       return { field: 'targetDate', message: 'targetDate must be a valid ISO date string' }
     }
   }
+  if (body.minSellThresholdCzk !== undefined && body.minSellThresholdCzk !== null) {
+    const n = Number(body.minSellThresholdCzk)
+    if (!Number.isFinite(n) || n < 0 || n > 50_000_000) {
+      return { field: 'minSellThresholdCzk', message: 'minSellThresholdCzk must be between 0 and 50 000 000' }
+    }
+  }
   if (body.defaultAiProviderKey !== undefined && body.defaultAiProviderKey !== null && body.defaultAiProviderKey !== '') {
     const ak = String(body.defaultAiProviderKey)
     if (!AI_DEFAULT_KEYS.has(ak)) {

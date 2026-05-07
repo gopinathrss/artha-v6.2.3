@@ -177,6 +177,7 @@ export async function getPortfolioSummary() {
         activeCount: holdings.filter((h) => h.status === 'ACTIVE').length,
         fxRates,
         settings,
+        mergedRiskProfile: merged.riskProfile,
         snapshots: snapshots.slice(0, 13).reverse()
       }
     }

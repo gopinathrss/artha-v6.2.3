@@ -252,7 +252,8 @@ export async function buildMonthlyPlanPayload(
     indiaSlices,
     sellingIsins,
     indiaAccountSlices,
-    driftThrPp
+    driftThrPp,
+    num(merged.minSellThresholdCzk)
   )
   for (const r of rebalanceSells) sellingIsins.add(r.isin)
 

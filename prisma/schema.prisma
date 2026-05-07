@@ -243,6 +243,8 @@ model AppSettings {
   targetEquityPct          Decimal @default(65) @db.Decimal(7, 4)
   targetBondsPct           Decimal @default(25) @db.Decimal(7, 4)
   targetCashPct            Decimal @default(10) @db.Decimal(7, 4)
+  /** Suppress REBALANCE_DRIFT sell rows below this CZK amount (trivial sells). */
+  minSellThresholdCzk      Decimal @default(1000) @db.Decimal(10, 2)
   targetWealthCzk          Decimal? @db.Decimal(14, 2)
   targetDate               DateTime?
   cronExecutionRetentionDays     Int @default(90)

@@ -90,6 +90,12 @@
                 </select>
               </div>
             </div>
+            <p class="form-field-help" id="as_risk_priority_note" style="margin-top: 0">
+              Note: risk profile is also set on the Finances page. The Finances page value takes priority.
+            </p>
+            <p class="form-field-help" id="risk-profile-source" style="margin-top: calc(-1 * var(--space-2))">
+              Set on <a href="/finances">Finances page</a> — affects strategy guardrails and drift tolerance.
+            </p>
             <div class="form-row">
               <div class="form-field">
                 <label class="form-field-label" for="as_target_wealth">Annual / lifetime target (Kč)</label>
@@ -131,6 +137,21 @@
                 placeholder="Coffee, Books, Travel, Hobbies" />
               <p class="form-field-help">
                 Used by This Month planner to label discretionary buckets. Existing entries are kept.
+              </p>
+            </div>
+            <div class="form-field" style="margin-top: var(--space-4)">
+              <label class="form-field-label" for="min-sell-threshold">Min sell threshold (Kč)</label>
+              <input
+                type="number"
+                id="min-sell-threshold"
+                name="minSellThresholdCzk"
+                min="0"
+                step="100"
+                class="form-field-input"
+              />
+              <p class="form-field-help">
+                Sell rebalancing rows below this amount are suppressed. Default: 1 000 Kč. Prevents trivial sells
+                where tax exceeds benefit.
               </p>
             </div>
             <div class="toggle-row">
@@ -376,13 +397,14 @@
                 Apply selection
               </button>
             </div>
+            <p id="ai_active_banner" class="form-field-help" style="margin-top: var(--space-2); margin-bottom: var(--space-3)"></p>
             <div id="st_ai_apply" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-2)" aria-live="polite"></div>
             <p id="ai_active_help" class="form-field-help" style="margin-top: calc(-1 * var(--space-2)); margin-bottom: var(--space-3)">
-              Choose who is <strong>live</strong> for Ask PIE, then click <strong>Apply selection</strong>. Saving keys in
-              the panel below also activates that provider.
+              Choose who is <strong>live</strong> for Ask PIE, then click <strong>Apply selection</strong>. Saving a card
+              below also sets that provider active.
             </p>
             <div id="ai_unconfigured_warn" class="callout callout-warning" style="display: none; margin-bottom: var(--space-4)"></div>
-            <div id="ai_config_mount"></div>
+            <div id="ai_provider_cards" class="ai-provider-cards-grid"></div>
             <div id="ai_status_mount" class="ai-status-panel ai-status-muted" aria-live="polite"></div>
           </section>
 
@@ -404,6 +426,33 @@
             </div>
             <div id="integrations-grid" class="integrations-grid" aria-live="polite">
               <div class="empty-state"><div class="empty-state-message">Loading integrations…</div></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="intelligence-summary-widget">
+              <div class="isw-header">
+                <span class="isw-title">Intelligence summary</span>
+                <a href="/portfolio" class="isw-link">Manage strategies →</a>
+              </div>
+              <div class="isw-grid">
+                <div class="isw-item">
+                  <span class="isw-label">Approved strategies</span>
+                  <span class="isw-value" id="isw-approved">—</span>
+                </div>
+                <div class="isw-item">
+                  <span class="isw-label">Pending approval</span>
+                  <span class="isw-value" id="isw-proposed">—</span>
+                </div>
+                <div class="isw-item">
+                  <span class="isw-label">Sleeping cash</span>
+                  <span class="isw-value" id="isw-sleeping">—</span>
+                </div>
+                <div class="isw-item">
+                  <span class="isw-label">Annual real loss</span>
+                  <span class="isw-value isw-value--warn" id="isw-loss">—</span>
+                </div>
+              </div>
             </div>
           </section>
 

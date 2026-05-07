@@ -1786,3 +1786,95 @@
   border-radius: var(--radius-sm);
   cursor: help;
 }
+
+/* V6.2.2 Area 3 — Settings intelligence summary */
+.intelligence-summary-widget {
+  border: 1px solid var(--color-border-default, #e2e8f0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 0;
+}
+.isw-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.isw-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.isw-link {
+  font-size: 0.8rem;
+  color: var(--color-accent-base, #3b82f6);
+}
+.isw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.isw-label {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #64748b);
+  display: block;
+}
+.isw-value {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.isw-value--warn {
+  color: var(--color-warning-fg, #f59e0b);
+}
+
+/* AI provider cards (Settings) */
+.ai-provider-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.ai-provider-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-2, var(--color-surface-raised));
+}
+.ai-provider-card.is-active-provider {
+  border-color: var(--color-accent-base);
+  box-shadow: 0 0 0 1px var(--color-accent-subtle);
+}
+.ai-provider-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.ai-provider-card-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+.ai-provider-badge {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.ai-provider-badge--muted {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+.ai-provider-badge--ok {
+  background: var(--color-success-bg, rgba(34, 197, 94, 0.15));
+  color: var(--color-success-fg, #16a34a);
+}
+.ai-provider-badge--warn {
+  background: var(--color-warning-bg, rgba(245, 158, 11, 0.15));
+  color: var(--color-warning-fg, #d97706);
+}
+.ai-provider-badge--fail {
+  background: var(--color-danger-bg, rgba(239, 68, 68, 0.12));
+  color: var(--color-danger-fg, #dc2626);
+}

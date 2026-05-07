@@ -1,5 +1,5 @@
 import type { AppSettings, Prisma, PrismaClient } from '@prisma/client'
-import { num } from './money'
+import { num, type MoneyInput } from './money'
 
 const DEFAULT_ID = 'default'
 
@@ -72,6 +72,7 @@ export type MergedSettings = {
   displayCurrency: string
   defaultAiProviderKey: string | null
   aiDebugLogging: boolean
+  minSellThresholdCzk: number
 }
 
 /** Finances / UserProfile risk wins over AppSettings copy of legacy Settings (Area 2). */
@@ -130,7 +131,8 @@ export async function getMergedSettings(prisma: PrismaClient): Promise<MergedSet
       displayCurrency: 'CZK',
       defaultAiProviderKey:
         leg?.aiProvider === 'anthropic' ? 'ai.anthropic' : leg?.aiProvider === 'openai' ? 'ai.openai' : null,
-      aiDebugLogging: false
+      aiDebugLogging: false,
+      minSellThresholdCzk: 1000
     }
   }
   const pick = <T>(a: T | null | undefined, b: T | null | undefined, d: T): T =>
@@ -160,7 +162,11 @@ export async function getMergedSettings(prisma: PrismaClient): Promise<MergedSet
     themeMode: app.themeMode || 'AUTO',
     displayCurrency: app.displayCurrency || 'CZK',
     defaultAiProviderKey: app.defaultAiProviderKey ?? null,
-    aiDebugLogging: app.aiDebugLogging ?? false
+    aiDebugLogging: app.aiDebugLogging ?? false,
+    minSellThresholdCzk: (() => {
+      const raw = (app as unknown as { minSellThresholdCzk?: MoneyInput | null }).minSellThresholdCzk
+      return raw != null ? num(raw) : 1000
+    })()
   }
 }
 
@@ -205,5 +211,8 @@ export function appSettingsPatchData(body: Record<string, unknown>): Prisma.AppS
   if (typeof body.emailPreviewRetentionDays === 'number') d.emailPreviewRetentionDays = body.emailPreviewRetentionDays
   if (typeof body.alertLogDismissedRetentionDays === 'number')
     d.alertLogDismissedRetentionDays = body.alertLogDismissedRetentionDays
+  if (numOrDec('minSellThresholdCzk') !== undefined) {
+    ;(d as Record<string, unknown>).minSellThresholdCzk = numOrDec('minSellThresholdCzk')
+  }
   return d
 }

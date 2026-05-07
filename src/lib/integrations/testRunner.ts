@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import type { PrismaClient } from '@prisma/client'
 import { getProviderDecrypted } from './store'
+import { envAnthropicApiKey, envGeminiApiKey } from './env-fallback'
 import { writeIntegrationStatus } from './status'
 import type { ProviderKey } from './registry'
 import { verifyGmailOAuthRefreshToken } from './communications/gmailApiMail'
@@ -43,19 +44,19 @@ export async function runIntegrationProviderTest(prisma: PrismaClient, key: Prov
       return await done('OK', 'OpenAI responded')
     }
     if (key === 'ai.anthropic') {
-      const k = dec.secrets.apiKey
-      if (!k) return await done('FAIL', 'Missing apiKey')
+      const k = dec.secrets.apiKey || envAnthropicApiKey()
+      if (!k) return await done('FAIL', 'Missing apiKey (save in Settings or set ANTHROPIC_API_KEY)')
       const ac = new Anthropic({ apiKey: k })
       await ac.messages.create({
-        model: String(dec.config?.model || 'claude-3-5-haiku-20241022'),
-        max_tokens: 5,
+        model: String(dec.config?.model || 'claude-sonnet-4-5'),
+        max_tokens: 1,
         messages: [{ role: 'user', content: 'ping' }]
       })
       return await done('OK', 'Anthropic responded')
     }
     if (key === 'ai.gemini') {
-      const k = dec.secrets.apiKey
-      if (!k) return await done('FAIL', 'Missing apiKey')
+      const k = dec.secrets.apiKey || envGeminiApiKey()
+      if (!k) return await done('FAIL', 'Missing apiKey (save in Settings or set GEMINI_API_KEY)')
       const model = String(dec.config?.model || 'gemini-1.5-flash')
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
       await axios.post(url, { contents: [{ parts: [{ text: 'ping' }] }] }, { params: { key: k }, timeout: 15_000 })

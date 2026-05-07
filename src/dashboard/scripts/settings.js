@@ -23,8 +23,8 @@
 
   const AI_MODEL_PRESETS = {
     'ai.openai': ['gpt-4o', 'gpt-4o-mini', 'o1-mini', 'gpt-4-turbo'],
-    'ai.anthropic': ['claude-3-5-sonnet-20240620', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
-    'ai.gemini': ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+    'ai.anthropic': ['claude-sonnet-4-5', 'claude-haiku-4-5-20251001'],
+    'ai.gemini': ['gemini-1.5-pro', 'gemini-1.5-flash']
   }
 
   const INTEG_LABELS = {
@@ -253,14 +253,29 @@
   // ---------- V5.2 App preferences ----------
   async function loadAppPreferences() {
     try {
-      const res = await fetchJsonTimeout('/api/app-settings', { method: 'GET', cache: 'no-store' }, 25_000)
+      const [res, overviewRes] = await Promise.all([
+        fetchJsonTimeout('/api/app-settings', { method: 'GET', cache: 'no-store' }, 25_000),
+        fetch('/api/overview', { method: 'GET', cache: 'no-store' })
+          .then((r) => r.json())
+          .catch(() => null)
+      ])
       const st = res?.data?.settings || {}
       const ccy = String(st.displayCurrency || 'CZK').toUpperCase()
       const elC = document.getElementById('as_display_ccy')
       if (elC) elC.value = ccy
-      const risk = String(st.riskProfile || 'MODERATE').toUpperCase()
+      const risk =
+        String(res?.data?.effectiveRiskProfile || '').toUpperCase() ||
+        String(overviewRes?.data?.mergedRiskProfile || '').toUpperCase() ||
+        String(overviewRes?.data?.settings?.riskProfile || '').toUpperCase() ||
+        String(overviewRes?.data?.profile?.riskProfile || '').toUpperCase() ||
+        'MODERATE'
       const elR = document.getElementById('as_risk')
-      if (elR) elR.value = risk
+      if (elR) elR.value = ['CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'].includes(risk) ? risk : 'MODERATE'
+      const elMin = document.getElementById('min-sell-threshold')
+      if (elMin) {
+        const mv = st.minSellThresholdCzk != null ? Number(st.minSellThresholdCzk) : 1000
+        elMin.value = Number.isFinite(mv) ? String(mv) : '1000'
+      }
       const dbg = document.getElementById('as_ai_debug')
       if (dbg) dbg.checked = !!st.aiDebugLogging
       const dauth = document.getElementById('as_dashboard_auth')
@@ -522,80 +537,83 @@
     apply.style.display = staged !== synced ? 'inline-block' : 'none'
   }
 
-  function mountAiConfigPanel(providerKey) {
-    const mount = document.getElementById('ai_config_mount')
+  function hasSavedAiApiKey(sec) {
+    return !!(sec && sec.apiKey != null && String(sec.apiKey).trim() !== '')
+  }
+
+  function syncAiProviderCardHighlight(activeKey) {
+    document.querySelectorAll('.ai-provider-card').forEach((el) => {
+      const k = el.getAttribute('data-ai-provider')
+      el.classList.toggle('is-active-provider', !!activeKey && k === activeKey)
+    })
+  }
+
+  function renderAiProviderCards() {
+    const mount = document.getElementById('ai_provider_cards')
     if (!mount) return
-    if (!providerKey) {
-      mount.innerHTML = `<div class="form-field-help">Select an AI provider above, then <strong>Apply selection</strong> to activate it (or leave <strong>None</strong>).</div>`
-      return
-    }
     const by = providerByKeyFromCache()
-    const p = by[providerKey] || {
-      key: providerKey,
-      label: INTEG_LABELS[providerKey] || providerKey,
-      config: {},
-      secrets: {}
-    }
-    const cfg = p.config && typeof p.config === 'object' ? p.config : {}
-    const sec = p.secrets && typeof p.secrets === 'object' ? p.secrets : {}
-    const currentModel = integVal(cfg.model)
-    const presets = AI_MODEL_PRESETS[providerKey] || []
-    const presetOpts = presets
-      .map((m) => `<option value="${escapeHtml(m)}" ${m === currentModel ? 'selected' : ''}>${escapeHtml(m)}</option>`)
-      .join('')
-    const customSelected = currentModel && !presets.includes(currentModel) ? 'selected' : ''
-    mount.innerHTML = `
-      <div class="ai-config-panel" data-ai-panel-key="${escapeHtml(providerKey)}">
-        <h3>${escapeHtml(p.label || providerKey)} configuration</h3>
-        <div class="form-row">
-          <div class="form-field" style="flex:1;min-width:12rem">
-            <label class="form-field-label" for="ai_panel_model">Model</label>
-            <select id="ai_panel_model" class="form-field-select">
-              ${presetOpts}
-              <option value="__custom__" ${customSelected ? 'selected' : ''}>Custom…</option>
-            </select>
-          </div>
-          <div class="form-field" style="flex:1;min-width:12rem;display:${currentModel && !presets.includes(currentModel) ? 'block' : 'none'}" id="ai_panel_model_custom_wrap">
-            <label class="form-field-label" for="ai_panel_model_custom">Custom model id</label>
-            <input id="ai_panel_model_custom" type="text" class="form-field-input" value="${escapeHtml(currentModel)}" placeholder="model id" />
-          </div>
+    mount.innerHTML = AI_INTEGRATION_KEYS.map((providerKey) => {
+      const p = by[providerKey] || {
+        key: providerKey,
+        label: INTEG_LABELS[providerKey] || providerKey,
+        config: {},
+        secrets: {},
+        enabled: false
+      }
+      const cfg = p.config && typeof p.config === 'object' ? p.config : {}
+      const sec = p.secrets && typeof p.secrets === 'object' ? p.secrets : {}
+      const currentModel = integVal(cfg.model)
+      const presets = AI_MODEL_PRESETS[providerKey] || []
+      let modelVal = currentModel
+      if (modelVal && !presets.includes(modelVal)) modelVal = presets[0] || modelVal
+      const presetOpts = presets
+        .map((m) => `<option value="${escapeHtml(m)}" ${m === modelVal ? 'selected' : ''}>${escapeHtml(m)}</option>`)
+        .join('')
+      const s = slug(providerKey)
+      const configured = hasSavedAiApiKey(sec)
+      const canTest = configured || !!p.enabled
+      const ph = configured ? '•••• (saved — paste to replace)' : 'Paste API key'
+      return `
+      <div class="ai-provider-card" data-ai-provider="${escapeHtml(providerKey)}">
+        <div class="ai-provider-card-head">
+          <h3 class="ai-provider-card-title">${escapeHtml(p.label || INTEG_LABELS[providerKey] || providerKey)}</h3>
+          <span class="ai-provider-badge ai-provider-badge--muted" data-ai-card-badge="${escapeHtml(providerKey)}">UNCONFIGURED</span>
         </div>
-        <div class="form-field" style="margin-top: var(--space-3)">
-          <label class="form-field-label" for="ai_panel_secret">API key</label>
-          <input id="ai_panel_secret" type="password" class="form-field-input" placeholder="${sec.apiKey ? '•••• (saved — paste to replace)' : 'Paste key'}" autocomplete="off" />
+        <div class="form-field">
+          <label class="form-field-label" for="ai-card-model-${s}">Model</label>
+          <select id="ai-card-model-${s}" class="form-field-select">
+            ${presetOpts}
+          </select>
         </div>
-        <div class="form-actions" style="margin-top: var(--space-4)">
-          <button type="button" class="btn btn-primary btn-sm" id="ai_panel_save">Save</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="ai_panel_test">Test connection</button>
+        <div class="form-field">
+          <label class="form-field-label" for="ai-card-secret-${s}">API key</label>
+          <input id="ai-card-secret-${s}" type="password" class="form-field-input" placeholder="${ph}" autocomplete="off" />
+        </div>
+        <p class="form-field-help" data-ai-card-tested="${escapeHtml(providerKey)}" style="margin:0">Last tested: —</p>
+        <div class="form-actions" style="margin-top:var(--space-3);display:flex;flex-wrap:wrap;gap:var(--space-2)">
+          <button type="button" class="btn btn-primary btn-sm" data-ai-action="save" data-ai-key="${escapeHtml(providerKey)}">Save</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-ai-action="test" data-ai-key="${escapeHtml(
+            providerKey
+          )}" ${canTest ? '' : 'disabled'} data-ai-test-btn="${escapeHtml(providerKey)}">Test connection</button>
         </div>
       </div>`
-    const selModel = document.getElementById('ai_panel_model')
-    const wrapCustom = document.getElementById('ai_panel_model_custom_wrap')
-    if (selModel && wrapCustom) {
-      selModel.addEventListener('change', () => {
-        wrapCustom.style.display = selModel.value === '__custom__' ? 'block' : 'none'
-      })
-    }
-    document.getElementById('ai_panel_save')?.addEventListener('click', () => saveAiPanel(providerKey))
-    document.getElementById('ai_panel_test')?.addEventListener('click', () => runAiPanelTest(providerKey))
+    }).join('')
   }
 
-  function readAiPanelModel() {
-    const sel = document.getElementById('ai_panel_model')
-    if (!sel) return ''
-    if (sel.value === '__custom__') {
-      return document.getElementById('ai_panel_model_custom')?.value?.trim() || ''
-    }
-    return sel.value?.trim() || ''
+  function readAiCardModel(providerKey) {
+    const s = slug(providerKey)
+    const sel = document.getElementById('ai-card-model-' + s)
+    return sel?.value?.trim() || ''
   }
 
-  async function saveAiPanel(providerKey) {
+  async function saveAiCard(providerKey) {
     if (!providerKey) return
+    const s = slug(providerKey)
     const config = {}
-    const m = readAiPanelModel()
+    const m = readAiCardModel(providerKey)
     if (m) config.model = m
     const secrets = {}
-    const apiKey = readSecretInput('ai_panel_secret')
+    const apiKey = readSecretInput('ai-card-secret-' + s)
     if (apiKey !== undefined) secrets.apiKey = apiKey
     const body = { enabled: true, config }
     if (Object.keys(secrets).length) body.secrets = secrets
@@ -628,32 +646,18 @@
     await loadAiProviderBlock()
   }
 
-  async function runAiPanelTest(providerKey) {
-    if (!providerKey) return
-    await refreshAiStatusPanel(providerKey, 'Running test…')
-    try {
-      const res = await fetch('/api/integrations/' + encodeURIComponent(providerKey) + '/test', { method: 'POST' })
-      const j = await res.json()
-      if (!j?.success) {
-        await refreshAiStatusPanel(providerKey, null)
-        return
-      }
-    } catch {
-      /* fall through to refresh */
-    }
-    await refreshAiStatusPanel(providerKey, null)
-  }
-
-  async function refreshAiStatusPanel(providerKey, interimMsg) {
-    const el = document.getElementById('ai_status_mount')
-    if (!el) return
-    el.className = 'ai-status-panel ai-status-muted'
+  async function refreshAiCardRowStatus(providerKey, interimMsg) {
+    const badge = document.querySelector('[data-ai-card-badge="' + providerKey + '"]')
+    const tested = document.querySelector('[data-ai-card-tested="' + providerKey + '"]')
+    const testBtn = document.querySelector('[data-ai-test-btn="' + providerKey + '"]')
+    if (!badge || !tested) return
+    const by = providerByKeyFromCache()
+    const p = by[providerKey]
+    const configured = p && hasSavedAiApiKey(p.secrets)
+    if (testBtn) testBtn.disabled = !(configured || p?.enabled)
     if (interimMsg) {
-      el.innerHTML = `<div>${escapeHtml(interimMsg)}</div>`
-      return
-    }
-    if (!providerKey) {
-      el.innerHTML = '<div>No provider selected.</div>'
+      badge.textContent = interimMsg
+      badge.className = 'ai-provider-badge ai-provider-badge--muted'
       return
     }
     try {
@@ -664,22 +668,50 @@
       )
       const row = (j?.data?.status && j.data.status[0]) || null
       if (!row) {
-        el.innerHTML = '<div>No test or live-call history yet. Use <strong>Test connection</strong>.</div>'
+        badge.textContent = configured ? 'CONNECTED' : 'UNCONFIGURED'
+        badge.className =
+          'ai-provider-badge ' + (configured ? 'ai-provider-badge--ok' : 'ai-provider-badge--muted')
+        tested.textContent = 'Last tested: —'
         return
       }
       const ok = row.status === 'OK'
-      const meta = row.metadata && typeof row.metadata === 'object' ? row.metadata : {}
-      const modelLine = meta.model != null ? `<div><strong>Model:</strong> ${escapeHtml(String(meta.model))}</div>` : ''
+      badge.textContent = ok ? 'CONNECTED' : row.status === 'WARN' ? 'WARN' : 'ERROR'
+      badge.className =
+        'ai-provider-badge ' + (ok ? 'ai-provider-badge--ok' : row.status === 'WARN' ? 'ai-provider-badge--warn' : 'ai-provider-badge--fail')
       const when = row.testedAt ? new Date(row.testedAt).toLocaleString() : '—'
-      el.className = 'ai-status-panel ' + (ok ? 'ai-status-ok' : row.status === 'WARN' ? 'ai-status-muted' : 'ai-status-fail')
-      el.innerHTML = `
-        <div><strong>Status:</strong> ${ok ? '✅ Connected' : row.status === 'WARN' ? '⚠️ ' + escapeHtml(row.status) : '❌ Failed'}</div>
-        <div><strong>Last tested:</strong> ${escapeHtml(when)}</div>
-        ${modelLine}
-        <div><strong>Detail:</strong> ${escapeHtml(row.message || '—')}</div>`
-    } catch (e) {
-      el.innerHTML = `<div>Could not load status: ${escapeHtml(String(e))}</div>`
+      tested.textContent = 'Last tested: ' + when
+    } catch {
+      badge.textContent = 'ERROR'
+      badge.className = 'ai-provider-badge ai-provider-badge--fail'
+      tested.textContent = 'Last tested: —'
     }
+  }
+
+  async function runAiCardTest(providerKey) {
+    if (!providerKey) return
+    await refreshAiCardRowStatus(providerKey, 'Testing…')
+    try {
+      await fetch('/api/integrations/' + encodeURIComponent(providerKey) + '/test', { method: 'POST' }).then((r) =>
+        r.json()
+      )
+    } catch {
+      /* refresh below */
+    }
+    await refreshAiCardRowStatus(providerKey, null)
+  }
+
+  function updateAiActiveBanner(activeKey) {
+    const el = document.getElementById('ai_active_banner')
+    if (!el) return
+    if (!activeKey) {
+      el.textContent = 'Active: — (none). Choose a provider and Apply selection, or Save on a card to activate it.'
+      return
+    }
+    const by = providerByKeyFromCache()
+    const row = by[activeKey]
+    const lab = (row && row.label) || INTEG_LABELS[activeKey] || activeKey
+    const mod = readAiCardModel(activeKey) || integVal(row?.config?.model) || '—'
+    el.textContent = 'Active: ' + lab + ' (' + mod + ')'
   }
 
   async function applyAiSelection() {
@@ -716,8 +748,8 @@
   async function loadAiProviderBlock() {
     const warn = document.getElementById('ai_unconfigured_warn')
     const sel = document.getElementById('ai_active_provider')
-    const mount = document.getElementById('ai_config_mount')
-    if (!sel || !mount) return
+    const cards = document.getElementById('ai_provider_cards')
+    if (!sel || !cards) return
     try {
       const [appRes, intRes] = await Promise.all([
         fetchJsonTimeout('/api/app-settings', { method: 'GET', cache: 'no-store' }, 25_000),
@@ -730,12 +762,14 @@
       aiSyncedActiveKey = dk || null
       sel.value = AI_INTEGRATION_KEYS.includes(dk) ? dk : ''
       updateAiApplyVisibility()
-      mountAiConfigPanel(sel.value || null)
+      renderAiProviderCards()
       const active = sel.value || null
+      syncAiProviderCardHighlight(active)
+      updateAiActiveBanner(active)
       if (warn) {
         const by = providerByKeyFromCache()
         const row = active ? by[active] : null
-        const hasKey = !!(row && row.secrets && row.secrets.apiKey)
+        const hasKey = row && hasSavedAiApiKey(row.secrets)
         if (active && !hasKey) {
           warn.style.display = 'block'
           warn.textContent = 'Provider not configured: add an API key and Save, then Test connection.'
@@ -744,9 +778,15 @@
           warn.textContent = ''
         }
       }
-      await refreshAiStatusPanel(active, null)
+      await Promise.all(AI_INTEGRATION_KEYS.map((k) => refreshAiCardRowStatus(k, null)))
+      const statusEl = document.getElementById('ai_status_mount')
+      if (statusEl) {
+        statusEl.className = 'ai-status-panel ai-status-muted'
+        statusEl.innerHTML =
+          '<div class="form-field-help" style="margin:0">Each card shows connection status and last test time.</div>'
+      }
     } catch (e) {
-      mount.innerHTML = `<div class="callout callout-warning">${escapeHtml(String(e))}</div>`
+      cards.innerHTML = `<div class="callout callout-warning">${escapeHtml(String(e))}</div>`
     }
   }
 
@@ -1040,6 +1080,35 @@
     }
   }
 
+  async function loadIntelligenceSummary() {
+    try {
+      const [stratRes, ceRes] = await Promise.all([
+        fetch('/api/strategies').then((r) => r.json()),
+        fetch('/api/capital-efficiency').then((r) => r.json())
+      ])
+      const strategies = stratRes.data ?? []
+      const approved = strategies.filter((s) => ['APPROVED', 'MONITORING'].includes(s.status)).length
+      const proposed = strategies.filter((s) => s.status === 'PROPOSED').length
+      const sleeping = ceRes.data?.totalSleepingCzk ?? 0
+      const loss = ceRes.data?.totalAnnualRealLossCzk ?? 0
+      const elA = document.getElementById('isw-approved')
+      const elP = document.getElementById('isw-proposed')
+      const elS = document.getElementById('isw-sleeping')
+      const elL = document.getElementById('isw-loss')
+      if (elA) elA.textContent = String(approved)
+      if (elP) elP.textContent = String(proposed)
+      if (elS) {
+        elS.textContent =
+          sleeping > 0 ? sleeping.toLocaleString('cs-CZ') + ' Kč' : 'None detected'
+      }
+      if (elL) {
+        elL.textContent = loss > 0 ? '−' + loss.toLocaleString('cs-CZ') + ' Kč/yr' : '—'
+      }
+    } catch {
+      /* informational only */
+    }
+  }
+
   // ---------- Wire-up (after DOM; safe if script placement changes) ----------
   function wireSettingsPage() {
     initThemeSegmented()
@@ -1050,6 +1119,7 @@
         console.error('[settings] loadSettings', e)
       }
       await Promise.allSettled([loadAppPreferences(), loadIntegrations(), loadHealth()])
+      await loadIntelligenceSummary()
       consumeGmailOAuthFromUrl()
     })()
 
@@ -1070,6 +1140,7 @@
         .split(',')
         .map((s) => s.trim())
         .filter((s) => s.length > 0)
+      const minSellRaw = document.getElementById('min-sell-threshold')?.value
       const body = {
         displayCurrency: document.getElementById('as_display_ccy').value,
         riskProfile: document.getElementById('as_risk').value,
@@ -1079,7 +1150,9 @@
         targetDate: tdRaw || null,
         timezone: tzRaw || 'Europe/Prague',
         accentColor: (acRaw || 'BLUE').toUpperCase(),
-        customCategories: cats
+        customCategories: cats,
+        minSellThresholdCzk:
+          minSellRaw === '' || minSellRaw == null ? undefined : Number(minSellRaw)
       }
       if (window.PieTheme && body.accentColor) {
         try { window.PieTheme.setAccent(body.accentColor) } catch { /* */ }
@@ -1128,8 +1201,8 @@
   document.getElementById('ai_active_provider')?.addEventListener('change', () => {
     updateAiApplyVisibility()
     const v = document.getElementById('ai_active_provider')?.value || null
-    mountAiConfigPanel(v)
-    void refreshAiStatusPanel(v, null)
+    syncAiProviderCardHighlight(v)
+    updateAiActiveBanner(v)
     const warn = document.getElementById('ai_unconfigured_warn')
     const by = providerByKeyFromCache()
     const row = v ? by[v] : null
@@ -1147,6 +1220,16 @@
 
   document.getElementById('ai_apply_active')?.addEventListener('click', () => {
     void applyAiSelection()
+  })
+
+  document.getElementById('ai_provider_cards')?.addEventListener('click', (ev) => {
+    const btn = ev.target && ev.target.closest ? ev.target.closest('[data-ai-action]') : null
+    if (!btn) return
+    const action = btn.getAttribute('data-ai-action')
+    const key = btn.getAttribute('data-ai-key')
+    if (!key) return
+    if (action === 'save') void saveAiCard(key)
+    else if (action === 'test') void runAiCardTest(key)
   })
 
   document.getElementById('save-targets')?.addEventListener('click', () =>
