@@ -10,6 +10,7 @@ import { num } from './money'
 import {
   calculateAllocation,
   calculateTaxStatus,
+  accountContributesToDeployableAllocationSlice,
   indiaMfAllocationPieces,
   indiaAccountSlicesFromAccounts
 } from './calculations'
@@ -217,7 +218,11 @@ export async function buildMonthlyPlanPayload(
 
   const fx = await getFXRates().catch(() => ({ EURCZK: 24.5, EURINR: 89.0, source: 'fallback', ageHours: 0 }))
   const fxRates = { EURCZK: fx.EURCZK, EURINR: fx.EURINR }
-  const emergencyLiquidityAccounts = accounts.filter((a) => a.type === 'SAVINGS' || a.type === 'NRE')
+  const emergencyLiquidityAccounts = accounts.filter(
+    (a) =>
+      (a.type === 'SAVINGS' || a.type === 'NRE') &&
+      accountContributesToDeployableAllocationSlice(a)
+  )
   const cashCzk = num(accountsToCzk(emergencyLiquidityAccounts, fxRates))
   const targetEmerg = num(profile.emergencyFundTarget) || fixed * 6
   const gap = Math.max(0, targetEmerg - cashCzk)

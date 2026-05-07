@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccountRole {
+  INVESTABLE
+  EMERGENCY_FUND
+  LONG_TERM_RESERVE
+  SLEEPING
+  GEO_STRATEGIC
+  LOCKED
+}
+
 model Holding {
   id                String      @id @default(cuid())
   isin              String
@@ -61,8 +70,24 @@ model Account {
   country         String   @default("CZ")
   isActive        Boolean  @default(true)
   notes           String?
+  /// Capital efficiency: how this account is treated in allocation / sleeping-money analysis.
+  accountRole            AccountRole @default(INVESTABLE)
+  /// Tiered annual rates, e.g. [{ "upTo": 400000, "ratePct": 3 }, { "above": 400000, "ratePct": 0.01 }]. Null = unknown (0% nominal in calculator).
+  interestTiers          Json?
+  /// Optional per-account emergency reserve target in local currency.
+  emergencyFundTarget    Decimal?    @db.Decimal(18, 2)
+  fxTrendNote            String?
+  capitalEfficiencyNote  String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+/// Macro indicators (CPI, rates). Optional — code falls back when rows missing.
+model MacroData {
+  id             String   @id @default(cuid())
+  key            String   @unique
+  valueDecimal   Decimal? @db.Decimal(10, 4)
+  updatedAt      DateTime @updatedAt
 }
 
 model Instrument {

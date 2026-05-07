@@ -197,7 +197,7 @@ describe('calculateAllocation', () => {
 })
 
 describe('indiaAccountSlicesFromAccounts', () => {
-  test('classifies INR FD as bonds and NRE/NRO/SAVINGS as cash', () => {
+  test('excludes INR FD from deployable slices; NRE/NRO/SAVINGS cash when INVESTABLE', () => {
     const fx = { EURCZK: 25, EURINR: 100 }
     const accounts = [
       { type: 'FIXED_DEPOSIT', currency: 'INR', balanceLocal: 400_000, isActive: true },
@@ -206,7 +206,7 @@ describe('indiaAccountSlicesFromAccounts', () => {
       { type: 'SAVINGS', currency: 'INR', balanceLocal: 500_000, isActive: true }
     ]
     const s = indiaAccountSlicesFromAccounts(accounts, fx)
-    expect(s.bondsCzk).toBeCloseTo(100_000, 4)
+    expect(s.bondsCzk).toBe(0)
     expect(s.cashCzk).toBeCloseTo(500_000 + 250_000 + 125_000, 4)
   })
 })

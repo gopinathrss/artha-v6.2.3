@@ -276,6 +276,19 @@ export interface NetWorthResult {
 
 type MoneyScalar = number | Prisma.Decimal | null | undefined
 
+/** INR (and INR savings) accounts that count toward deployable allocation slices (V6.2.2). */
+export function accountContributesToDeployableAllocationSlice(account: {
+  accountRole?: string | null
+  type?: string | null
+  isActive?: boolean
+}): boolean {
+  if (account.isActive === false) return false
+  const typ = String(account.type || '').toUpperCase().trim()
+  if (typ === 'FIXED_DEPOSIT') return false
+  const r = String(account.accountRole ?? 'INVESTABLE').toUpperCase()
+  return r === 'INVESTABLE' || r === 'SLEEPING'
+}
+
 export function indiaAccountSlicesFromAccounts(accounts: any[], fxRates: FXRates): {
   bondsCzk: number
   cashCzk: number
@@ -284,8 +297,11 @@ export function indiaAccountSlicesFromAccounts(accounts: any[], fxRates: FXRates
   const rows = (accounts || []).filter((a) => a?.isActive !== false)
   const isInr = (a: any) => String(a?.currency || '').toUpperCase().trim() === 'INR'
   const typ = (a: any) => String(a?.type || '').toUpperCase()
-  const fd = rows.filter((a) => isInr(a) && typ(a) === 'FIXED_DEPOSIT')
-  const cashLike = rows.filter((a) => isInr(a) && ['NRE', 'NRO', 'SAVINGS'].includes(typ(a)))
+  const deploy = (a: any) => accountContributesToDeployableAllocationSlice(a)
+  const fd = rows.filter((a) => isInr(a) && typ(a) === 'FIXED_DEPOSIT' && deploy(a))
+  const cashLike = rows.filter(
+    (a) => isInr(a) && ['NRE', 'NRO', 'SAVINGS'].includes(typ(a)) && deploy(a)
+  )
   return {
     bondsCzk: num(accountsToCzk(fd, fx)),
     cashCzk: num(accountsToCzk(cashLike, fx))

@@ -19,6 +19,7 @@ import { registerIntegrationsRoutes } from './integrationsRoutes'
 import { registerGoogleMailOAuthRoutes } from './googleMailOAuthRoutes'
 import { registerDashboardAuthRoutes } from './dashboardAuthRoutes'
 import { registerStrategyRoutes } from './strategyRoutes'
+import { registerCapitalEfficiencyRoutes } from './capitalEfficiencyRoutes'
 import { registerDashboardApiAuthGate, registerDashboardHtmlAuthGate } from './dashboardAuthMiddleware'
 import { registerExternalReadApiGate } from './externalReadApiGate'
 import { registerRequestContext, send500 } from './requestContext'
@@ -150,6 +151,7 @@ registerCfoRoutes(app)
 registerAppSettingsRoutes(app)
 registerIntegrationsRoutes(app)
 registerStrategyRoutes(app)
+registerCapitalEfficiencyRoutes(app)
 registerGoogleMailOAuthRoutes(app)
 registerExternalReadApiGate(app)
 

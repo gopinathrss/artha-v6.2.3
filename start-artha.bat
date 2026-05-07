@@ -6,8 +6,13 @@ REM ============================================================================
 REM ARTHA V5.2 — no-Docker Windows dev (one double-click)
 REM  - Portable PostgreSQL: C:\Projects\pgsql\bin  (cluster: ..\data-artha-v4)
 REM  - Dev DB port: 5544 (matches .env.example DATABASE_URL)
-REM  - Portable Node (preferred): C:\Projects\node\node-*-win-x64\node.exe + npm ^(same folder as official zip^)
-REM    Fallback: .node-portable\node-*-win-x64\ then first `where node`
+REM  - Portable Node ^(first match wins^):
+REM      C:\Projects\Node-v24\node-*-win-x64  ^(e.g. node-v24.15.0-win-x64^)
+REM      C:\Projects\node\node-*-win-x64
+REM    On ARM64: Node-v24 and C:\Projects\node **win-arm64** first, then win-x64
+REM    Fallback: .node-portable\ then first `where node`
+REM  - If Windows shows "This app can't run on your PC" after Postgres starts, Node is
+REM    wrong OS/arch ^(e.g. Linux zip, or ARM PC needs win-arm64^) — see smoke test below.
 REM ============================================================================
 
 set "PG_BIN=C:\Projects\pgsql\bin"
@@ -28,11 +33,46 @@ if not exist "%PG_BIN%\pg_ctl.exe" (
   exit /b 1
 )
 
-REM --- Node: C:\Projects\node — prefer versioned folder ^(full zip: npm beside node^) over lone node.exe at root ---
+REM --- Node: ARM64 Windows prefers win-arm64 ^(x64-only Node can show "can't run on your PC"^) ---
 set "NODE="
-for /d %%D in ("C:\Projects\node\node-*-win-x64") do (
-  if exist "%%~fD\node.exe" set "NODE=%%~fD\node.exe" & goto :node_scan_done
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+  for /d %%D in ("C:\Projects\Node-v24\node-*-win-arm64") do (
+    if exist "%%~fD\node.exe" (
+      set "NODE=%%~fD\node.exe"
+      goto :node_scan_arm_done
+    )
+  )
+  for /d %%D in ("C:\Projects\node\node-*-win-arm64") do (
+    if exist "%%~fD\node.exe" (
+      set "NODE=%%~fD\node.exe"
+      goto :node_scan_arm_done
+    )
+  )
+  for /d %%D in ("%~dp0.node-portable\node-*-win-arm64") do (
+    if exist "%%~fD\node.exe" (
+      set "NODE=%%~fD\node.exe"
+      goto :node_scan_arm_done
+    )
+  )
 )
+:node_scan_arm_done
+if not defined NODE (
+  for /d %%D in ("C:\Projects\Node-v24\node-*-win-x64") do (
+    if exist "%%~fD\node.exe" (
+      set "NODE=%%~fD\node.exe"
+      goto :node_scan_done
+    )
+  )
+)
+if not defined NODE (
+  for /d %%D in ("C:\Projects\node\node-*-win-x64") do (
+    if exist "%%~fD\node.exe" (
+      set "NODE=%%~fD\node.exe"
+      goto :node_scan_done
+    )
+  )
+)
+if not defined NODE if exist "C:\Projects\Node-v24\node.exe" set "NODE=C:\Projects\Node-v24\node.exe"
 if not defined NODE if exist "C:\Projects\node\node.exe" set "NODE=C:\Projects\node\node.exe"
 :node_scan_done
 if not defined NODE (
@@ -40,7 +80,18 @@ if not defined NODE (
     set "NODE=%~dp0.node-portable\node-v22.14.0-win-x64\node.exe"
   ) else (
     for /d %%D in ("%~dp0.node-portable\node-*-win-x64") do (
-      if exist "%%~fD\node.exe" set "NODE=%%~fD\node.exe" & goto :node_found
+      if exist "%%~fD\node.exe" (
+        set "NODE=%%~fD\node.exe"
+        goto :node_found
+      )
+    )
+    if not defined NODE if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
+      for /d %%D in ("%~dp0.node-portable\node-*-win-arm64") do (
+        if exist "%%~fD\node.exe" (
+          set "NODE=%%~fD\node.exe"
+          goto :node_found
+        )
+      )
     )
   )
 )
@@ -51,9 +102,10 @@ if not defined NODE (
 :node_ok
 if not defined NODE (
   echo [ERROR] Node.js not found.
-  echo         Expected: C:\Projects\node\node-*-win-x64\node.exe  ^(full zip contents^)
-  echo         Or:      C:\Projects\node\node.exe  ^(flat layout with npm.cmd next to it^)
-  echo         Or:      .node-portable\node-*-win-x64\node.exe
+  echo         Expected: C:\Projects\Node-v24\node-*-win-x64\node.exe  ^(or win-arm64 on ARM64 PC^)
+  echo         Or:      C:\Projects\node\node-*-win-x64\node.exe
+  echo         Or:      C:\Projects\Node-v24\node.exe / C:\Projects\node\node.exe  ^(flat layout^)
+  echo         Or:      .node-portable with node-*-win-x64 or node-*-win-arm64 ^(full zip^)
   echo         Or:      Node 20+ on PATH
   pause
   exit /b 1
@@ -79,6 +131,20 @@ if not defined NPM_CMD if not defined NPM_CLI_JS (
 )
 :npm_cmd_done
 
+REM --- Prove Node runs ^(wrong OS/arch gives Windows "This app can't run on your PC" on first prisma/npm call^) ---
+echo [INFO] Node runtime check: !NODE!
+"!NODE!" -e "console.log('[OK]',process.version,process.arch)" 2>"%TEMP%\artha_nodechk.err"
+if errorlevel 1 (
+  echo [ERROR] Node.exe did not start. Common causes:
+  echo   - Not a Windows build ^(Linux/macOS zip by mistake^)
+  echo   - Wrong CPU: on ARM64 Windows use the **win-arm64** Node zip or installer
+  echo   - Corrupt or blocked file ^(unblock in file properties, re-download^)
+  echo   Path: !NODE!
+  type "%TEMP%\artha_nodechk.err" 2>nul
+  pause
+  exit /b 1
+)
+
 if not exist ".env" (
   echo [ERROR] Missing .env in "%CD%"
   echo         Copy .env.example to .env and set DATABASE_URL for port %PG_PORT% if needed.
@@ -97,6 +163,7 @@ if not exist "%PGDATA%\PG_VERSION" (
     pause
     exit /b 1
   )
+  call :EnsurePgdataWritable
 )
 
 "%PG_BIN%\pg_ctl.exe" status -D "%PGDATA%" >nul 2>&1
@@ -128,18 +195,94 @@ if errorlevel 1 (
 
 echo [INFO] Postgres is ready on 127.0.0.1:%PG_PORT%
 
-set "DBCHK="
-"%PG_BIN%\psql.exe" -h 127.0.0.1 -p %PG_PORT% -U postgres -d postgres -Atf "%~dp0scripts\exists-artha-db.sql" >"%TEMP%\artha_dbchk.txt" 2>nul
-set /p DBCHK=<"%TEMP%\artha_dbchk.txt"
-if not "!DBCHK!"=="1" (
-  echo [INFO] Creating database artha_v4...
-  "%PG_BIN%\psql.exe" -h 127.0.0.1 -p %PG_PORT% -U postgres -d postgres -c "CREATE DATABASE artha_v4;"
-  if errorlevel 1 (
-    echo [ERROR] CREATE DATABASE artha_v4 failed.
+REM Local portable cluster: avoid SSL/GSS paths that sometimes surface as Windows "Access is denied"
+set "PGSSLMODE=disable"
+set "PGGSSENCMODE=disable"
+
+REM Unblock psql/pg_* exes downloaded as zip ^(Mark of the Web^) — pg_isready may work while psql is still blocked
+where powershell >nul 2>&1 && (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -LiteralPath '%PG_BIN%' -Filter '*.exe' -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue" 2>nul
+)
+
+set "PSQLBASE=%PG_BIN%\psql.exe"
+set "PG_ENSURE_JS=%~dp0scripts\pg-ensure-artha-db.mjs"
+echo [INFO] PostgreSQL client ^(psql^) smoke test...
+"%PSQLBASE%" --version >nul 2>"%TEMP%\artha_psqlver.err"
+if errorlevel 1 (
+  echo [WARN] psql.exe will not run ^(blocked, wrong arch, or corrupt^).
+  type "%TEMP%\artha_psqlver.err" 2>nul
+  if not exist "!PG_ENSURE_JS!" (
+    echo [ERROR] Missing fallback script: !PG_ENSURE_JS!
     pause
     exit /b 1
   )
+  echo [INFO] Using Node PostgreSQL wire-protocol fallback ^(no psql/createdb^)…
+  call :EnsurePgdataWritable
+  "!NODE!" "!PG_ENSURE_JS!" %PG_PORT% artha_v4
+  if errorlevel 1 (
+    echo [ERROR] Node fallback could not ensure database artha_v4.
+    echo [HINT] Unblock C:\Projects\pgsql\bin\psql.exe if you prefer the normal path:
+    echo        Properties → General → Unblock, or: Get-ChildItem 'C:\Projects\pgsql\bin\*.exe' ^| Unblock-File
+    pause
+    exit /b 1
+  )
+  goto :AfterPgPortableSubs
 )
+
+call :EnsurePgdataWritable
+
+set "DBCHK="
+"%PSQLBASE%" -h 127.0.0.1 -p %PG_PORT% -U postgres -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname = 'artha_v4'" >"%TEMP%\artha_dbchk.txt" 2>"%TEMP%\artha_dbchk.err"
+if errorlevel 1 (
+  echo [ERROR] Cannot query Postgres ^(connection, pg_hba, or client blocked^).
+  type "%TEMP%\artha_dbchk.err" 2>nul
+  echo.
+  echo [HINT] If stderr shows "Access is denied": unblock psql.exe ^(see smoke-test hints above^) or set PGSSLMODE=disable ^(already set in this script^).
+  echo [HINT] If another Postgres owns port %PG_PORT%:  netstat -ano ^| findstr ":%PG_PORT%"
+  echo           This script expects cluster at "%PGDATA%" with host trust for 127.0.0.1.
+  pause
+  exit /b 1
+)
+for /f "usebackq delims=" %%A in ("%TEMP%\artha_dbchk.txt") do set "DBCHK=%%A"
+
+if "!DBCHK!"=="1" (
+  echo [INFO] Database artha_v4 already exists.
+) else (
+  echo [INFO] Creating database artha_v4...
+  call :EnsurePgdataWritable
+  "%PG_BIN%\createdb.exe" -h 127.0.0.1 -p %PG_PORT% -U postgres -E UTF8 -T template0 artha_v4 >"%TEMP%\artha_createdb.out" 2>"%TEMP%\artha_createdb.err"
+  if errorlevel 1 (
+    set "DBCHK2="
+    "%PSQLBASE%" -h 127.0.0.1 -p %PG_PORT% -U postgres -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname = 'artha_v4'" >"%TEMP%\artha_dbchk2.txt" 2>nul
+    for /f "usebackq delims=" %%A in ("%TEMP%\artha_dbchk2.txt") do set "DBCHK2=%%A"
+    if "!DBCHK2!"=="1" (
+      echo [INFO] Database artha_v4 already exists ^(created by another process^).
+    ) else (
+      echo [ERROR] CREATE DATABASE artha_v4 failed.
+      type "%TEMP%\artha_createdb.err" 2>nul
+      type "%TEMP%\artha_createdb.out" 2>nul
+      echo.
+      echo [HINT] Windows "Access is denied" usually means Postgres cannot create folders under:
+      echo   "%PGDATA%"
+      echo   - Run this script from the same user that ran initdb / pg_ctl start
+      echo   - Or as Administrator once:
+      echo       icacls "%PGDATA%" /grant "%USERNAME%:(OI)(CI)F" /T
+      echo   - Exclude PGDATA + postgres.exe from antivirus / Controlled folder access
+      pause
+      exit /b 1
+    )
+  )
+)
+
+goto :AfterPgPortableSubs
+
+:EnsurePgdataWritable
+REM Portable cluster: ensure the server process ^(same Windows user as pg_ctl^) can create new DB dirs under PGDATA.
+if not exist "%PGDATA%" exit /b 0
+icacls "%PGDATA%" /grant "%USERNAME%:(OI)(CI)F" /T >nul 2>&1
+exit /b 0
+
+:AfterPgPortableSubs
 
 echo.
 echo === npm dependencies ^(install if tooling or key packages missing^) ===

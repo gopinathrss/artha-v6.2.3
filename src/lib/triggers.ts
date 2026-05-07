@@ -188,6 +188,15 @@ export async function runMorningJob(): Promise<{
     }
     await resolveInactiveTriggerAlerts(activeKeys)
     await saveDailySnapshotFromPortfolio(p)
+
+    try {
+      const { computeCapitalEfficiency } = await import('./intelligence/sleepingMoneyEngine')
+      const { maybeFireSleepingMoneyAlert } = await import('./cron/sleepingMoneyAlert')
+      const ceReport = await computeCapitalEfficiency(prisma)
+      await maybeFireSleepingMoneyAlert(prisma, ceReport)
+    } catch (e: unknown) {
+      errors.push(`sleeping-money: ${e instanceof Error ? e.message : String(e)}`)
+    }
   } catch (e: any) {
     errors.push(e?.message || String(e))
   }

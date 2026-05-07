@@ -1,3 +1,4 @@
+import { AccountRole } from '@prisma/client'
 import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { isAdherenceRow } from './allocationRowTypes'
@@ -10,7 +11,7 @@ import { getRbiRepoRate, getStalestNREFDAge } from './indiaIntelligence'
 export type HealthRow = { name: string; status: 'PASS' | 'WARN' | 'FAIL'; message?: string }
 
 /** Spec target: named checks (trust score divides by this count). */
-export const HEALTH_CHECK_COUNT = 18
+export const HEALTH_CHECK_COUNT = 19
 
 /** When the DB is unreachable, return named rows so `/api/health` stays JSON 200 (observability). */
 function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trustScore: number } {
@@ -30,6 +31,7 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
     'AI_RECENT_FAILURES',
     'CRON_HEALTH',
     'STRATEGY_EVALUATOR',
+    'CAPITAL_EFFICIENCY',
     'MEMORY_HEALTHY',
     'RETENTION_POLICY'
   ]
@@ -400,6 +402,28 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     }
   } catch {
     checks.push({ name: 'STRATEGY_EVALUATOR', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const sleepingAccts = await prisma.account.findMany({
+      where: { accountRole: AccountRole.SLEEPING },
+      select: { capitalEfficiencyNote: true }
+    })
+    if (sleepingAccts.length === 0) {
+      checks.push({ name: 'CAPITAL_EFFICIENCY', status: 'PASS', message: 'No sleeping accounts detected' })
+    } else {
+      const totalNote = sleepingAccts
+        .map((a) => a.capitalEfficiencyNote)
+        .filter(Boolean)
+        .join('; ')
+      checks.push({
+        name: 'CAPITAL_EFFICIENCY',
+        status: 'WARN',
+        message: `${sleepingAccts.length} account(s) with sleeping cash. ${totalNote.slice(0, 80)}`
+      })
+    }
+  } catch {
+    checks.push({ name: 'CAPITAL_EFFICIENCY', status: 'WARN', message: 'Skip' })
   }
 
   try {
