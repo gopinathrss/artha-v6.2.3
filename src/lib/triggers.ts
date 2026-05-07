@@ -47,6 +47,23 @@ export async function runAllTriggers(portfolioData: any): Promise<FiredTrigger[]
   return fired
 }
 
+/**
+ * Daily snapshot without Yahoo/NAV refresh — uses current DB state + FX.
+ * Use when the machine may miss weekday 06:00 morning job (e.g. dev laptop off).
+ */
+export async function createDailySnapshot(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const summary = await getPortfolioSummary()
+    if (!summary.success || !summary.data) {
+      return { ok: false, error: summary.error || 'Portfolio load failed' }
+    }
+    await saveDailySnapshotFromPortfolio(summary.data)
+    return { ok: true }
+  } catch (e: unknown) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 export async function saveDailySnapshotFromPortfolio(data: any) {
   const nw = data?.netWorth
   if (!nw) return

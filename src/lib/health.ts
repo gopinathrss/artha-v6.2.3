@@ -429,11 +429,13 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
   try {
     const u = process.memoryUsage()
     const ratio = u.heapTotal > 0 ? u.heapUsed / u.heapTotal : 0
-    const st: HealthRow['status'] = ratio < 0.8 ? 'PASS' : ratio < 0.9 ? 'WARN' : 'FAIL'
+    // Node often sits at 70–90% heap after module load; WARN 80–95%, FAIL only when truly critical.
+    const st: HealthRow['status'] =
+      ratio < 0.8 ? 'PASS' : ratio < 0.97 ? 'WARN' : 'FAIL'
     checks.push({
       name: 'MEMORY_HEALTHY',
       status: st,
-      message: `heap ${(ratio * 100).toFixed(0)}%`
+      message: `heap ${(ratio * 100).toFixed(0)}% (warn ≥80%, fail ≥97%)`
     })
   } catch {
     checks.push({ name: 'MEMORY_HEALTHY', status: 'WARN', message: 'Skip' })

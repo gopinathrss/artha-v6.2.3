@@ -6,7 +6,7 @@ import { getPortfolioSummary } from '../lib/portfolio'
 import { loadAllLibrary, findBestAlternative, compareFundToETF, scoreInstrument } from '../lib/instrumentLibrary'
 import { askPie } from '../lib/aiIntelligence'
 import { sendTestEmail } from '../lib/emailService'
-import { runMorningJob } from '../lib/triggers'
+import { createDailySnapshot, runMorningJob } from '../lib/triggers'
 import { getFXRates } from '../lib/fetchers'
 import {
   calculateDTAABenefit,
@@ -41,6 +41,20 @@ app.use((_req, res, next) => {
 registerDashboardAuthRoutes(app)
 registerDashboardHtmlAuthGate(app)
 registerDashboardApiAuthGate(app)
+
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug/memory', (_req, res) => {
+    const m = process.memoryUsage()
+    const pct = m.heapTotal > 0 ? Math.round((m.heapUsed / m.heapTotal) * 100) : 0
+    res.json({
+      heapUsed: Math.round(m.heapUsed / 1024 / 1024) + ' MB',
+      heapTotal: Math.round(m.heapTotal / 1024 / 1024) + ' MB',
+      rss: Math.round(m.rss / 1024 / 1024) + ' MB',
+      external: Math.round(m.external / 1024 / 1024) + ' MB',
+      pct: pct + '%'
+    })
+  })
+}
 
 // Avoid stale dashboard during dev: browsers cache CSS & HTML aggressively
 app.use(
@@ -253,6 +267,20 @@ app.get('/api/snapshots', async (_req, res) => {
     res.json({ success: true, data: { snapshots }, demo })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+/** Create or update today's Snapshot row from current portfolio (no full morning NAV refresh). */
+app.post('/api/snapshots/trigger', async (_req, res) => {
+  try {
+    const r = await createDailySnapshot()
+    if (!r.ok) {
+      res.status(500).json({ success: false, error: r.error || 'Snapshot failed' })
+      return
+    }
+    res.json({ success: true, data: { snapshot: 'upserted' } })
+  } catch (e: unknown) {
+    res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) })
   }
 })
 

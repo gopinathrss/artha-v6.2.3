@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client'
 export const REGISTERED_CRON_JOB_NAMES = [
   'fx-refresh-weekday',
   'morning-job-weekday',
+  'daily-snapshot',
   'monthly-letter',
   'weekly-backup',
   'eom-journal',

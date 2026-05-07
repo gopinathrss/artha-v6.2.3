@@ -5,9 +5,10 @@
   "displayName": "PIE — Personal Investment Engine",
   "main": "dist/api/server.js",
   "scripts": {
-    "dev": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs src/api/server.ts",
+    "dev": "node --max-old-space-size=512 --env-file=.env ./node_modules/tsx/dist/cli.mjs src/api/server.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/api/server.js",
+    "start": "node --max-old-space-size=512 --env-file=.env dist/api/server.js",
+    "start:tsx": "node --max-old-space-size=512 --env-file=.env ./node_modules/tsx/dist/cli.mjs src/api/server.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

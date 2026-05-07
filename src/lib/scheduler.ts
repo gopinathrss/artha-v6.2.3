@@ -1,7 +1,12 @@
 import cron from 'node-cron'
 import { getPrisma, realPrisma } from './prisma'
 import { getPortfolioSummary } from './portfolio'
-import { generateAndSendMonthlyLetter, runMorningJob, runWeeklyBackup } from './triggers'
+import {
+  createDailySnapshot,
+  generateAndSendMonthlyLetter,
+  runMorningJob,
+  runWeeklyBackup
+} from './triggers'
 import { fetchAllRates } from './currency'
 import { generateMonthlyPlan } from './allocationPlanner'
 import { sendEmail } from './emailService'
@@ -37,6 +42,23 @@ export function startScheduler() {
         // eslint-disable-next-line no-console
         console.log('[Scheduler] FX + prices + triggers done', r)
         return { itemsProcessed: r.triggered + r.alertsCreated }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  /** Daily snapshot — 23:00 Prague (after FX + typical NAV cadence); also covers weekends. */
+  cron.schedule(
+    '0 23 * * *',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] Daily snapshot (23:00 Europe/Prague)...')
+      await runCronJob('daily-snapshot', async () => {
+        const r = await createDailySnapshot()
+        if (!r.ok) {
+          throw new Error(r.error || 'daily snapshot failed')
+        }
+        return { itemsProcessed: 1 }
       })
     },
     { timezone: 'Europe/Prague' }
@@ -432,4 +454,6 @@ export function startScheduler() {
   console.log('[Scheduler] Smart reports: monthly 06:20, quarterly 06:30 (quarter months), tax-year Apr 1 07:00')
   // eslint-disable-next-line no-console
   console.log('[Scheduler] TTL prune registered (Sunday 03:00 Europe/Prague)')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] Daily snapshot registered (23:00 Europe/Prague)')
 }

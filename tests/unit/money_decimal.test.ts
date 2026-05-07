@@ -1,8 +1,18 @@
 import { Prisma } from '@prisma/client'
-import { d, num } from '../../src/lib/money'
+import { describe, expect, it, test, vi } from 'vitest'
+import { d, num, serializeJsonBody } from '../../src/lib/money'
 import { calculateNetWorth } from '../../src/lib/calculations'
 
 describe('money.ts + Decimal net worth', () => {
+  it('serializeJsonBody warns when Decimal toNumber exceeds safe monitoring threshold', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const body = { projectedFV: new Prisma.Decimal('100000000000000') }
+    const out = serializeJsonBody(body)
+    expect(typeof out.projectedFV).toBe('number')
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[money] Large Decimal'))
+    spy.mockRestore()
+  })
+
   test('d().plus avoids binary float dust on classic 0.1 + 0.2', () => {
     const sum = d('0.1').plus(d('0.2'))
     expect(sum.toString()).toBe('0.3')

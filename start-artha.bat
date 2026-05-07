@@ -418,7 +418,7 @@ if exist "%MIGRATE_V52%" (
 echo.
 echo === ARTHA V5.2 dev server ^(http://localhost:3002^) ===
 echo Using Node: %NODE%
-"%NODE%" --env-file=.env "%TSX_CLI%" "%SERVER_TS%"
+"%NODE%" --max-old-space-size=512 --env-file=.env "%TSX_CLI%" "%SERVER_TS%"
 
 pause
 endlocal

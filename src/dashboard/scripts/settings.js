@@ -995,7 +995,7 @@
       if (res && res.success === false) {
         loadError = String(res.error || res.message || 'Health check refused')
       } else {
-        data = res?.data || {}
+      data = res?.data || {}
       }
     } catch (e) {
       loadError = e instanceof Error ? e.message : String(e)
@@ -1123,8 +1123,8 @@
       consumeGmailOAuthFromUrl()
     })()
 
-    ;['t_eq', 't_bd', 't_cs'].forEach((id) => {
-      document.getElementById(id)?.addEventListener('input', updateTargetsSum)
+  ;['t_eq', 't_bd', 't_cs'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('input', updateTargetsSum)
     })
 
     document.getElementById('save-app-prefs')?.addEventListener('click', () =>
