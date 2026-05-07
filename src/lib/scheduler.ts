@@ -7,6 +7,10 @@ import { generateMonthlyPlan } from './allocationPlanner'
 import { sendEmail } from './emailService'
 import { buildPlanReadyEmail } from './planEmail'
 import { runCronJob } from './cronWrapper'
+import { pruneOldRows } from './cron/pruneOldRows'
+import { ensureCronJobPlaceholders } from './cron/cronPlaceholders'
+import { runDailyStrategyEvaluation } from './cron/evaluateStrategies'
+import { runCapProximityCheck } from './cron/monitorProfitCaps'
 
 export function startScheduler() {
   cron.schedule(
@@ -33,6 +37,28 @@ export function startScheduler() {
         // eslint-disable-next-line no-console
         console.log('[Scheduler] FX + prices + triggers done', r)
         return { itemsProcessed: r.triggered + r.alertsCreated }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
+    '30 7 * * *',
+    async () => {
+      await runCronJob('evaluate-strategies', async () => {
+        const r = await runDailyStrategyEvaluation()
+        return { itemsProcessed: r.evaluated, metadata: r as unknown as object }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  cron.schedule(
+    '0 */6 * * *',
+    async () => {
+      await runCronJob('monitor-profit-caps', async () => {
+        const r = await runCapProximityCheck()
+        return { itemsProcessed: r.checked, metadata: r as unknown as object }
       })
     },
     { timezone: 'Europe/Prague' }
@@ -142,8 +168,8 @@ export function startScheduler() {
         if (settings?.alertEmail && settings?.smtpUser) {
           const r = await sendEmail(
             settings.alertEmail,
-            `ARTHA — Your ${monthYear} plan is ready`,
-            buildPlanReadyEmail(plan)
+            `PIE — Your ${monthYear} plan is ready`,
+            await buildPlanReadyEmail(plan)
           )
           if (!r.sent) {
             // eslint-disable-next-line no-console
@@ -185,7 +211,7 @@ export function startScheduler() {
             .replace(/\r\n/g, '\n')
           await sendEmail(
             settings.alertEmail,
-            'ARTHA daily digest',
+            'PIE daily digest',
             '<pre style="font-family:system-ui,sans-serif;white-space:pre-wrap">' + safe + '</pre>'
           )
         }
@@ -350,6 +376,44 @@ export function startScheduler() {
     { timezone: 'Europe/Prague' }
   )
 
+  cron.schedule(
+    '0 3 * * 0',
+    async () => {
+      // eslint-disable-next-line no-console
+      console.log('[Scheduler] TTL prune (CronExecution / SystemHealth / email previews / dismissed alerts)…')
+      await runCronJob('prune-old-rows', async () => {
+        const prisma = await getPrisma()
+        const r = await pruneOldRows(prisma)
+        // eslint-disable-next-line no-console
+        console.log(
+          '[Scheduler] Prune done cron=',
+          r.cronDeleted,
+          'health=',
+          r.healthDeleted,
+          'emailPreview=',
+          r.emailDeleted,
+          'alerts=',
+          r.alertDeleted
+        )
+        return {
+          itemsProcessed: r.cronDeleted + r.healthDeleted + r.emailDeleted + r.alertDeleted,
+          metadata: r as unknown as object
+        }
+      })
+    },
+    { timezone: 'Europe/Prague' }
+  )
+
+  void (async () => {
+    try {
+      const prisma = await getPrisma()
+      await ensureCronJobPlaceholders(prisma)
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[Scheduler] Cron placeholders failed', e)
+    }
+  })()
+
   // eslint-disable-next-line no-console
   console.log('[Scheduler] All jobs scheduled. Main TZ: Europe/Prague; AMFI: Asia/Kolkata')
   // eslint-disable-next-line no-console
@@ -366,4 +430,6 @@ export function startScheduler() {
   console.log('[Scheduler] Historical NAV bulk refresh registered (quarterly 03:00 Europe/Prague)')
   // eslint-disable-next-line no-console
   console.log('[Scheduler] Smart reports: monthly 06:20, quarterly 06:30 (quarter months), tax-year Apr 1 07:00')
+  // eslint-disable-next-line no-console
+  console.log('[Scheduler] TTL prune registered (Sunday 03:00 Europe/Prague)')
 }

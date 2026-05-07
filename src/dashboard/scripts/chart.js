@@ -60,4 +60,6 @@ function escapeChartText(s) {
     .replace(/"/g, '&quot;')
 }
 
-window.ArthaChart = { renderSvgMultiLineChart }
+const _pieChart = { renderSvgMultiLineChart }
+window.PieChart = _pieChart
+window.ArthaChart = _pieChart

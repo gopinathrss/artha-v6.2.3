@@ -121,8 +121,8 @@ export function getDemoPortfolio(persona = 'engineer') {
       totalEur: j(base.nw / 24.5),
       czechTotal: j(2_150_000),
       indiaTotal: j(1_680_000),
-      gainCzk: j(1_190_000),
-      gainPct: 39.0,
+      inflowWeightedGainCzk: 1_941_000 - 3_050_000,
+      inflowWeightedGainPct: Math.round(((1_941_000 - 3_050_000) / 3_050_000) * 100 * 100) / 100,
       czechFundsCzk: j(1_941_000),
       czechSavingsCzk: 380_000,
       czechPensionCzk: 30_000,
@@ -145,12 +145,20 @@ export function getDemoPortfolio(persona = 'engineer') {
       bondsCzk: j(617_000),
       cashCzk: j(500_000)
     },
-    xirr: {
-      value: base.xirr + (Math.random() - 0.5),
-      isEstimate: false,
-      note: '',
-      cashflowCount: 36
-    },
+    xirr: (() => {
+      const v = base.xirr + (Math.random() - 0.5) * 0.2
+      return {
+        displayValue: v,
+        displayLabel: null,
+        displayState: 'OK' as const,
+        rawEstimate: v,
+        isEstimate: false,
+        note: '',
+        cashflowCount: 36,
+        monthsOfHistory: 36,
+        minMonthsForDisplay: 12
+      }
+    })(),
     health: {
       score: base.health,
       grade: base.health >= 80 ? 'A' : base.health >= 65 ? 'B' : 'C',
@@ -158,7 +166,7 @@ export function getDemoPortfolio(persona = 'engineer') {
     },
     confidence: 88,
     totalInvested: j(3_050_000),
-    momChange: { czk: j(68_400), pct: 1.64 },
+    momChange: { czk: j(68_400), pct: 1.64, label: 'MoM', tier: 1 },
     holdings,
     snapshots,
     fxRates: { EURCZK: 24.5, EURINR: 89.5 },

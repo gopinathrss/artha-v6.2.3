@@ -1,6 +1,9 @@
 import type { AllocationPlan } from '@prisma/client'
 import { getPrisma } from './prisma'
 import { ensureRowType, isAdherenceRow } from './allocationRowTypes'
+import { parsePlanAllocations } from './allocationPlanSchema'
+import { readPlanAllocationsForMutation } from './planAllocationsRead'
+import { replacePlanRows, type PlanRowClient } from './allocationPlanRows'
 
 type AllocRow = Record<string, unknown>
 
@@ -14,6 +17,7 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
   if (!plan) {
     throw new Error('Plan not found')
   }
+  await readPlanAllocationsForMutation(plan)
   const all = plan.allocations as unknown
   if (!Array.isArray(all)) {
     throw new Error('Invalid allocations')
@@ -91,6 +95,7 @@ export async function markAllPendingRowsDone(planId: string, opts?: { executedAt
       where: { id: planId },
       data: { allocations: next as object }
     })
+    await replacePlanRows(tx as unknown as PlanRowClient, planId, parsePlanAllocations(next))
   })
 
   const updated = await prisma.allocationPlan.findUnique({ where: { id: planId } })

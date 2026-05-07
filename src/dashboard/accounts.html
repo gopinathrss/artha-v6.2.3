@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" class="preload">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PIE — Accounts</title>
+    <script src="/scripts/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="topbar-menu-trigger" id="menu-toggle" aria-label="Open menu" type="button">
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+                stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Accounts &amp; balances</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn btn-ghost btn-sm" id="refresh-btn" type="button">Refresh</button>
+            <button class="btn btn-primary btn-sm" id="add-account-btn" type="button">
+              + Add account
+            </button>
+          </div>
+        </header>
+
+        <div class="content">
+          <section class="overview-hero">
+            <div class="hero-eyebrow">Cash &amp; deposits</div>
+            <div class="hero-value-row">
+              <div class="hero-value" id="hero-total">—</div>
+            </div>
+            <div class="hero-meta" id="hero-sub">
+              Bank balances, pension, FDs across CZK / EUR / INR — converted at the latest CNB rates.
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat"><div class="hero-stat-label">Active accounts</div>
+                <div class="hero-stat-value" id="stat-active">—</div></div>
+              <div class="hero-stat"><div class="hero-stat-label">CZK balance</div>
+                <div class="hero-stat-value" id="stat-czk">—</div></div>
+              <div class="hero-stat"><div class="hero-stat-label">EUR balance</div>
+                <div class="hero-stat-value" id="stat-eur">—</div></div>
+              <div class="hero-stat"><div class="hero-stat-label">INR balance</div>
+                <div class="hero-stat-value" id="stat-inr">—</div></div>
+            </div>
+          </section>
+
+          <section class="card" style="margin-bottom: var(--space-5)">
+            <div class="card-header">
+              <div>
+                <h2 class="card-title">All accounts</h2>
+                <p class="card-subtitle" id="accounts-subtitle">—</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table" id="accounts-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Institution</th>
+                    <th>Country</th>
+                    <th class="num">Balance</th>
+                    <th class="num">In CZK</th>
+                    <th class="num">Rate</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="accounts-tbody">
+                  <tr><td colspan="8" class="empty-state"><div class="empty-state-message">Loading…</div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+    <script src="/scripts/fetchJson.js"></script>
+    <script src="/scripts/pieUi.js"></script>
+    <script src="/scripts/accounts.js"></script>
+  </body>
+</html>

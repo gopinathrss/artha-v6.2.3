@@ -28,6 +28,10 @@ export function num(v: MoneyInput): number {
 /** Deep-clone for `res.json`: every `Decimal` becomes a JSON number. */
 export function serializeJsonBody<T>(body: T): T {
   return JSON.parse(
-    JSON.stringify(body, (_key, value) => (value instanceof Prisma.Decimal ? value.toNumber() : value))
+    JSON.stringify(body, (_key, value) => {
+      if (value instanceof Prisma.Decimal) return value.toNumber()
+      if (typeof value === 'bigint') return Number(value)
+      return value
+    })
   ) as T
 }

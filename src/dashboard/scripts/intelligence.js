@@ -1,7 +1,7 @@
 /**
- * /intelligence — V5 rebuild (Ask Artha chat).
+ * /intelligence — V5 rebuild (Ask PIE chat).
  *
- * POST /api/intelligence/ask {question} → response with aiResponse + keyNumbers.
+ * POST /api/intelligence/ask {question} → { data: { memory: AIMemory, cached? } }; text is memory.aiResponse.
  * GET  /api/intelligence/history       → prior memories (questions/answers).
  *
  * The conversation is in-memory (page-local); persisted memories appear in
@@ -68,6 +68,106 @@
     win.scrollTop = win.scrollHeight
   }
 
+  /** Strip ```json fences and parse Ask PIE JSON shape (answer, topAction, followUp, keyNumbers). */
+  function parseAssistantPayload(raw) {
+    let s = String(raw || '').trim()
+    const fenced = /^```(?:json)?\s*\r?\n?([\s\S]*?)\r?\n?```\s*$/i.exec(s)
+    if (fenced) s = fenced[1].trim()
+    else if (s.startsWith('```')) {
+      s = s.replace(/^```[a-z0-9_-]*\s*\r?\n?/i, '').replace(/\r?\n?```\s*$/i, '').trim()
+    }
+    if (!s.startsWith('{')) return null
+    const start = s.indexOf('{')
+    let depth = 0
+    let end = -1
+    for (let i = start; i < s.length; i++) {
+      if (s[i] === '{') depth++
+      else if (s[i] === '}') {
+        depth--
+        if (depth === 0) {
+          end = i
+          break
+        }
+      }
+    }
+    if (end < 0) return null
+    try {
+      return JSON.parse(s.slice(start, end + 1))
+    } catch {
+      return null
+    }
+  }
+
+  function paragraphsToHtml(text) {
+    return String(text || '')
+      .split(/\n{2,}|\n/)
+      .filter((p) => p.trim().length)
+      .map((p) => `<p class="chat-answer-p">${escapeHtml(p.trim())}</p>`)
+      .join('')
+  }
+
+  /** Rich assistant bubble when API returns JSON (or legacy rows stored as raw JSON). */
+  function appendAssistantFromMemory(mem) {
+    const div = document.createElement('div')
+    div.className = 'chat-msg chat-msg-assistant chat-msg-rich'
+    const raw = String((mem && (mem.aiResponse || mem.answer)) || '').trim()
+    const j = parseAssistantPayload(raw)
+    const rec = mem && mem.recommendations && typeof mem.recommendations === 'object' ? mem.recommendations : {}
+    const topFromRec = typeof rec.topAction === 'string' ? rec.topAction : ''
+    const fuFromRec = Array.isArray(rec.followUp) ? rec.followUp.filter((x) => typeof x === 'string') : []
+
+    if (j && typeof j === 'object') {
+      const answer =
+        typeof j.answer === 'string'
+          ? j.answer
+          : typeof j.response === 'string'
+            ? j.response
+            : typeof j.content === 'string'
+              ? j.content
+              : ''
+      const topAction = typeof j.topAction === 'string' ? j.topAction : topFromRec
+      const followUp = Array.isArray(j.followUp) ? j.followUp.filter((x) => typeof x === 'string') : fuFromRec
+      const conf = j.confidence != null && Number.isFinite(Number(j.confidence)) ? Number(j.confidence) : null
+      const keyNumbers = Array.isArray(j.keyNumbers) ? j.keyNumbers : Array.isArray(mem.keyNumbers) ? mem.keyNumbers : []
+
+      let metricsHtml = ''
+      if (keyNumbers.length) {
+        const rows = keyNumbers
+          .map((row) => {
+            if (row && typeof row === 'object' && !Array.isArray(row)) {
+              return Object.entries(row)
+                .map(([k, v]) => `<span class="chat-kv"><span class="chat-k">${escapeHtml(k)}</span> ${escapeHtml(String(v))}</span>`)
+                .join(' ')
+            }
+            return `<span class="chat-kv">${escapeHtml(JSON.stringify(row))}</span>`
+          })
+          .join('')
+        metricsHtml = `<div class="chat-metrics">${rows}</div>`
+      }
+
+      const followHtml =
+        followUp.length > 0
+          ? `<ul class="chat-followup">${followUp.map((q) => `<li>${escapeHtml(q)}</li>`).join('')}</ul>`
+          : ''
+
+      div.innerHTML = `
+        <div class="chat-answer-rich">
+          ${answer ? `<div class="chat-answer-main">${paragraphsToHtml(answer)}</div>` : `<p class="text-tertiary">No answer text.</p>`}
+          ${topAction ? `<div class="chat-top-action"><span class="chat-top-label">Top action</span> ${escapeHtml(topAction)}</div>` : ''}
+          ${followHtml}
+          ${metricsHtml}
+          ${conf != null ? `<div class="chat-meta">Confidence: ${escapeHtml(String(conf))}%</div>` : ''}
+        </div>`
+    } else {
+      div.innerHTML = raw
+        .split('\n')
+        .map((line) => `<div>${escapeHtml(line)}</div>`)
+        .join('')
+    }
+    win.appendChild(div)
+    win.scrollTop = win.scrollHeight
+  }
+
   function appendThinking() {
     const div = document.createElement('div')
     div.className = 'chat-msg chat-msg-assistant'
@@ -98,8 +198,15 @@
 
       removeThinking()
 
-      const ans = res?.data?.aiResponse || res?.data?.answer || res?.data?.response
-      if (ans) {
+      const mem = res?.data?.memory
+      const ans =
+        (mem && (mem.aiResponse || mem.answer)) ||
+        res?.data?.aiResponse ||
+        res?.data?.answer ||
+        res?.data?.response
+      if (mem && (mem.aiResponse != null || mem.answer != null)) {
+        appendAssistantFromMemory(mem)
+      } else if (ans) {
         appendMsg('assistant', ans)
       } else if (res?.error || res?.success === false) {
         appendMsg(
@@ -133,7 +240,7 @@
       sub.textContent = 'No prior questions'
       list.innerHTML = `
         <div class="empty-state">
-          <div class="empty-state-message">Ask Artha a question to start a history.</div>
+          <div class="empty-state-message">Ask PIE a question to start a history.</div>
         </div>
       `
       return
@@ -173,7 +280,7 @@
           ? `${Number(d.avgGainFollowed90d).toFixed(1)}%`
           : '—'
       el.style.display = 'block'
-      el.innerHTML = `<strong>ARTHA’s recent track record:</strong> ${escapeHtml(adh)} adherence on evaluated rows · ${escapeHtml(
+      el.innerHTML = `<strong>PIE’s recent track record:</strong> ${escapeHtml(adh)} adherence on evaluated rows · ${escapeHtml(
         avg
       )} avg 90d gain (followed). See <a href="/reports#track-record">Reports → Track record</a> for detail.`
     } catch {

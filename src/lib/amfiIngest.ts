@@ -63,7 +63,7 @@ export async function ingestAmfiNavAll(options?: { maxRows?: number }): Promise<
   let text: string
   try {
     const r = await fetch(AMFI_URL, {
-      headers: { 'User-Agent': 'ARTHA/1.0 (personal CFO)' }
+      headers: { 'User-Agent': 'PIE/1.0 (Personal Investment Engine)' }
     })
     if (!r.ok) {
       return { ok: false, lines: 0, parsed: 0, inserted: 0, asOf: asOf.toISOString(), error: `HTTP ${r.status}` }

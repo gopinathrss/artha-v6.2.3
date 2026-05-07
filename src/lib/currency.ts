@@ -1,6 +1,8 @@
 import axios from 'axios'
-import { getPrisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
+import { getProviderDecrypted } from './integrations/store'
+import { envExchangeRateApiKey } from './integrations/env-fallback'
 
 const TIMEOUT = 8000
 const FALLBACK = { EUR: 25.0, USD: 23.0, INR: 0.28 }
@@ -83,8 +85,19 @@ function czkPerInrFromEur(eurCzk: number, inrPerEur: number): number {
   return eurCzk / inrPerEur
 }
 
+async function resolveExchangeRateApiKey(): Promise<string | null> {
+  try {
+    const d = await getProviderDecrypted(realPrisma, 'fx.exchangerate-api')
+    if (d?.secrets?.apiKey) return d.secrets.apiKey
+  } catch {
+    /* */
+  }
+  const k = envExchangeRateApiKey()
+  return k || null
+}
+
 async function fetchExchangeRateApiFallback(czkPerEur: number): Promise<{ USD: number; INR: number } | null> {
-  const key = process.env.EXCHANGE_RATE_API_KEY
+  const key = await resolveExchangeRateApiKey()
   if (!key) return null
   try {
     const urlEurUsd = `https://v6.exchangerate-api.com/v6/${key}/pair/EUR/USD`

@@ -2,4 +2,6 @@ import multer from 'multer'
 import os from 'os'
 import path from 'path'
 
-export const arthaUpload = multer({ dest: path.join(os.tmpdir(), 'artha-uploads') })
+export const pieUpload = multer({ dest: path.join(os.tmpdir(), 'pie-uploads') })
+/** @deprecated Use {@link pieUpload} */
+export const arthaUpload = pieUpload

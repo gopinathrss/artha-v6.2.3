@@ -1,4 +1,5 @@
-import { realPrisma as prisma } from '../prismaProvider'
+import type { Prisma } from '@prisma/client'
+import { getPrisma } from '../prisma'
 import { getPatternsByTags } from '../patterns/loader'
 
 export interface Lesson {
@@ -14,9 +15,11 @@ export interface Lesson {
 
 export async function extractLesson(
   isin: string,
-  context: { fundName: string; planId?: string; rowKey?: string }
+  context: { fundName: string; planId?: string; rowKey?: string },
+  tx?: Prisma.TransactionClient
 ): Promise<Lesson | null> {
-  const stats = await prisma.historicalNavStats.findUnique({ where: { isin } })
+  const db = tx ?? (await getPrisma())
+  const stats = await db.historicalNavStats.findUnique({ where: { isin } })
   if (!stats || stats.dataPointCount < 30) return null
 
   const cagr5y = stats.cagr5y != null ? Number(stats.cagr5y) : null
@@ -49,7 +52,7 @@ export async function extractLesson(
     narrative += ` Per [${patterns[0]!.id}], ${patterns[0]!.title.toLowerCase()}.`
   }
 
-  await prisma.backtestLesson.create({
+  await db.backtestLesson.create({
     data: {
       isin,
       fundName: context.fundName,

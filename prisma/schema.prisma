@@ -33,6 +33,7 @@ model Holding {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
   cashflows         Cashflow[]
+  strategy          FundStrategy?
 }
 
 model Cashflow {
@@ -179,6 +180,16 @@ model Settings {
   timezone             String  @default("Europe/Prague")
   // Onboarding: false until user finishes wizard (banner persists while false)
   onboardingComplete   Boolean @default(false)
+  /** When false (default), planner emits HOLD instead of reduced BUY within 90d of tax-free anniversary. */
+  taxFreeWindowAllowsBuy Boolean @default(false)
+  /** TTL pruning (F11.1): `CronExecution` rows older than this are deleted by weekly job. */
+  cronExecutionRetentionDays     Int @default(90)
+  /** `SystemHealth` rows older than this are pruned. */
+  systemHealthRetentionDays      Int @default(60)
+  /** Terminal email preview rows (not PENDING) older than this are pruned. */
+  emailPreviewRetentionDays      Int @default(30)
+  /** Dismissed `AlertLog` rows with `dismissedAt` older than this are purged (F11.2). */
+  alertLogDismissedRetentionDays Int @default(90)
   autoIngestEmails     Boolean @default(false)
   imapHost             String?
   imapPort             Int?    @default(993)
@@ -186,6 +197,79 @@ model Settings {
   imapPassword         String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+/// V5.2: canonical app preferences (targets, toggles, theme). Legacy `Settings` remains for one release; merge at read time.
+model AppSettings {
+  id        String @id
+  themeMode String @default("AUTO") // AUTO | LIGHT | DARK
+  /** Hero / overview display unit */
+  displayCurrency String @default("CZK") // CZK | EUR | USD | INR
+  /** e.g. ai.anthropic — must match enabled IntegrationProvider */
+  defaultAiProviderKey String?
+  riskProfile          String  @default("MODERATE") // CONSERVATIVE | MODERATE | AGGRESSIVE
+  demoModeEnabled        Boolean @default(false)
+  demoPersona            String  @default("engineer")
+  alertsEnabled          Boolean @default(true)
+  monthlyLetterEnabled   Boolean @default(true)
+  confidenceEnabled      Boolean @default(true)
+  taxFreeWindowAllowsBuy Boolean @default(false)
+  aiDebugLogging         Boolean @default(false)
+  targetEquityPct          Decimal @default(65) @db.Decimal(7, 4)
+  targetBondsPct           Decimal @default(25) @db.Decimal(7, 4)
+  targetCashPct            Decimal @default(10) @db.Decimal(7, 4)
+  targetWealthCzk          Decimal? @db.Decimal(14, 2)
+  targetDate               DateTime?
+  cronExecutionRetentionDays     Int @default(90)
+  systemHealthRetentionDays      Int @default(60)
+  emailPreviewRetentionDays      Int @default(30)
+  alertLogDismissedRetentionDays Int @default(90)
+  onboardingComplete   Boolean @default(false)
+  timezone             String  @default("Europe/Prague")
+  /** UI accent color (CSS color or named token: BLUE | GREEN | PURPLE | AMBER | ROSE). */
+  accentColor          String  @default("BLUE")
+  /** Custom expense/category labels for This Month and Finances (JSON array of strings). */
+  customCategories     Json    @default("[]")
+  autoIngestEmails     Boolean @default(false)
+  /** When true, browser must sign in (password on this row). Editable in Settings. */
+  dashboardAuthEnabled               Boolean @default(false)
+  /** Bcrypt of bootstrap phrase for /login first-time setup; optional if PIE_AUTH_BOOTSTRAP_KEY is set in .env. */
+  dashboardBootstrapKeyHash          String?
+  /** Bcrypt hash when dashboard login is on (never returned by API). */
+  dashboardPasswordHash              String?
+  dashboardPasswordResetTokenSha256  String?
+  dashboardPasswordResetExpires      DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model IntegrationProvider {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  category  String
+  label     String
+  config    Json     @default("{}")
+  secrets   Json     @default("{}")
+  enabled   Boolean  @default(false)
+  isDefault Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, enabled])
+}
+
+model IntegrationStatus {
+  id          String   @id @default(cuid())
+  providerKey String
+  status      String
+  source      String
+  message     String?
+  metadata    Json?
+  latencyMs   Int?
+  testedAt    DateTime @default(now())
+
+  @@index([providerKey, testedAt])
 }
 
 model EmailIngestionPreview {
@@ -370,7 +454,42 @@ model AllocationPlan {
   planSource             String? // MANUAL|AUTO_CRON
   createdAt              DateTime                @default(now())
   recommendationOutcomes RecommendationOutcome[]
+  rows                   AllocationPlanRow[]
   @@index([monthYear, status])
+}
+
+enum PlanRowKind {
+  BUY
+  SELL
+  HOLD
+  RESERVE
+}
+
+model AllocationPlanRow {
+  id                String         @id @default(cuid())
+  planId            String
+  plan              AllocationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  type              PlanRowKind
+  orderIndex        Int
+  amountCzk         Decimal        @db.Decimal(18, 2)
+  reason            String         @db.Text
+  isin              String?
+  destination       String?
+  source            String?
+  sellSubtype       String?
+  taxImpactCzk      Decimal?       @db.Decimal(18, 2)
+  currentValueCzk   Decimal?       @db.Decimal(18, 2)
+  holdReason        String?
+  daysToAction      Int?
+  executionStatus   String         @default("PENDING")
+  executedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([planId, orderIndex])
+  @@index([planId, orderIndex])
+  @@index([type])
+  @@index([isin])
 }
 
 model SipExecution {
@@ -594,4 +713,126 @@ model GeneratedReport {
   title        String?
   htmlContent  String?  @db.Text
   createdAt    DateTime @default(now())
+}
+
+enum StrategyStatus {
+  PROPOSED
+  APPROVED
+  MONITORING
+  PAUSED
+  COMPLETED
+  REJECTED
+  SUPERSEDED
+}
+
+enum StrategyConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SignalType {
+  TAX_WINDOW_REACHED
+  ALLOCATION_DRIFT
+  PROFIT_CAP_PCT
+  PROFIT_CAP_CZK
+  PROFIT_CAP_APPROACH
+  DRAWDOWN_RISK
+  DRAWDOWN_WARNING
+  REVIEW_DATE
+  STRATEGY_COMPLETE
+}
+
+enum SignalStrength {
+  STRONG_SELL
+  SOFT_SELL
+  REVIEW
+  HOLD
+  WARNING
+}
+
+model FundStrategy {
+  id            String             @id @default(cuid())
+  holdingId     String             @unique
+  holding       Holding            @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+
+  // Status
+  status        StrategyStatus     @default(PROPOSED)
+  confidence    StrategyConfidence
+  proposedAt    DateTime           @default(now())
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+  completedAt   DateTime?
+
+  // Position sizing (D1)
+  allocationPct      Decimal  @db.Decimal(5, 2)
+  allocationSleve    String
+  absoluteCapCzk     Decimal  @db.Decimal(18, 2)
+  monthlySipCzk      Decimal  @db.Decimal(18, 2)
+  monthsToTarget     Int
+  reviewDate         DateTime
+
+  // Profit cap (D2 — both, trigger whichever first)
+  profitCapPct           Decimal  @db.Decimal(6, 2)
+  profitCapCzk           Decimal  @db.Decimal(18, 2)
+  profitCapAdjustedAt    DateTime?
+  profitCapAdjustedFrom  Decimal? @db.Decimal(18, 2)
+
+  // Drawdown guardrail
+  drawdownGuardrailPct   Decimal  @db.Decimal(5, 2)
+  drawdownHistoricalMax  Decimal? @db.Decimal(5, 2)
+
+  // Exit plan
+  taxFreeDate            DateTime?
+  preferTaxFreeExit      Boolean  @default(true)
+
+  // Reasoning
+  proposalReasoning      String   @db.Text
+  keyMetrics             Json
+
+  // Approval
+  approvedBy             String?  @default("user")
+  approvalNote           String?
+
+  signals                StrategySignal[]
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([holdingId])
+  @@index([status])
+}
+
+model StrategySignal {
+  id            String         @id @default(cuid())
+  strategyId    String
+  strategy      FundStrategy   @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  holdingId     String
+
+  signalType    SignalType
+  strength      SignalStrength
+  firedAt       DateTime       @default(now())
+
+  // Signal metrics at time of firing
+  currentValueCzk    Decimal?  @db.Decimal(18, 2)
+  costBasisCzk       Decimal?  @db.Decimal(18, 2)
+  gainPct            Decimal?  @db.Decimal(6, 2)
+  drawdownPct        Decimal?  @db.Decimal(6, 2)
+  allocationPct      Decimal?  @db.Decimal(5, 2)
+
+  // Decision reasoning
+  reasoning          String    @db.Text
+  crossCheckResults  Json
+
+  // User action
+  acknowledgedAt     DateTime?
+  userAction         String?
+  userNote           String?
+
+  createdAt          DateTime  @default(now())
+
+  @@index([strategyId])
+  @@index([holdingId])
+  @@index([signalType])
+  @@index([firedAt])
 }

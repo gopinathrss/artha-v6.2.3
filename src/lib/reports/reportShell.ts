@@ -30,7 +30,7 @@ export function wrapReportHtml(title: string, inner: string): string {
   <div class="wrap">
     <p class="no-print"><a href="javascript:window.print()">Print / PDF</a></p>
     <h1>${esc(title)}</h1>
-    <div class="muted">ARTHA smart report · generated ${esc(new Date().toISOString())}</div>
+    <div class="muted">PIE smart report · generated ${esc(new Date().toISOString())}</div>
     ${inner}
   </div>
 </body>

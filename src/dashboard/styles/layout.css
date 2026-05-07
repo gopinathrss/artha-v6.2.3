@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════
-   ARTHA V5 — Layout
+   PIE (Personal Investment Engine) — Layout
    ═══════════════════════════════════════════════════════════════════ */
 
 html,
@@ -41,18 +41,30 @@ body {
 }
 
 .sidebar-brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
-  background: var(--color-accent-base);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-md);
-  letter-spacing: -0.02em;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .sidebar-brand-name {
@@ -60,6 +72,17 @@ body {
   font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
   color: var(--color-text-primary);
+  line-height: 1.15;
+}
+
+.sidebar-brand-sub {
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  line-height: 1.2;
+  max-width: 11rem;
 }
 
 .sidebar-section {

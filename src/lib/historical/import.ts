@@ -80,7 +80,7 @@ async function fetchYahooDaily(isin: string): Promise<Array<{ date: Date; nav: n
   const period1 = Math.floor((Date.now() - MONTHLY_HISTORY_YEARS * 365 * 86400000) / 1000)
   const period2 = Math.floor(Date.now() / 1000)
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?period1=${period1}&period2=${period2}&interval=1d`
-  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ARTHA/5)' } })
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PIE/5)' } })
   if (!res.ok) throw new Error(`Yahoo HTTP ${res.status}`)
   const json = (await res.json()) as {
     chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<{ close?: (number | null)[] }> } }> }

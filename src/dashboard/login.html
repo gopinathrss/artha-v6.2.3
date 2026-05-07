@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PIE — Sign in</title>
+    <link rel="icon" href="/assets/pie-logo.svg" type="image/svg+xml" />
+    <script src="/scripts/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
+    <link rel="stylesheet" href="/styles/auth-login.css" />
+  </head>
+  <body class="auth-page">
+    <div class="auth-bg-pattern" aria-hidden="true"></div>
+    <main class="auth-main">
+      <div class="auth-card-v2">
+        <div class="auth-card-accent" aria-hidden="true"></div>
+        <div class="auth-tabs" role="tablist" aria-label="Authentication">
+          <span class="auth-tab auth-tab--active" id="tab-primary">Sign in</span>
+          <span class="auth-tab auth-tab--muted auth-tab--disabled" title="PIE is single-user on this device">Sign up</span>
+          <a class="auth-tab auth-tab--link" href="/forgot-password.html">Reset</a>
+        </div>
+
+        <div class="auth-card-body">
+          <div class="auth-brand">
+            <div class="auth-brand-mark">
+              <img src="/assets/pie-logo.svg" alt="" width="40" height="40" />
+            </div>
+            <div class="auth-brand-text">
+              <div class="auth-brand-title">PIE</div>
+              <div class="auth-brand-sub">Personal Investment Engine</div>
+            </div>
+          </div>
+
+          <div id="auth-disabled" style="display: none" class="callout callout-info">
+            Dashboard login is <strong>off</strong> (enable under <strong>Settings → App preferences → Dashboard login</strong>).
+            <p style="margin-top: var(--space-3)"><a class="btn btn-primary btn-sm" href="/">Open overview</a></p>
+          </div>
+
+          <div id="auth-forms" style="display: none">
+            <div id="bootstrap-panel" style="display: none" class="auth-form-stack">
+              <header class="auth-panel-head">
+                <h2 class="auth-panel-title">First-time setup</h2>
+                <div class="auth-panel-rule" aria-hidden="true"></div>
+              </header>
+              <p class="auth-panel-lead form-field-help">
+                Set a strong password for this PIE instance. Enter the <strong>bootstrap phrase</strong> from
+                <strong>Settings → App preferences</strong> (saved hashed), or the value of
+                <code>PIE_AUTH_BOOTSTRAP_KEY</code> from your server <code>.env</code>.
+              </p>
+              <div class="form-field auth-field-wrap">
+                <label class="form-field-label auth-label-caps" for="boot-key">Bootstrap key</label>
+                <div class="auth-input-shell">
+                  <input id="boot-key" type="password" class="form-field-input" autocomplete="off" placeholder="Bootstrap key" />
+                  <span class="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15.5 7.5L18.5 10.5C19.33 11.33 20 12.67 20 14v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2c0-1.33.67-2.67 1.5-3.5L9.5 7.5" />
+                      <path d="M12 12v-1a3 3 0 1 0-3-3" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <div class="form-field auth-field-wrap">
+                <label class="form-field-label auth-label-caps" for="boot-pw">New password</label>
+                <div class="auth-input-shell">
+                  <input id="boot-pw" type="password" class="form-field-input" autocomplete="new-password" placeholder="New password" />
+                  <span class="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="5" y="11" width="14" height="10" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <button type="button" class="auth-btn-primary" id="btn-bootstrap">Create password &amp; sign in</button>
+            </div>
+
+            <div id="login-panel" style="display: none" class="auth-form-stack">
+              <header class="auth-panel-head">
+                <h2 class="auth-panel-title">Welcome back</h2>
+                <div class="auth-panel-rule" aria-hidden="true"></div>
+              </header>
+              <p class="auth-panel-lead form-field-help">Enter your dashboard password to continue.</p>
+              <div class="form-field auth-field-wrap">
+                <label class="form-field-label auth-label-caps" for="login-pw">Password</label>
+                <div class="auth-input-shell">
+                  <input id="login-pw" type="password" class="form-field-input" autocomplete="current-password" placeholder="Password" />
+                  <span class="auth-field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="5" y="11" width="14" height="10" rx="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </span>
+                </div>
+              </div>
+              <button type="button" class="auth-btn-primary" id="btn-login">Login</button>
+              <p class="auth-secondary form-field-help">
+                <a href="/forgot-password.html">Forgot password?</a> — we email a link to your saved <strong>Alert email</strong>.
+              </p>
+            </div>
+            <p class="auth-msg" id="auth-msg" aria-live="polite"></p>
+          </div>
+
+          <footer class="auth-footer-note">PIE v6 · local-first · secrets encrypted on this device.</footer>
+        </div>
+      </div>
+    </main>
+    <script src="/scripts/login.js"></script>
+  </body>
+</html>

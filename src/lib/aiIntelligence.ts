@@ -1,13 +1,16 @@
 import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 import type { AIMemory } from '@prisma/client'
-import { getPrisma } from './prisma'
+import { getPrisma, realPrisma } from './prisma'
 import { getPatternsByTags } from './patterns/loader'
 import { projectFutureValue, calculateRequiredSIP } from './calculations'
 import { findBestAlternative, loadAllLibrary, scoreInstrument } from './instrumentLibrary'
 import { getBestNREFDRate, getRbiRepoRate } from './indiaIntelligence'
 import { num } from './money'
 import { ensureRowType } from './allocationRowTypes'
+import { readPlanAllocationsOrEmpty } from './planAllocationsRead'
+import { getSecret } from './secrets'
+import { envAnthropicApiKey, envAnthropicModel, envOpenaiApiKey } from './integrations/env-fallback'
 import type { BuyRow, SellRow } from './allocationRowTypes'
 
 async function logAiSystemHealth(opts: {
@@ -40,10 +43,14 @@ async function maybeNotifyAiDegraded() {
   }
 }
 
-function calculateBlendedReturn(portfolio: any): number {
+function calculateBlendedReturn(portfolio: any, riskProfile?: string): number {
   const a = portfolio?.allocation
   if (!a) return 8
-  return (a.equityPct / 100) * 13 + (a.bondsPct / 100) * 6.5 + (a.cashPct / 100) * 5
+  const rp = (riskProfile || 'MODERATE').toUpperCase()
+  const eqW = rp === 'AGGRESSIVE' ? 14 : rp === 'CONSERVATIVE' ? 11 : 13
+  const bdW = rp === 'AGGRESSIVE' ? 7 : rp === 'CONSERVATIVE' ? 6 : 6.5
+  const caW = rp === 'AGGRESSIVE' ? 4.5 : rp === 'CONSERVATIVE' ? 5.5 : 5
+  return (a.equityPct / 100) * eqW + (a.bondsPct / 100) * bdW + (a.cashPct / 100) * caW
 }
 
 async function buildExecutionHistoryAppendix(): Promise<string> {
@@ -63,7 +70,7 @@ async function buildExecutionHistoryAppendix(): Promise<string> {
   const recentSkips: Array<{ date: string; fund: string; amount: number; reason: string }> = []
 
   for (const plan of recentPlans) {
-    const rawRows = Array.isArray(plan.allocations) ? (plan.allocations as unknown[]) : []
+    const rawRows = await readPlanAllocationsOrEmpty(plan)
     for (const raw of rawRows) {
       const row = ensureRowType(raw)
       if (row.type === 'HOLD') continue
@@ -120,6 +127,21 @@ ${patterns.length > 0 ? '\n   PATTERN DETECTED:\n' + patterns.map((p) => `    * 
   `
 }
 
+function formatXirrForAiPrompt(x: Record<string, unknown> | null | undefined): string {
+  if (!x) return 'IRR: context unavailable.'
+  const st = String(x.displayState || '')
+  if (st === 'OK' && x.displayValue != null && Number.isFinite(Number(x.displayValue))) {
+    return `IRR (12+ mo cashflow, money-weighted): ${Number(x.displayValue).toFixed(2)}%.`
+  }
+  if (st === 'INSUFFICIENT_HISTORY') {
+    return `IRR: not yet available — need ${Number(x.minMonthsForDisplay ?? 12)} months of cashflow history (${Number(x.monthsOfHistory ?? 0)} months recorded).`
+  }
+  if (st === 'ESTIMATE_HIDDEN') {
+    return 'IRR: headline hidden — short-horizon proxy not shown (unstable vs a full-year money-weighted rate).'
+  }
+  return 'IRR: not available for this prompt context.'
+}
+
 export function classifyQueryTags(query: string): string[] {
   const tags: string[] = []
   const q = query.toLowerCase()
@@ -144,7 +166,7 @@ export async function buildFullContext(
   const parts = [
     `NetWorth CZK: ${nw.totalCzk}. EUR equiv: ${nw.totalEur}.`,
     `Czech funds: ${nw.czechFundsCzk}. India total: ${nw.indiaTotal}.`,
-    `XIRR: ${JSON.stringify(portfolio?.xirr || {})}.`,
+    `${formatXirrForAiPrompt(portfolio?.xirr)} InflowWeightedGain: ${nw.inflowWeightedGainPct ?? 'n/a'}% (Czech fund NAV excl. exited minus net holding cashflows, over those inflows; not a time-weighted return).`,
     `Allocation: ${JSON.stringify(portfolio?.allocation || {})}.`,
     `RBI repo rate: ${Number(india.rbi).toFixed(2)}% (verified ${india.rbiVerifiedDays}d ago). Best NRE 1yr: ${india.best1yr}%.`,
     `DTAA: ${JSON.stringify(india.dtaa)}.`,
@@ -199,7 +221,11 @@ export async function buildFullContext(
 
     wisdom = patternsSection + outcomesSection
 
-    if (process.env.ARTHA_DEBUG_AI_CONTEXT === '1') {
+    const { getMergedSettings } = await import('./appSettingsMerge')
+    const dbg =
+      (await getMergedSettings(realPrisma).catch(() => null))?.aiDebugLogging ||
+      process.env.PIE_DEBUG_AI_CONTEXT === '1' || process.env.ARTHA_DEBUG_AI_CONTEXT === '1'
+    if (dbg) {
       console.log('[buildFullContext] wisdom appendix:', wisdom.slice(0, 2000))
     }
   }
@@ -216,36 +242,58 @@ function detectQuestionType(q: string): string {
   return 'GENERAL'
 }
 
-export function analyzeRetirement(portfolio: any) {
-  const currentAge = 31
-  const targetAge = 50
-  const yearsLeft = targetAge - currentAge
-  const blended = calculateBlendedReturn(portfolio)
+export async function analyzeRetirement(portfolio: any) {
+  const prisma = await getPrisma()
+  const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
+  const { getMergedSettings } = await import('./appSettingsMerge')
+  const merged = await getMergedSettings(realPrisma)
+  const dob = profile?.dateOfBirth ? new Date(profile.dateOfBirth as Date) : null
+  const currentAge = dob
+    ? Math.max(18, Math.floor((Date.now() - dob.getTime()) / (365.25 * 86400000)))
+    : 35
+  const targetAge = profile?.retirementAge ?? 60
+  const yearsLeft = Math.max(1, targetAge - currentAge)
+  const blended = calculateBlendedReturn(portfolio, merged.riskProfile)
   const total = portfolio?.netWorth?.totalCzk ?? 0
-  const sip = Array.isArray(portfolio?.holdings)
-    ? (portfolio.holdings as any[]).reduce((s, h) => s + num(h?.monthlySipCzk || 0), 0) || 32000
-    : 32000
+  const sipFromHoldings = Array.isArray(portfolio?.holdings)
+    ? (portfolio.holdings as { monthlySipCzk?: unknown }[]).reduce((s, h) => {
+        const v = h?.monthlySipCzk
+        return s + (typeof v === 'number' || typeof v === 'string' ? num(v as never) : 0)
+      }, 0)
+    : 0
+  const sip =
+    sipFromHoldings > 0
+      ? sipFromHoldings
+      : Math.max(0, num(profile?.monthlyNetIncomeCzk) * 0.25 || num(profile?.retirementMonthlyExpense) * 0.5)
   const projected = projectFutureValue(total, blended, yearsLeft, sip)
   const monthlyPassive = (projected * 0.04) / 12
+  const expenses = num(profile?.retirementMonthlyExpense) || num(profile?.monthlyNetIncomeCzk) * 0.5 || 0
   return {
     currentNetWorthCzk: total,
     yearsToRetirement: yearsLeft,
     projectedAtRetirement: projected,
     monthlyPassiveIncome: Math.round(monthlyPassive),
-    currentMonthlyExpenses: 32000,
-    isOnTrack: monthlyPassive >= 32000,
-    shortfallCzk: Math.max(0, 32000 - monthlyPassive) * 12 * 20,
+    currentMonthlyExpenses: Math.round(expenses),
+    isOnTrack: expenses > 0 ? monthlyPassive >= expenses : false,
+    shortfallCzk: expenses > 0 ? Math.max(0, expenses - monthlyPassive) * 12 * 20 : 0,
     requiredSIP: calculateRequiredSIP(total, projected * 1.5, blended, yearsLeft)
   }
 }
 
-export function analyzeProperty(portfolio: any) {
-  const propertyPriceCzk = 5_000_000
+export async function analyzeProperty(portfolio: any) {
+  const prisma = await getPrisma()
+  const profile = await prisma.userProfile.findUnique({ where: { id: 'default' } })
+  const { getMergedSettings } = await import('./appSettingsMerge')
+  const merged = await getMergedSettings(realPrisma)
+  const propertyPriceCzk =
+    merged.targetWealthCzk != null && merged.targetWealthCzk > 0
+      ? merged.targetWealthCzk
+      : Math.max(3_000_000, num(profile?.monthlyNetIncomeCzk) * 120)
   const downPaymentPct = 0.2
   const downPaymentNeeded = propertyPriceCzk * downPaymentPct
   const nw = portfolio?.netWorth || {}
   const liquidSavings = num(nw.czechSavingsCzk || 0) + num(nw.czechPensionCzk || 0)
-  const monthlyTowardDown = 15000
+  const monthlyTowardDown = Math.max(5000, num(profile?.monthlyNetIncomeCzk) * 0.2)
   const monthsToDown = Math.max(0, Math.round((downPaymentNeeded - liquidSavings) / monthlyTowardDown))
   const mortgageMonthly = Math.round(((propertyPriceCzk - downPaymentNeeded) * 0.055) / 12)
   return {
@@ -285,6 +333,32 @@ export function analyzeMonthlyAction(portfolio: any) {
   return { priority: 'REBALANCE', detail: portfolio?.allocation }
 }
 
+function stripAiJsonFences(raw: string): string {
+  let s = raw.trim()
+  const fenced = /^```(?:json)?\s*\r?\n?([\s\S]*?)\r?\n?```\s*$/i.exec(s)
+  if (fenced) return fenced[1].trim()
+  if (s.startsWith('```')) {
+    s = s.replace(/^```[a-z0-9_-]*\s*\r?\n?/i, '')
+    s = s.replace(/\r?\n?```\s*$/i, '')
+  }
+  return s.trim()
+}
+
+function extractBalancedJson(s: string): string | null {
+  const start = s.indexOf('{')
+  if (start < 0) return null
+  let depth = 0
+  for (let i = start; i < s.length; i++) {
+    const c = s[i]
+    if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) return s.slice(start, i + 1)
+    }
+  }
+  return null
+}
+
 function parseAIResponse(text: string | null | undefined): {
   answer: string
   keyNumbers: any[]
@@ -292,28 +366,52 @@ function parseAIResponse(text: string | null | undefined): {
   confidence: number
   followUp: string[]
 } {
+  const fallback = (msg: string) => ({
+    answer: msg,
+    keyNumbers: [] as any[],
+    topAction: 'Review allocation and next tax event.',
+    confidence: 65,
+    followUp: [] as string[]
+  })
   if (!text) {
     return { answer: 'No content', keyNumbers: [], topAction: '', confidence: 0, followUp: [] }
   }
+  const cleaned = stripAiJsonFences(text)
+  let j: Record<string, unknown>
   try {
-    const j = JSON.parse(text)
-    return {
-      answer: String(j.answer || text),
-      keyNumbers: j.keyNumbers || [],
-      topAction: j.topAction || '',
-      confidence: Math.min(100, Math.max(0, Number(j.confidence) || 70)),
-      followUp: Array.isArray(j.followUp) ? j.followUp : []
-    }
+    j = JSON.parse(cleaned) as Record<string, unknown>
   } catch {
-    return { answer: text, keyNumbers: [], topAction: 'Review allocation and next tax event.', confidence: 65, followUp: [] }
+    const sub = extractBalancedJson(cleaned)
+    if (!sub) return fallback(text)
+    try {
+      j = JSON.parse(sub) as Record<string, unknown>
+    } catch {
+      return fallback(text)
+    }
+  }
+  const pickAnswer = (): string => {
+    const a = j.answer ?? j.response ?? j.content ?? j.summary ?? j.message
+    if (typeof a === 'string') return a
+    if (Array.isArray(a) && a.every((x) => typeof x === 'string')) return (a as string[]).join('\n')
+    if (a != null && typeof a === 'object') return JSON.stringify(a)
+    return typeof text === 'string' ? text : ''
+  }
+  const answerStr = pickAnswer().trim() || 'No structured answer returned.'
+  const kn = j.keyNumbers
+  const fu = j.followUp
+  return {
+    answer: answerStr,
+    keyNumbers: Array.isArray(kn) ? kn : [],
+    topAction: typeof j.topAction === 'string' ? j.topAction : '',
+    confidence: Math.min(100, Math.max(0, Number(j.confidence) || 70)),
+    followUp: Array.isArray(fu) ? fu.filter((x): x is string => typeof x === 'string') : []
   }
 }
 
-export type AskKeys = { anthropicKey: string; openaiKey: string }
+export type AskKeys = { anthropicKey?: string; openaiKey?: string }
 
-export async function askArtha(question: string, portfolio: any, keys: AskKeys): Promise<AIMemory> {
+export async function askPie(question: string, portfolio: any, keys?: AskKeys): Promise<AIMemory> {
   const prisma = await getPrisma()
-  const { anthropicKey, openaiKey } = keys
   const library = await loadAllLibrary()
   const rbiInfo = getRbiRepoRate()
   const rbi = rbiInfo.value
@@ -327,12 +425,12 @@ export async function askArtha(question: string, portfolio: any, keys: AskKeys):
     { userQuery: question }
   )
   let pre: any = {}
-  if (type === 'RETIREMENT') pre = analyzeRetirement(portfolio)
-  if (type === 'PROPERTY') pre = analyzeProperty(portfolio)
+  if (type === 'RETIREMENT') pre = await analyzeRetirement(portfolio)
+  if (type === 'PROPERTY') pre = await analyzeProperty(portfolio)
   if (type === 'FEES') pre = await analyzeFees(portfolio)
   if (type === 'MONTHLY_ACTION') pre = analyzeMonthlyAction(portfolio)
 
-  const systemPrompt = `You are ARTHA, a personal CFO and financial intelligence system
+  const systemPrompt = `You are PIE (Personal Investment Engine), a personal CFO and financial intelligence system
 for an Indian professional living in Czech Republic.
 CRITICAL RULES:
 - Every number you must derive from the context and pre-computed analysis only
@@ -346,8 +444,40 @@ When advising, you MUST:
   const userPrompt = `PORTFOLIO CONTEXT:\n${context}\n\nPRE-COMPUTED:\n${JSON.stringify(pre)}\n\nQUESTION: ${question}\n\nRespond as raw JSON: {"answer":"","keyNumbers":[],"topAction":"","confidence":70,"followUp":[]}`
 
   const noKeyMsg =
-    'Set ANTHROPIC_API_KEY (recommended) or OpenAI API key in Settings -> Integrations (or env OPENAI_API_KEY).'
-  if (!anthropicKey && !openaiKey) {
+    'Configure an enabled AI provider under Integrations (or set legacy OPENAI_API_KEY / ANTHROPIC_API_KEY once for bootstrap).'
+
+  let textOut: string | undefined
+  try {
+    const { bootstrapIntegrationsFromEnvIfNeeded } = await import('./integrations/store')
+    await bootstrapIntegrationsFromEnvIfNeeded()
+    const { aiRouterAsk } = await import('./integrations/ai/router')
+    const out = await aiRouterAsk({
+      system: systemPrompt + '\nRespond as raw JSON only.',
+      user: userPrompt,
+      max_tokens: 800,
+      temperature: 0.3
+    })
+    textOut = out.text
+    await logAiSystemHealth({
+      checkName: 'AI_CALL_SUCCESS',
+      status: 'PASS',
+      message: `${out.provider} OK`,
+      metadata: { provider: out.provider, model: out.model, inputTokens: out.inputTokens, outputTokens: out.outputTokens }
+    })
+  } catch {
+    /* fall through to legacy keys */
+  }
+
+  const anthropicKey = (keys?.anthropicKey || envAnthropicApiKey()).trim()
+  let openaiKey = (keys?.openaiKey || envOpenaiApiKey()).trim()
+  try {
+    const sk = await getSecret('openaiApiKey')
+    if (sk) openaiKey = sk.trim()
+  } catch {
+    /* plaintext blocked */
+  }
+
+  if (!textOut && !anthropicKey && !openaiKey) {
     return prisma.aIMemory.create({
       data: {
         questionAsked: question,
@@ -361,11 +491,10 @@ When advising, you MUST:
     })
   }
 
-  const modelClaude = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022'
+  const modelClaude = envAnthropicModel()
   const modelOpenAI = 'gpt-4o'
 
-  let textOut: string | undefined
-  if (anthropicKey) {
+  if (!textOut && anthropicKey) {
     try {
       const ac = new Anthropic({ apiKey: anthropicKey })
       const msg = await ac.messages.create({
@@ -460,7 +589,7 @@ When advising, you MUST:
         questionType: type,
         portfolioSnapshot: portfolio as any,
         aiResponse:
-          'AI call failed. Check ANTHROPIC_API_KEY or OpenAI key, network, and model availability. Primary: Claude; fallback: GPT-4o.',
+          'AI call failed. Check Integrations AI providers, legacy API keys, network, and model availability.',
         keyNumbers: [] as any,
         recommendations: {} as any,
         confidenceScore: 0
@@ -481,6 +610,9 @@ When advising, you MUST:
     }
   })
 }
+
+/** @deprecated Use {@link askPie} */
+export const askArtha = askPie
 
 export async function lastMemories(n: number) {
   const prisma = await getPrisma()

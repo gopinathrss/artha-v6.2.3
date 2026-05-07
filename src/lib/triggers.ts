@@ -54,16 +54,16 @@ export async function saveDailySnapshotFromPortfolio(data: any) {
   const day = new Date()
   day.setHours(0, 0, 0, 0)
   const a = data.allocation || { equityPct: 0, bondsPct: 0, cashPct: 0 }
-  const gainPct = nw.gainPct ?? 0
+  const gainPct = nw.inflowWeightedGainPct ?? 0
   await prisma.snapshot.upsert({
     where: { date: day },
     update: {
       netWorthCzk: nw.totalCzk,
       netWorthEur: nw.totalEur ?? 0,
       investedCzk: data.totalInvested ?? 0,
-      gainCzk: nw.gainCzk ?? 0,
+      gainCzk: nw.inflowWeightedGainCzk ?? 0,
       gainPct,
-      xirr: data.xirr?.value,
+      xirr: data.xirr?.displayValue,
       xirrIsEstimate: data.xirr?.isEstimate !== false,
       equityPct: a.equityPct,
       bondsPct: a.bondsPct,
@@ -76,9 +76,9 @@ export async function saveDailySnapshotFromPortfolio(data: any) {
       netWorthCzk: nw.totalCzk,
       netWorthEur: nw.totalEur ?? 0,
       investedCzk: data.totalInvested ?? 0,
-      gainCzk: nw.gainCzk ?? 0,
+      gainCzk: nw.inflowWeightedGainCzk ?? 0,
       gainPct,
-      xirr: data.xirr?.value,
+      xirr: data.xirr?.displayValue,
       xirrIsEstimate: data.xirr?.isEstimate !== false,
       equityPct: a.equityPct,
       bondsPct: a.bondsPct,
@@ -203,7 +203,7 @@ export async function deliverAlert(
   const { sendEmail } = await import('./emailService')
   await sendEmail(
     settings.alertEmail,
-    `[ARTHA] ${trigger.title}`,
+    `[PIE] ${trigger.title}`,
     `<p><strong>${trigger.title}</strong></p><p>${trigger.message}</p><p><small>${trigger.triggerType}</small></p>`
   ).catch(() => {})
   if (trigger.id) {
@@ -223,13 +223,13 @@ export async function generateAndSendMonthlyLetter(portfolio: any, settings: any
   h1{font-family:'Playfair Display',Georgia,serif;color:#0F1E3C}
   .num{font-family:Georgia,serif;color:#B8922A;font-size:28px}
   </style></head><body>
-  <h1>ARTHA — ${monthYear}</h1>
+  <h1>PIE — ${monthYear}</h1>
   <p>Net worth: <span class="num">${Math.round(portfolio?.netWorth?.totalCzk ?? 0).toLocaleString('cs-CZ')}</span> CZK</p>
-  <p>Automated letter from your local Artha instance.</p>
+  <p>Automated letter from your local PIE instance.</p>
   </body></html>`
 
   if (settings?.alertEmail) {
-    await sendEmail(settings.alertEmail, `ARTHA monthly — ${monthYear}`, html)
+    await sendEmail(settings.alertEmail, `PIE monthly — ${monthYear}`, html)
   }
   const key = new Date().toISOString().slice(0, 7)
   const prisma = await getPrisma()
@@ -251,5 +251,5 @@ export async function generateAndSendMonthlyLetter(portfolio: any, settings: any
 export async function runWeeklyBackup() {
   // Placeholder: in production, dump DB or copy files
   // eslint-disable-next-line no-console
-  console.log('[ARTHA] Weekly backup placeholder (configure backup target separately)')
+  console.log('[PIE] Weekly backup placeholder (configure backup target separately)')
 }

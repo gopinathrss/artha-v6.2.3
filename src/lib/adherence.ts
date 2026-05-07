@@ -1,5 +1,6 @@
 import { getPrisma } from './prisma'
 import { isAdherenceRow } from './allocationRowTypes'
+import { readPlanAllocationsOrEmpty } from './planAllocationsRead'
 
 function lastNMonthYearLabels(n: number): string[] {
   const out: string[] = []
@@ -46,7 +47,8 @@ export async function computeOnTrackStreakMax(): Promise<number> {
       orderBy: { generatedAt: 'desc' }
     })
     if (!plan) break
-    const c = countRowStates(plan.allocations as unknown)
+    const parsed = await readPlanAllocationsOrEmpty(plan)
+    const c = countRowStates(parsed as unknown)
     if (c.total < 1) break
     if (c.pending > 0) break
     streak += 1
@@ -88,8 +90,8 @@ export async function computeAdherenceStats(months: number) {
       orderBy: { generatedAt: 'desc' }
     })
     if (!plan) continue
-    const arr = plan.allocations as unknown
-    if (!Array.isArray(arr)) continue
+    const arr = await readPlanAllocationsOrEmpty(plan)
+    if (arr.length === 0) continue
     for (const raw of arr) {
       if (!isAdherenceRow(raw)) continue
       const row = raw as Row

@@ -44,6 +44,12 @@ export function mergedAccountShapeB(
 ): { currency: string; balanceLocal: Prisma.Decimal; balanceCzkSnapshot: Prisma.Decimal | null } {
   const currency = String(patch.currency ?? prev.currency)
   const balanceLocal = patch.balanceLocal !== undefined ? d(patch.balanceLocal as MoneyInput) : d(prev.balanceLocal)
+  const cur = (currency || 'CZK').toUpperCase().trim()
+  // CZK: always align snapshot to local on write (ignores stale DB / client snapshot mismatches).
+  if (cur === 'CZK') {
+    const snapshot = balanceCzkSnapshotForWrite(currency, balanceLocal, balanceLocal)
+    return { currency, balanceLocal, balanceCzkSnapshot: snapshot }
+  }
   const snapInPatch = Object.prototype.hasOwnProperty.call(patch, 'balanceCzkSnapshot')
   const clientSnap = snapInPatch ? (patch.balanceCzkSnapshot as MoneyInput | null) : (prev.balanceCzkSnapshot as MoneyInput | null)
   const snapshot = balanceCzkSnapshotForWrite(currency, balanceLocal, clientSnap)

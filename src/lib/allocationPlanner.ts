@@ -1,6 +1,11 @@
 import type { AllocationPlan, ExpenseCommitment, Holding, IncomeEvent, UpcomingEvent, UserProfile } from '@prisma/client'
 import type { IndiaMutualFund } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { getPrisma, realPrisma } from './prisma'
+import { assertValidMonthYear } from './allocationPlanGuards'
+import { parseAllocationsJsonStrict, parsePlanAllocations } from './allocationPlanSchema'
+import { replacePlanRows } from './allocationPlanRows'
+import type { PlanRowClient } from './allocationPlanRows'
 import { num } from './money'
 import {
   calculateAllocation,
@@ -17,6 +22,7 @@ import { detectRebalanceSells } from './sellEngine/rebalanceDrift'
 import { detectFdMaturityActions } from './sellEngine/fdMaturity'
 import { generateHoldRows } from './sellEngine/holdReasoning'
 import type { AllocationRow, BuyRow, HoldRow, SellRow } from './allocationRowTypes'
+import { loadApprovedStrategies, type StrategyMapValue } from './intelligence/strategyContext'
 
 export type {
   AllocationRow,
@@ -66,6 +72,21 @@ function computeContinuityMeta(
     droppedFundsCount: droppedFunds.length,
     droppedFunds
   }
+}
+
+function buildStrategyReason(
+  strategy: StrategyMapValue,
+  holding: { name?: string | null }
+): string {
+  const name = String(holding.name || 'Fund').trim() || 'Fund'
+  const low =
+    String(strategy.confidence || '').toUpperCase() === 'LOW'
+      ? ' (LOW confidence — limited history)'
+      : ''
+  return (
+    `${name}: Approved strategy — month ${strategy.currentMonth} of ${strategy.monthsToTarget}, ` +
+    `target ${Math.round(strategy.absoluteCapCzk).toLocaleString('cs-CZ')} Kč${low}.`
+  )
 }
 
 function continuityBuyReason(base: string, isin: string | undefined, prev: AllocationRow[] | null): string {
@@ -152,7 +173,7 @@ export async function buildMonthlyPlanPayload(
   let prevAlloc = previousAllocations
   if (prevAlloc === undefined) {
     const prevPlan = await prisma.allocationPlan.findFirst({ orderBy: { generatedAt: 'desc' } })
-    prevAlloc = prevPlan?.allocations ? (prevPlan.allocations as unknown as AllocationRow[]) : null
+    prevAlloc = prevPlan?.allocations != null ? parsePlanAllocations(prevPlan.allocations) : null
   }
 
   const previouslyRecommendedIsins = new Set<string>()
@@ -170,24 +191,29 @@ export async function buildMonthlyPlanPayload(
   const [y, mo] = my.split('-').map((x) => parseInt(x, 10))
   const ref = new Date(y, mo - 1, 15)
 
-  const [incomeRows, expRows, evRows, settings, holdings, lib, accounts, indiaFunds] = await Promise.all([
+  const { getMergedSettings } = await import('./appSettingsMerge')
+  const [incomeRows, expRows, evRows, holdings, lib, accounts, indiaFunds, merged] = await Promise.all([
     prisma.incomeEvent.findMany(),
     prisma.expenseCommitment.findMany(),
     prisma.upcomingEvent.findMany(),
-    realPrisma.settings.findFirst(),
     prisma.holding.findMany({ where: { status: { not: 'EXITED' } }, include: { cashflows: true } }),
     loadAllLibrary(),
     prisma.account.findMany({ where: { isActive: true } }),
-    prisma.indiaMutualFund.findMany().catch(() => [] as IndiaMutualFund[])
+    prisma.indiaMutualFund.findMany().catch(() => [] as IndiaMutualFund[]),
+    getMergedSettings(realPrisma)
   ])
+
+  // Strategy map is loaded once per plan generation. Fallback: empty map (planner works unchanged).
+  const approvedStrategies = await loadApprovedStrategies(prisma).catch(() => new Map())
 
   const totalIncome = monthlyIncomeCzk(incomeRows, y, mo, profile)
   const fixed = monthlyFixedCzk(expRows, ref)
   const reservedEvents = reservedForEventsCzk(evRows, ref)
 
-  const tgtEq = num(settings?.targetEquityPct ?? 65)
-  const tgtBd = num(settings?.targetBondsPct ?? 25)
-  const tgtCa = num(settings?.targetCashPct ?? 10)
+  const tgtEq = merged.targetEquityPct
+  const tgtBd = merged.targetBondsPct
+  const tgtCa = merged.targetCashPct
+  const taxWindowAllowsBuy = merged.taxFreeWindowAllowsBuy === true
 
   const fx = await getFXRates().catch(() => ({ EURCZK: 24.5, EURINR: 89.0, source: 'fallback', ageHours: 0 }))
   const fxRates = { EURCZK: fx.EURCZK, EURINR: fx.EURINR }
@@ -254,8 +280,61 @@ export async function buildMonthlyPlanPayload(
   }
 
   const now = new Date()
+
+  const addHold = (h: {
+    name?: string
+    isin?: string
+    currentValueCzk?: number
+    reason: string
+    holdReason?: string
+    daysToAction?: number | null
+  }) => {
+    pushRow({
+      type: 'HOLD',
+      amountCzk: 0,
+      reason: h.reason,
+      name: h.name,
+      isin: h.isin,
+      currentValueCzk: h.currentValueCzk ?? 0,
+      holdReason: h.holdReason ?? null,
+      daysToAction: h.daysToAction ?? null,
+      currency: 'CZK',
+      executionStatus: 'PENDING'
+    })
+  }
+
   const addBuy = (a: Omit<BuyRow, 'rowKey' | 'executionStatus' | 'type' | 'currency'>) => {
     if (a.isin && sellingIsins.has(a.isin)) return
+
+    // Strategy-aware override: if an approved strategy exists for this holding, use its monthly SIP.
+    // If cap is reached, emit HOLD instead (STRATEGY_CAP guard).
+    if (a.isin) {
+      const h = holdings.find((x) => x && x.isin === a.isin)
+      if (h) {
+        const st = approvedStrategies.get(h.id)
+        if (st) {
+          const cur = num(h.currentValueCzk)
+          if (st.isCapReached) {
+            addHold({
+              name: h.name,
+              isin: h.isin,
+              currentValueCzk: cur,
+              holdReason: 'STRATEGY_CAP',
+              reason:
+                `Strategy cap reached — position at ${Math.round(cur).toLocaleString('cs-CZ')} Kč, cap is ${Math.round(
+                  st.absoluteCapCzk
+                ).toLocaleString('cs-CZ')} Kč. Approve a new strategy to continue.`
+            })
+            return
+          }
+          a = {
+            ...a,
+            amountCzk: st.monthlySipCzk,
+            reason: buildStrategyReason(st, h)
+          }
+        }
+      }
+    }
     pushRow({
       type: 'BUY',
       amountCzk: a.amountCzk,
@@ -306,18 +385,19 @@ export async function buildMonthlyPlanPayload(
               prevAlloc
             )
           })
-        } else {
+        } else if (taxWindowAllowsBuy) {
           addBuy({
             destination: eqH.name,
             isin: eqH.isin,
             amountCzk: Math.round(eqShare * 0.5),
             reason: continuityBuyReason(
-              'Equity: existing holding; tax window soon — add carefully.',
+              'Equity: existing holding; tax window soon — reduced BUY (override enabled in Settings).',
               eqH.isin,
               prevAlloc
             )
           })
         }
+        // else: default — no BUY inside 90d tax-free window; HOLD row comes from generateHoldRows.
       }
     } else if (topEq) {
       addBuy({
@@ -388,6 +468,40 @@ export async function buildMonthlyPlanPayload(
     targetCashPct: tgtCa
   })
   for (const h of holdRows) {
+    // STRATEGY GUARD — same effect as running before AT_TARGET inside generateHoldRows: approved
+    // strategy forces BUY (or STRATEGY_CAP HOLD) instead of emitting drift-tolerance HOLD rows.
+    if (h.type === 'HOLD' && h.holdReason === 'AT_TARGET' && h.isin) {
+      const holding = activeHoldings.find((x) => x.isin === h.isin)
+      if (holding && holding.status === 'ACTIVE' && !sellingIsins.has(holding.isin)) {
+        const strategyEntry = approvedStrategies.get(holding.id)
+        if (strategyEntry) {
+          const cur = num(holding.currentValueCzk)
+          if (strategyEntry.isCapReached) {
+            addHold({
+              name: holding.name,
+              isin: holding.isin,
+              currentValueCzk: cur,
+              holdReason: 'STRATEGY_CAP',
+              reason:
+                `Strategy cap reached — position at ${Math.round(cur).toLocaleString('cs-CZ')} Kč, cap is ${Math.round(
+                  strategyEntry.absoluteCapCzk
+                ).toLocaleString('cs-CZ')} Kč. Approve a new strategy to continue.`
+            })
+            continue
+          }
+          pushRow({
+            type: 'BUY',
+            amountCzk: strategyEntry.monthlySipCzk,
+            reason: buildStrategyReason(strategyEntry, holding),
+            destination: holding.name,
+            isin: holding.isin,
+            currency: 'CZK',
+            executionStatus: 'PENDING'
+          })
+          continue
+        }
+      }
+    }
     const { rowKey: _rk, ...rest } = h
     pushRow(rest as Record<string, unknown> & { type: string; amountCzk: number; reason: string })
   }
@@ -411,74 +525,90 @@ export async function generateMonthlyPlan(
   const priorSnapshot = await prisma.allocationPlan.findFirst({
     orderBy: { generatedAt: 'desc' }
   })
-  const prevRows = priorSnapshot?.allocations
-    ? (priorSnapshot.allocations as unknown as AllocationRow[])
-    : null
+  const prevRows =
+    priorSnapshot?.allocations != null ? parsePlanAllocations(priorSnapshot.allocations) : null
 
   const p = await buildMonthlyPlanPayload(monthYear, prevRows)
+  assertValidMonthYear(p.monthYear)
   const continuity = computeContinuityMeta(prevRows, p.allocations)
 
-  const plan = await prisma.allocationPlan.create({
-    data: {
-      monthYear: p.monthYear,
-      totalAvailableCzk: p.totalAvailableCzk,
-      fixedExpensesCzk: p.fixedExpensesCzk,
-      reservedEventsCzk: p.reservedEventsCzk,
-      investableCzk: p.investableCzk,
-      emergencyTopupCzk: p.emergencyTopupCzk,
-      allocations: p.allocations as object,
-      continuity: continuity as object,
-      status: 'PROPOSED',
-      planSource
-    }
-  })
+  const validatedBase = parseAllocationsJsonStrict(JSON.parse(JSON.stringify(p.allocations)))
 
   const { extractLesson } = await import('./historical/lessonExtractor')
-  const nextAlloc: AllocationRow[] = JSON.parse(JSON.stringify(p.allocations)) as AllocationRow[]
-  for (let i = 0; i < nextAlloc.length; i++) {
-    const row = nextAlloc[i]!
-    if (row.type === 'BUY' && row.isin) {
-      const lesson = await extractLesson(row.isin, {
-        fundName: row.destination,
-        planId: plan.id,
-        rowKey: row.rowKey ?? `${row.type}-${row.isin}`
-      })
-      if (lesson) {
-        nextAlloc[i] = {
-          ...row,
-          reason: `${row.reason} ${lesson.narrative}`.trim()
-        } as AllocationRow
-      }
-    }
-  }
-  await prisma.allocationPlan.update({
-    where: { id: plan.id },
-    data: { allocations: nextAlloc as object }
-  })
 
-  const tracked = nextAlloc.filter((r) => r.type === 'BUY' || r.type === 'SELL')
-  for (const row of tracked) {
-    const fundName =
-      row.type === 'BUY'
-        ? (row.destination ?? row.isin ?? 'BUY')
-        : row.type === 'SELL'
-          ? (row.source ?? row.isin ?? 'SELL')
-          : '—'
-    await prisma.recommendationOutcome.create({
+  const planId = await prisma.$transaction(async (tx) => {
+    const plan = await tx.allocationPlan.create({
       data: {
-        planId: plan.id,
-        rowKey: row.rowKey ?? `${row.type}-${row.isin ?? 'row'}`,
-        rowType: row.type,
-        isin: row.isin ?? null,
-        fundName,
-        recommendedAmountCzk: row.amountCzk,
-        recommendedAt: plan.generatedAt,
-        status: 'PENDING'
+        monthYear: p.monthYear,
+        totalAvailableCzk: p.totalAvailableCzk,
+        fixedExpensesCzk: p.fixedExpensesCzk,
+        reservedEventsCzk: p.reservedEventsCzk,
+        investableCzk: p.investableCzk,
+        emergencyTopupCzk: p.emergencyTopupCzk,
+        allocations: validatedBase as unknown as Prisma.InputJsonValue,
+        continuity: continuity as unknown as Prisma.InputJsonValue,
+        status: 'PROPOSED',
+        planSource
       }
     })
-  }
 
-  return plan
+    const nextAlloc: AllocationRow[] = JSON.parse(JSON.stringify(validatedBase)) as AllocationRow[]
+    for (let i = 0; i < nextAlloc.length; i++) {
+      const row = nextAlloc[i]!
+      if (row.type === 'BUY' && row.isin) {
+        const lesson = await extractLesson(
+          row.isin,
+          {
+            fundName: String(row.destination || ''),
+            planId: plan.id,
+            rowKey: row.rowKey ?? `${row.type}-${row.isin}`
+          },
+          tx
+        )
+        if (lesson) {
+          nextAlloc[i] = {
+            ...row,
+            reason: `${row.reason} ${lesson.narrative}`.trim()
+          } as AllocationRow
+        }
+      }
+    }
+
+    await tx.allocationPlan.update({
+      where: { id: plan.id },
+      data: { allocations: nextAlloc as unknown as Prisma.InputJsonValue }
+    })
+
+    await replacePlanRows(tx as unknown as PlanRowClient, plan.id, nextAlloc)
+
+    const tracked = nextAlloc.filter((r) => r.type === 'BUY' || r.type === 'SELL')
+    for (const row of tracked) {
+      const fundName =
+        row.type === 'BUY'
+          ? (row.destination ?? row.isin ?? 'BUY')
+          : row.type === 'SELL'
+            ? (row.source ?? row.isin ?? 'SELL')
+            : '—'
+      await tx.recommendationOutcome.create({
+        data: {
+          planId: plan.id,
+          rowKey: row.rowKey ?? `${row.type}-${row.isin ?? 'row'}`,
+          rowType: row.type,
+          isin: row.isin ?? null,
+          fundName,
+          recommendedAmountCzk: row.amountCzk,
+          recommendedAt: plan.generatedAt,
+          status: 'PENDING'
+        }
+      })
+    }
+
+    return plan.id
+  })
+
+  const out = await prisma.allocationPlan.findUnique({ where: { id: planId } })
+  if (!out) throw new Error('Plan missing after transaction')
+  return out
 }
 
 export function currentMonthYear(): string {

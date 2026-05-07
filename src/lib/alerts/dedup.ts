@@ -1,5 +1,12 @@
 import { getPrisma } from '../prisma'
 
+/**
+ * DEDUP WINDOW — not a physical delete TTL.
+ * Dismissed alerts older than this are eligible to fire again
+ * (their dismissed state is no longer honoured).
+ * Rows themselves persist until dismissed-alert pruning in `src/lib/cron/pruneOldRows.ts`
+ * (`alertLogDismissedRetentionDays`, default 90d) removes old DISMISSED rows.
+ */
 const DISMISS_RETENTION_MS = 30 * 86400000
 
 export function alertKeyForTrigger(tr: { triggerType: string; dataSnapshot?: unknown }): string {

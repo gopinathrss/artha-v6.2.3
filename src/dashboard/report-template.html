@@ -4,12 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>ARTHA — Premium report</title>
+    <title>PIE — Premium report</title>
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600&family=Fraunces:opsz,wght@9..144,500;600&display=swap"
     />
-    <script type="application/json" id="artha-report">
+    <script type="application/json" id="pie-report">
       __REPORT_JSON__
     </script>
     <style>
@@ -238,7 +238,7 @@
       ;(function () {
         var D = null
         try {
-          D = JSON.parse(document.getElementById('artha-report').textContent)
+          D = JSON.parse(document.getElementById('pie-report').textContent)
         } catch (e) {
           document.getElementById('p1').innerHTML = '<h1>Invalid report data</h1>'
           return
@@ -252,7 +252,7 @@
         var fmtPct = function (n) { return (Number(n) || 0).toFixed(2) + '%' }
         if (D.cover) {
           document.getElementById('p1').innerHTML = `
-          <h1 class="f-title" style="margin-top:0">${(D.cover.titleLine || 'ARTHA — Monthly report').replace(/</g, '&lt;')}</h1>
+          <h1 class="f-title" style="margin-top:0">${(D.cover.titleLine || 'PIE — Monthly report').replace(/</g, '&lt;')}</h1>
           <p class="muted" style="margin:0 0 8px">${(D.cover.periodStartLabel || '')} — ${(D.cover.periodEndLabel || '')}</p>
           <div class="f-hero mono">${czk(D.cover.netWorthCzk)}</div>
           <p class="${(D.cover.momCzk || 0) >= 0 ? 'pos' : ''}" style="margin:0 0 4px">

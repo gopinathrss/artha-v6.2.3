@@ -2,6 +2,7 @@ import { Decimal } from '@prisma/client/runtime/library'
 import { fetchUnseenSipEmails } from './imap'
 import { parseErsteSipEmail } from './parsers/erste'
 import { realPrisma as prisma } from '../prismaProvider'
+import { getSecret } from '../secrets'
 
 export async function runEmailIngestion(): Promise<{
   fetched: number
@@ -11,7 +12,8 @@ export async function runEmailIngestion(): Promise<{
   errors: string[]
 }> {
   const settings = await prisma.settings.findFirst()
-  if (!settings?.imapHost || !settings?.imapUser || !settings?.imapPassword) {
+  const imapPassword = settings ? await getSecret('imapPassword') : null
+  if (!settings?.imapHost || !settings?.imapUser || !imapPassword) {
     return {
       fetched: 0,
       parsed: 0,
@@ -25,7 +27,7 @@ export async function runEmailIngestion(): Promise<{
     host: settings.imapHost,
     port: settings.imapPort ?? 993,
     user: settings.imapUser,
-    password: settings.imapPassword
+    password: imapPassword
   })
 
   let parsed = 0

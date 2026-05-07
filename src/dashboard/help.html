@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en" class="preload">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PIE — Help &amp; manual</title>
+    <script src="/scripts/theme.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles/index.css" />
+    <style>
+      .help-toc {
+        position: sticky;
+        top: var(--space-4);
+        align-self: start;
+        padding: var(--space-4);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--surface-1);
+        font-size: var(--text-sm);
+      }
+      .help-toc a {
+        display: block;
+        padding: 0.25rem 0;
+        color: var(--color-text-secondary);
+      }
+      .help-toc a:hover {
+        color: var(--color-accent);
+      }
+      .help-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+        gap: var(--space-6);
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .help-grid {
+          grid-template-columns: 1fr;
+        }
+        .help-toc {
+          position: static;
+        }
+      }
+      .help-article h2 {
+        margin-top: var(--space-6);
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border);
+      }
+      .help-article h2:first-child {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+      }
+      .help-article code {
+        font-size: 0.9em;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+      <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="topbar-menu-trigger" aria-label="Open menu" id="menu-toggle" type="button">
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 4 H14 M2 8 H14 M2 12 H14" />
+              </svg>
+            </button>
+            <h1 class="topbar-page-title">Help &amp; manual</h1>
+          </div>
+          <div class="topbar-actions">
+            <a class="btn btn-ghost btn-sm" href="/settings">Settings</a>
+            <a class="btn btn-primary btn-sm" href="/">Overview</a>
+          </div>
+        </header>
+
+        <div class="content">
+          <div class="help-grid">
+            <nav class="help-toc" aria-label="On this page">
+              <div style="font-weight: 600; margin-bottom: var(--space-2)">On this page</div>
+              <a href="#intro">What PIE is</a>
+              <a href="#databases">Databases &amp; hosting</a>
+              <a href="#nav">Navigation</a>
+              <a href="#overview">Overview &amp; portfolio math</a>
+              <a href="#planner">This month &amp; planner</a>
+              <a href="#india">India</a>
+              <a href="#email">Email ingestion</a>
+              <a href="#integrations">Integrations</a>
+              <a href="#settings">Settings &amp; alerts</a>
+              <a href="#intelligence">Ask PIE (AI)</a>
+              <a href="#backtest">Backtest &amp; patterns</a>
+              <a href="#health">Health &amp; cron</a>
+              <a href="#reset">Portfolio fresh start</a>
+              <a href="#security">Dashboard login</a>
+            </nav>
+
+            <article class="help-article card" style="padding: var(--space-6)">
+              <h2 id="intro">What PIE is</h2>
+              <p>
+                <strong>PIE (Personal Investment Engine)</strong> is a self-hosted dashboard for tracking funds, accounts,
+                allocation vs targets, India (NRE / MF / FD), tax reminders, and optional AI summaries. Data stays on
+                <em>your</em> Postgres unless you configure outbound email or AI APIs.
+              </p>
+
+              <h2 id="databases">Databases &amp; hosting</h2>
+              <p>
+                PIE uses <strong>two</strong> Postgres databases, configured in <code>.env</code>:
+                <code>DATABASE_URL</code> (personal / “real”) and <code>DATABASE_URL_DEMO</code> (isolated demo). They
+                must differ — the app refuses to start if they are the same.
+              </p>
+              <p>
+                <strong>When you host on a VPS</strong>, nothing is copied automatically. Your local data remains on
+                your machine until you <strong>migrate</strong> it (for example <code>pg_dump</code> from local and
+                <code>pg_restore</code> on the server, or managed Postgres import). If you point the VPS
+                <code>DATABASE_URL</code> at an <strong>empty</strong> database, you get a fresh empty PIE — your old
+                data is not “lost”, it simply was never transferred. Always take a backup before changing URLs or
+                providers.
+              </p>
+              <p>
+                <strong>Demo mode</strong> (Settings): when on, reads/writes go to the <strong>demo</strong> database;
+                toggling demo on wipes and reseeds that DB with persona sample data. Your personal DB is untouched.
+              </p>
+
+              <h2 id="nav">Navigation</h2>
+              <p>
+                The sidebar groups <strong>Workspace</strong> (day-to-day numbers) and <strong>Intelligence</strong>
+                (research / AI / reports). <strong>Settings</strong> holds allocation targets, IMAP, notifications,
+                integrations, health checks, and destructive actions such as portfolio reset.
+              </p>
+
+              <h2 id="overview">Overview &amp; portfolio math</h2>
+              <p>
+                <strong>Overview</strong> aggregates holdings (with cashflows), active accounts, FX rates, and optional
+                India mutual funds to compute net worth, MoM change, allocation vs equity/bonds/cash targets, XIRR from
+                cashflows, confidence and health scores. NAV freshness and FX staleness feed into those scores.
+              </p>
+              <p>
+                <strong>Portfolio</strong> is the detailed holdings grid; edits flow through the API to the same
+                models Overview reads.
+              </p>
+
+              <h2 id="planner">This month &amp; planner</h2>
+              <p>
+                <strong>This month</strong> ties to the allocation planner: planned buys/sells/holds, SIP rows, and
+                execution status. Logic respects tax-free windows and persona/risk settings merged from AppSettings and
+                legacy Settings.
+              </p>
+
+              <h2 id="india">India</h2>
+              <p>
+                India views combine <strong>NRE/NRO-style accounts</strong>, mutual fund positions, and FD ladders with
+                RBI reference rates and DTAA-style helpers where implemented. FX conversion uses the same rate table as
+                the rest of the dashboard.
+              </p>
+
+              <h2 id="email">Email ingestion</h2>
+              <p>
+                Optional <strong>IMAP</strong> (legacy Settings fields today) fetches bank/fund emails, parses previews,
+                and can auto-create SIP executions when confidence is high and auto-ingest is enabled. PIE does not delete
+                mail on the server. Integrations include <code>comms.imap</code> for future consolidation and tests.
+              </p>
+
+              <h2 id="integrations">Integrations (V5.2)</h2>
+              <ul>
+                <li><code>comms.smtp</code> — outbound mail (Gmail OAuth via API or classic SMTP + app password).</li>
+                <li><code>comms.telegram</code> — bot token + your numeric chat id for alerts and slash commands.</li>
+                <li><code>comms.imap</code> — optional duplicate path for IMAP tests.</li>
+                <li><code>ai.*</code> — API keys for Ask PIE; exactly one AI provider is “active” in AppSettings.</li>
+                <li><code>fx.exchangerate-api</code> — optional FX provider key.</li>
+              </ul>
+              <p>Secrets are encrypted at rest; the Settings UI masks saved values until you paste a replacement.</p>
+
+              <h2 id="settings">Settings &amp; alerts</h2>
+              <p>
+                Allocation targets, theme, risk profile, demo flag, alert email, Telegram chat id, monthly letter and
+                alert toggles live here (merged with AppSettings where applicable). <strong>Send test email</strong> uses
+                configured SMTP/OAuth. <strong>System health</strong> runs checks against DB, integrations, and jobs.
+              </p>
+
+              <h2 id="intelligence">Ask PIE (AI)</h2>
+              <p>
+                The intelligence view sends portfolio context and your question to the configured AI provider. It is
+                optional; without keys, that area stays disabled. AI debug logs can be toggled in App Settings.
+              </p>
+
+              <h2 id="backtest">Backtest &amp; patterns</h2>
+              <p>
+                <strong>Backtest Lab</strong> runs historical scenarios against stored or imported series;
+                <strong>Patterns</strong> surfaces recurring behaviours from past data where implemented. Both read from
+                the same Postgres models as the rest of PIE.
+              </p>
+
+              <h2 id="health">Health &amp; cron</h2>
+              <p>
+                Scheduled jobs (morning digest, pruning, FX refresh, etc.) record rows in <code>CronExecution</code> and
+                <code>SystemHealth</code>. The health grid on Settings and Overview reflects recent checks.
+              </p>
+
+              <h2 id="reset">Portfolio fresh start (danger)</h2>
+              <p>
+                Under <strong>Settings → Data &amp; backups</strong>, <strong>Reset portfolio</strong> truncates almost
+                all <strong>personal</strong> data tables on <code>DATABASE_URL</code> while keeping
+                <code>Settings</code>, <code>AppSettings</code>, <code>IntegrationProvider</code>, and the seeded
+                <code>InstrumentLibrary</code>. You must type <code>reset</code> to confirm. Demo mode must be
+                <strong>off</strong>; the action never targets the demo database. Take a <code>pg_dump</code> backup
+                first if there is anything you might regret losing.
+              </p>
+
+              <h2 id="security">Dashboard login</h2>
+              <p>
+                Turn <strong>Dashboard login</strong> on under <strong>Settings → App preferences</strong> (stored as
+                <code>AppSettings.dashboardAuthEnabled</code>). The browser must then sign in; the password is stored
+                (bcrypt) on                 <code>AppSettings</code>. First-time setup on <code>/login.html</code> accepts the bootstrap phrase from
+                <strong>Settings</strong> (stored hashed) or <code>PIE_AUTH_BOOTSTRAP_KEY</code> from <code>.env</code>.
+                Set <code>PIE_DASHBOARD_AUTH=0</code> in <code>.env</code>
+                only to force login off if you lock yourself out. Session cookies are signed with
+                <code>SESSION_SECRET</code>. Forgot-password emails use your saved <strong>Alert email</strong> and
+                require working outbound mail. Gmail OAuth redirect URLs are documented on the SMTP integration card.
+              </p>
+              <p class="form-field-help" style="margin-top: var(--space-6)">
+                This page is a concise manual, not every line of code. For migration notes and sprint maps, see the
+                <code>docs/</code> folder in the repository.
+              </p>
+            </article>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/scripts/sidebar.js"></script>
+    <script src="/scripts/shell.js"></script>
+  </body>
+</html>

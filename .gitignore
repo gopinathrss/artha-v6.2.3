@@ -10,3 +10,7 @@ seed-data/
 test-results/
 playwright-report/
 
+# Secret keyfile (normally %APPDATA%/artha/secret.key — guard if ever placed in repo)
+secret.key
+*.secret.key
+

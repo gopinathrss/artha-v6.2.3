@@ -6,7 +6,15 @@ import { prisma } from '../../src/lib/prisma'
 import app from '../../src/api/server'
 
 const run = hasTestDatabase()
-const MY = '2030-01'
+
+/** Within `assertValidMonthYear` future window (not far-future 2030-*). */
+function futureMonth(offset: number) {
+  const d = new Date()
+  d.setUTCMonth(d.getUTCMonth() + offset)
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+const MY = futureMonth(2)
 
 describe.skipIf(!run)('api this-month', () => {
   let planId: string

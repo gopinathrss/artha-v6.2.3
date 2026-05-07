@@ -1,6 +1,7 @@
 import { getPrisma } from './prisma'
 import { num } from './money'
 import { isAdherenceRow } from './allocationRowTypes'
+import { readPlanAllocationsOrEmpty } from './planAllocationsRead'
 
 export type MonthPlanOutcome = {
   monthYear: string
@@ -78,7 +79,8 @@ export async function getMonthlyPlanOutcomes(months: number): Promise<MonthPlanO
       })
       continue
     }
-    const c = countRows(plan.allocations as unknown)
+    const parsed = await readPlanAllocationsOrEmpty(plan)
+    const c = countRows(parsed as unknown)
     const den = c.done + c.skipped
     const adherencePct = den > 0 ? Math.round((c.done / den) * 1000) / 10 : 0
     out.push({

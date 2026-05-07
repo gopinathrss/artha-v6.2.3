@@ -87,12 +87,13 @@ const monthlyExpense = (amt: number) => ({
   createdAt: new Date()
 })
 
-const settings = (tEq = 65, tBd = 25, tCa = 10) => ({
+const settings = (tEq = 65, tBd = 25, tCa = 10, taxFreeWindowAllowsBuy = false) => ({
   id: 's1',
   targetEquityPct: tEq,
   targetBondsPct: tBd,
   targetCashPct: tCa,
-  riskProfile: null
+  riskProfile: null,
+  taxFreeWindowAllowsBuy
 })
 
 const equityHolding = (taxFreeSoon: boolean) => {
@@ -313,7 +314,7 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     expect(p.allocations.some((a) => (a as { isin?: string }).isin === 'EQTOP')).toBe(false)
   })
 
-  it('8: approaching tax-free <90d → weights existing holding, not top library', async () => {
+  it('8: approaching tax-free <90d → no reduced BUY by default; HOLD on that ISIN', async () => {
     const now = new Date()
     const taxFree = new Date()
     taxFree.setDate(taxFree.getDate() + 30)
@@ -341,15 +342,111 @@ describe('buildMonthlyPlanPayload (10 scenarios)', () => {
     prismaMock.holding.findMany.mockResolvedValue([h as never])
     prismaMock.account.findMany.mockResolvedValue([{ balanceCzkSnapshot: 400_000, type: 'SAVINGS', isActive: true, balanceLocal: 400_000, currency: 'CZK' }] as never)
     const p = await buildMonthlyPlanPayload('2026-05')
-    const eq = p.allocations.find(
-      (a) => a.type === 'BUY' && (a as { isin?: string }).isin === 'CZNEAR'
-    )
-    expect(eq).toBeTruthy()
+    expect(p.allocations.some((a) => a.type === 'BUY' && (a as { isin?: string }).isin === 'CZNEAR')).toBe(false)
+    const hold = p.allocations.find(
+      (a) => a.type === 'HOLD' && (a as { isin?: string }).isin === 'CZNEAR'
+    ) as { holdReason?: string } | undefined
+    expect(hold).toBeTruthy()
+    expect(hold?.holdReason).toBe('TAX_WINDOW_NEAR')
     expect(
       p.allocations.some(
         (a) => (a as { isin?: string; reason?: string }).isin === 'EQTOP' && String(a.reason || '').toLowerCase().includes('george')
       )
     ).toBe(false)
+  })
+
+  it('8a: 200d to tax-free → nearTax false → normal library BUY (EQTOP)', async () => {
+    const taxFree = new Date()
+    taxFree.setDate(taxFree.getDate() + 200)
+    const purchase = new Date(taxFree)
+    purchase.setFullYear(purchase.getFullYear() - 3)
+    const h = {
+      id: 'h1',
+      isin: 'CZFAR',
+      name: 'Czech equity far from window',
+      category: 'EQUITY',
+      units: 10,
+      nav: 100,
+      currentValueCzk: 10_000,
+      status: 'ACTIVE',
+      country: 'CZ',
+      purchaseStartDate: purchase,
+      taxFreeDate: taxFree,
+      cashflows: [] as { amountCzk: number; type: string }[]
+    }
+    prismaMock.userProfile.findUnique.mockResolvedValue(baseProfile() as never)
+    prismaMock.incomeEvent.findMany.mockResolvedValue([{ recurring: true, amountCzk: 0, date: new Date(), id: 'i', source: 'x', amountLocal: 0, currency: 'CZK', createdAt: new Date() }])
+    prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(20_000)] as never)
+    prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
+    prismaMock.settings.findFirst.mockResolvedValue(settings(65, 25, 10) as never)
+    // Balanced sleeve mix so drift rebalance does not SELL the only equity line (which blocks EQTOP BUY).
+    prismaMock.holding.findMany.mockResolvedValue(balancedHoldings65(h as never))
+    prismaMock.account.findMany.mockResolvedValue([{ balanceCzkSnapshot: 400_000, type: 'SAVINGS', isActive: true, balanceLocal: 400_000, currency: 'CZK' }] as never)
+    const p = await buildMonthlyPlanPayload('2026-05')
+    expect(p.allocations.some((a) => a.type === 'BUY' && (a as { isin?: string }).isin === 'EQTOP')).toBe(true)
+  })
+
+  it('8c: already tax-free (past taxFreeDate) → no BUY into existing CZ equity; library path may still add EQTOP', async () => {
+    const taxFree = new Date()
+    taxFree.setDate(taxFree.getDate() - 10)
+    const purchase = new Date(taxFree)
+    purchase.setFullYear(purchase.getFullYear() - 3)
+    const h = {
+      id: 'h1',
+      isin: 'CZFREE',
+      name: 'Czech equity tax-free',
+      category: 'EQUITY',
+      units: 10,
+      nav: 100,
+      currentValueCzk: 10_000,
+      status: 'ACTIVE',
+      country: 'CZ',
+      purchaseStartDate: purchase,
+      taxFreeDate: taxFree,
+      cashflows: [] as { amountCzk: number; type: string }[]
+    }
+    prismaMock.userProfile.findUnique.mockResolvedValue(baseProfile() as never)
+    prismaMock.incomeEvent.findMany.mockResolvedValue([{ recurring: true, amountCzk: 0, date: new Date(), id: 'i', source: 'x', amountLocal: 0, currency: 'CZK', createdAt: new Date() }])
+    prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(20_000)] as never)
+    prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
+    prismaMock.settings.findFirst.mockResolvedValue(settings(65, 25, 10) as never)
+    prismaMock.holding.findMany.mockResolvedValue([h as never])
+    prismaMock.account.findMany.mockResolvedValue([{ balanceCzkSnapshot: 400_000, type: 'SAVINGS', isActive: true, balanceLocal: 400_000, currency: 'CZK' }] as never)
+    const p = await buildMonthlyPlanPayload('2026-05')
+    expect(p.allocations.some((a) => a.type === 'BUY' && (a as { isin?: string }).isin === 'CZFREE')).toBe(false)
+    // Existing CZ equity past tax window: planner skips new library equity BUY into that sleeve (see allocationPlanner).
+    expect(p.allocations.some((a) => a.type === 'BUY' && (a as { isin?: string }).isin === 'EQTOP')).toBe(false)
+  })
+
+  it('8b: tax window — reduced BUY when Settings.taxFreeWindowAllowsBuy=true', async () => {
+    const taxFree = new Date()
+    taxFree.setDate(taxFree.getDate() + 30)
+    const purchase = new Date(taxFree)
+    purchase.setFullYear(purchase.getFullYear() - 3)
+    const h = {
+      id: 'h1',
+      isin: 'CZNEAR',
+      name: 'Czech equity near',
+      category: 'EQUITY',
+      units: 10,
+      nav: 100,
+      currentValueCzk: 10_000,
+      status: 'ACTIVE',
+      country: 'CZ',
+      purchaseStartDate: purchase,
+      taxFreeDate: taxFree,
+      cashflows: [] as { amountCzk: number; type: string }[]
+    }
+    prismaMock.userProfile.findUnique.mockResolvedValue(baseProfile() as never)
+    prismaMock.incomeEvent.findMany.mockResolvedValue([{ recurring: true, amountCzk: 0, date: new Date(), id: 'i', source: 'x', amountLocal: 0, currency: 'CZK', createdAt: new Date() }])
+    prismaMock.expenseCommitment.findMany.mockResolvedValue([monthlyExpense(20_000)] as never)
+    prismaMock.upcomingEvent.findMany.mockResolvedValue([] as never)
+    prismaMock.settings.findFirst.mockResolvedValue(settings(65, 25, 10, true) as never)
+    prismaMock.holding.findMany.mockResolvedValue([h as never])
+    prismaMock.account.findMany.mockResolvedValue([{ balanceCzkSnapshot: 400_000, type: 'SAVINGS', isActive: true, balanceLocal: 400_000, currency: 'CZK' }] as never)
+    const p = await buildMonthlyPlanPayload('2026-05')
+    const eq = p.allocations.find((a) => a.type === 'BUY' && (a as { isin?: string }).isin === 'CZNEAR')
+    expect(eq).toBeTruthy()
   })
 
   it('10: CONSERVATIVE style targets → more to bonds name than growth case', async () => {

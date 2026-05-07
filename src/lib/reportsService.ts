@@ -25,7 +25,7 @@ function legacyJsonHtml(row: { periodLabel: string; type: string; dataSnapshot: 
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>ARTHA report — ${esc(row.type)}</title>
+<title>PIE report — ${esc(row.type)}</title>
 <style>
   :root { font-family: "JetBrains Mono", ui-monospace, monospace; --ink: #0a1628; --paper: #f7f3ea; }
   @media print { .no-print { display: none !important; } }
@@ -40,7 +40,7 @@ function legacyJsonHtml(row: { periodLabel: string; type: string; dataSnapshot: 
 <body>
   <div class="wrap">
     <p class="no-print"><a href="javascript:window.print()">Print / PDF</a></p>
-    <h1>ARTHA — ${esc(row.type)} (legacy)</h1>
+    <h1>PIE — ${esc(row.type)} (legacy)</h1>
     <p class="muted">${esc(String(row.periodLabel))} · Generated ${esc(new Date(row.createdAt).toISOString())}</p>
     <pre>${esc(typeof d === 'object' && d !== null ? JSON.stringify(d, null, 2) : String(d))}</pre>
   </div>

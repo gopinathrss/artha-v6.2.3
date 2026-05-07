@@ -5,7 +5,11 @@ import { computeAdherenceStats } from '../adherence'
 import { getPlanForMonth, currentMonthYear } from '../allocationPlanner'
 import { markPlanRowDone } from '../planRowUpdate'
 import { ensureRowType } from '../allocationRowTypes'
-import { askArtha } from '../aiIntelligence'
+import { askPie } from '../aiIntelligence'
+import { readPlanAllocationsOrEmpty } from '../planAllocationsRead'
+import { getSecret } from '../secrets'
+import { getProviderDecrypted, upsertIntegrationProvider } from '../integrations/store'
+import { envAnthropicApiKey, envOpenaiApiKey, envTelegramBotToken } from '../integrations/env-fallback'
 
 let botInstance: TelegramBot | null = null
 
@@ -46,7 +50,7 @@ export async function notifyAiDegradedIfNeeded(): Promise<void> {
     alertKey: 'ai:provider-degraded',
     severity: 'HIGH',
     category: 'SYSTEM_MONITOR',
-    title: 'ARTHA — AI provider',
+    title: 'PIE — AI provider',
     message: 'AI provider degraded — check /api/ai/recent-errors.',
     metadata: { failuresIn1h: n }
   })
@@ -57,7 +61,7 @@ export async function notifyAiDegradedIfNeeded(): Promise<void> {
     await bot
       .sendMessage(
         settings.telegramChatId,
-        '*ARTHA* — AI provider degraded. Check /api/ai/recent-errors for details.',
+        '*PIE* — AI provider degraded. Check /api/ai/recent-errors for details.',
         { parse_mode: 'Markdown' }
       )
       .catch(() => {})
@@ -68,7 +72,7 @@ export async function buildDailyDigest(): Promise<string> {
   const settings = await realPrisma.settings.findFirst()
   const s = await getPortfolioSummary()
   if (!s.success || !s.data) {
-    return `*ARTHA — Daily digest*\n\nPortfolio unavailable. Check database / profile.`
+    return `*PIE — Daily digest*\n\nPortfolio unavailable. Check database / profile.`
   }
   const d = s.data
   const nw = d.netWorth?.totalCzk ?? 0
@@ -76,15 +80,17 @@ export async function buildDailyDigest(): Promise<string> {
   const adh = await computeAdherenceStats(6).catch(() => ({ adherencePct: 0 }))
   const my = currentMonthYear()
   const plan = await getPlanForMonth(my)
-  const rows = (plan?.allocations as Array<{ destination?: string; executionStatus?: string; amountCzk?: number }>) || []
+  const rows = plan ? await readPlanAllocationsOrEmpty(plan) : []
   const pending = rows
     .map((r, i) => ({ i, r }))
     .filter((x) => (String(x.r.executionStatus || 'PENDING').toUpperCase() === 'PENDING'))
   const top = pending[0]
+  const destLabel =
+    top && (top.r.type === 'BUY' || top.r.type === 'RESERVE')
+      ? (top.r as { destination?: string }).destination || 'row'
+      : 'row'
   const action = top
-    ? `Top action: *${(top.r.destination || 'row').replace(/\*/g, '')}* — ${formatCzk(
-        Number(top.r.amountCzk) || 0
-      )} Kč (PENDING)`
+    ? `Top action: *${destLabel.replace(/\*/g, '')}* — ${formatCzk(Number(top.r.amountCzk) || 0)} Kč (PENDING)`
     : 'No pending lines in the current plan (or no plan).'
   const y = new Date()
   y.setDate(y.getDate() - 1)
@@ -111,7 +117,7 @@ export async function buildDailyDigest(): Promise<string> {
       : `FD: *${soon[0]!.f.bank}* matures in *${soon[0]!.days}d*.`
 
   return [
-    `*ARTHA — Daily digest*`,
+    `*PIE — Daily digest*`,
     ``,
     `Net worth: *${formatCzk(nw)}* Kč`,
     `MoM: ${(mom.czk ?? 0) >= 0 ? '+' : ''}${formatCzk(mom.czk ?? 0)} Kč (${mom.pct == null ? 'n/a' : `${Number(mom.pct).toFixed(2)}%`})`,
@@ -128,10 +134,26 @@ export async function buildDailyDigest(): Promise<string> {
   ].join('\n')
 }
 
+async function resolveTelegramBotToken(): Promise<string> {
+  try {
+    const integ = await getProviderDecrypted(realPrisma, 'comms.telegram')
+    if (integ?.secrets?.botToken) return integ.secrets.botToken.trim()
+  } catch {
+    /* */
+  }
+  try {
+    const t = await getSecret('telegramBotToken')
+    if (t) return t.trim()
+  } catch {
+    /* */
+  }
+  return envTelegramBotToken()
+}
+
 export async function startTelegramBot() {
   stopTelegramBot()
   const settings = await realPrisma.settings.findFirst()
-  const token = (process.env.TELEGRAM_BOT_TOKEN || settings?.telegramBotToken || '').trim()
+  let token = await resolveTelegramBotToken()
   if (!token) {
     // eslint-disable-next-line no-console
     console.log('[Telegram] No token, skipping bot start')
@@ -152,9 +174,19 @@ export async function startTelegramBot() {
       where: { id: s0.id },
       data: { telegramChatId: String(chatId) }
     })
+    try {
+      const row = await realPrisma.integrationProvider.findUnique({ where: { key: 'comms.telegram' } })
+      const cfg = (row?.config as Record<string, unknown>) || {}
+      await upsertIntegrationProvider(realPrisma, 'comms.telegram', {
+        config: { ...cfg, chatId: String(chatId) },
+        enabled: row?.enabled ?? true
+      })
+    } catch {
+      /* */
+    }
     await botInstance!.sendMessage(
       chatId,
-      '✓ ARTHA bot connected. Try /summary, /plan, /alert, /ai <question>'
+      '✓ PIE bot connected. Try /summary, /plan, /alert, /ai <question>'
     )
   })
 
@@ -169,13 +201,15 @@ export async function startTelegramBot() {
     const mom = d.momChange || { czk: 0, pct: 0 }
     const adh = await computeAdherenceStats(6)
     const text =
-      `*ARTHA — Today*\n\n` +
+      `*PIE — Today*\n\n` +
       `Net worth: *${formatCzk(nw)}* Kč\n` +
       `MoM: ${(mom.czk ?? 0) >= 0 ? '+' : ''}${formatCzk(mom.czk ?? 0)} ` +
       `(${mom.pct == null ? 'n/a' : `${Number(mom.pct).toFixed(2)}%`})\n\n` +
       `Adherence (6m): ${(Number(adh.adherencePct) || 0).toFixed(0)}%\n` +
       `XIRR: ${
-        d.xirr && d.xirr.value != null ? (Number(d.xirr.value) || 0).toFixed(2) + '%' : 'n/a'
+        d.xirr && d.xirr.displayState === 'OK' && d.xirr.displayValue != null
+          ? (Number(d.xirr.displayValue) || 0).toFixed(2) + '%'
+          : 'n/a'
       }`
     await botInstance!.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' })
   })
@@ -186,9 +220,9 @@ export async function startTelegramBot() {
       await botInstance!.sendMessage(msg.chat.id, 'No plan for this month yet.')
       return
     }
-    const all = plan.allocations as unknown[]
+    const all = await readPlanAllocationsOrEmpty(plan)
     let text = `*Plan for ${plan.monthYear}*\n\n`
-    if (!Array.isArray(all) || all.length === 0) {
+    if (all.length === 0) {
       text += 'No rows.'
     } else {
       all.forEach((raw, i) => {
@@ -228,12 +262,12 @@ export async function startTelegramBot() {
       await botInstance!.sendMessage(msg.chat.id, 'No plan for this month.')
       return
     }
-    const all = plan.allocations as unknown
-    if (!Array.isArray(all) || n >= all.length) {
+    const parsed = await readPlanAllocationsOrEmpty(plan)
+    if (n >= parsed.length) {
       await botInstance!.sendMessage(msg.chat.id, 'Invalid row number')
       return
     }
-    const row = ensureRowType(all[n])
+    const row = ensureRowType(parsed[n])
     try {
       await markPlanRowDone(plan.id, n, { source: 'TELEGRAM' })
       const label =
@@ -273,15 +307,10 @@ export async function startTelegramBot() {
     }
     await botInstance!.sendMessage(msg.chat.id, '🤔 Thinking…')
     const s = await getPortfolioSummary()
-    const set = await realPrisma.settings.findFirst()
-    const mem = await askArtha(
-      q,
-      s.success && s.data ? s.data : {},
-      {
-        anthropicKey: (process.env.ANTHROPIC_API_KEY || '') as string,
-        openaiKey: (set?.openaiApiKey || process.env.OPENAI_API_KEY || '') as string
-      }
-    )
+    const mem = await askPie(q, s.success && s.data ? s.data : {}, {
+      anthropicKey: envAnthropicApiKey(),
+      openaiKey: envOpenaiApiKey()
+    })
     const ans = (mem as { aiResponse?: string }).aiResponse || '—'
     await botInstance!.sendMessage(msg.chat.id, ans)
   })

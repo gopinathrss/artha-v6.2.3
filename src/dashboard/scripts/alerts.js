@@ -63,6 +63,8 @@
       const q = showDismissed ? '?includeDismissed=1' : ''
       const res = await fetch('/api/alerts' + q).then((r) => r.json())
       alerts = res?.data?.alerts || []
+      const foot = document.getElementById('alerts-retention-note')
+      if (foot) foot.textContent = res?.data?.alertRetentionNote || ''
     } catch {}
 
     renderHero(alerts)

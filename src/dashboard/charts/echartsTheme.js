@@ -12,21 +12,24 @@
       return fallback
     }
   }
-  window.ArthaEcharts = window.ArthaEcharts || {}
-  window.ArthaEcharts.getGold = function () {
-    return readVar('--gold', '#B8922A')
+  var PieE = {
+    getGold: function () {
+      return readVar('--gold', '#B8922A')
+    },
+    getTeal: function () {
+      return readVar('--teal', '#0a7a8a')
+    },
+    getSlate: function () {
+      return readVar('--text-muted', '#4a5a6b')
+    },
+    applyTo: function (chart) {
+      if (!chart || !chart.setOption) return
+      var g = PieE.getGold()
+      var t = PieE.getTeal()
+      var s = PieE.getSlate()
+      chart.setOption({ color: [g, t, s] })
+    }
   }
-  window.ArthaEcharts.getTeal = function () {
-    return readVar('--teal', '#0a7a8a')
-  }
-  window.ArthaEcharts.getSlate = function () {
-    return readVar('--text-muted', '#4a5a6b')
-  }
-  window.ArthaEcharts.applyTo = function (chart) {
-    if (!chart || !chart.setOption) return
-    var g = window.ArthaEcharts.getGold()
-    var t = window.ArthaEcharts.getTeal()
-    var s = window.ArthaEcharts.getSlate()
-    chart.setOption({ color: [g, t, s] })
-  }
+  window.PieEcharts = window.PieEcharts || PieE
+  window.ArthaEcharts = window.ArthaEcharts || window.PieEcharts
 })()

@@ -1,13 +1,16 @@
 import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { isAdherenceRow } from './allocationRowTypes'
+import { readPlanAllocationsOrEmpty } from './planAllocationsRead'
+import { isSecretStoredSafely } from './secrets'
+import { envAnthropicApiKey, envGeminiApiKey, envOpenaiApiKey } from './integrations/env-fallback'
 import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS, getFxAgeHours } from './currency'
 import { getRbiRepoRate, getStalestNREFDAge } from './indiaIntelligence'
 
 export type HealthRow = { name: string; status: 'PASS' | 'WARN' | 'FAIL'; message?: string }
 
 /** Spec target: named checks (trust score divides by this count). */
-export const HEALTH_CHECK_COUNT = 16
+export const HEALTH_CHECK_COUNT = 18
 
 /** When the DB is unreachable, return named rows so `/api/health` stays JSON 200 (observability). */
 function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trustScore: number } {
@@ -26,7 +29,9 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
     'BACKUP_RECENT',
     'AI_RECENT_FAILURES',
     'CRON_HEALTH',
-    'MEMORY_HEALTHY'
+    'STRATEGY_EVALUATOR',
+    'MEMORY_HEALTHY',
+    'RETENTION_POLICY'
   ]
   const checks: HealthRow[] = [
     { name: 'DB_HEALTH', status: 'FAIL', message: dbMessage },
@@ -81,6 +86,12 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
   try {
     const nav = await prisma.navHistory.findFirst({ orderBy: { date: 'desc' } })
     const navAgeDays = nav ? (Date.now() - nav.date.getTime()) / 86400000 : 999
+    const activeHoldings = await prisma.holding.findMany({
+      where: { status: 'ACTIVE' },
+      select: { navSourceType: true, navLastFetchedAt: true }
+    })
+    const allNavFromErste =
+      activeHoldings.length > 0 && activeHoldings.every((h) => h.navSourceType === 'ERSTE')
     const tracked = await prisma.holding.findMany({
       where: { status: 'ACTIVE', navSourceType: { in: ['ERSTE', 'YAHOO', 'AMFI'] } },
       select: { navLastFetchedAt: true }
@@ -97,31 +108,68 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     const histStale = !nav || navAgeDays >= 10
     const holdStale = tracked.length > 0 && worstHoldDays > 7
     let st: HealthRow['status'] = 'PASS'
-    if (!nav && tracked.length === 0) st = 'WARN'
-    else if (histStale || holdStale) st = navAgeDays >= 14 || worstHoldDays > 10 ? 'FAIL' : 'WARN'
+    let msg = nav
+      ? `NavHistory ${navAgeDays.toFixed(1)}d; ERSTE/YAHOO/AMFI holdings max ${worstHoldDays.toFixed(1)}d since fetch`
+      : 'No NavHistory yet'
+    if (!nav && allNavFromErste) {
+      st = 'WARN'
+      msg =
+        'NavHistory empty — expected for Erste-only portfolios. NAV sourced from Erste holding refresh, not Tier-2 history.'
+    } else if (!nav && tracked.length === 0) {
+      st = 'WARN'
+    } else if (histStale || holdStale) {
+      st = navAgeDays >= 14 || worstHoldDays > 10 ? 'FAIL' : 'WARN'
+    }
     checks.push({
       name: 'NAV_FRESHNESS',
       status: st,
-      message: nav
-        ? `NavHistory ${navAgeDays.toFixed(1)}d; ERSTE/YAHOO/AMFI holdings max ${worstHoldDays.toFixed(1)}d since fetch`
-        : 'No NavHistory yet'
+      message: msg
     })
   } catch {
     checks.push({ name: 'NAV_FRESHNESS', status: 'WARN', message: 'Skip' })
   }
 
   const s = await realPrisma.settings.findFirst()
-  checks.push({
-    name: 'EMAIL_CONFIGURED',
-    status: s?.smtpUser && s?.smtpPass ? 'PASS' : 'WARN',
-    message: s?.smtpUser ? 'SMTP set' : 'Not configured'
-  })
+  {
+    let em: HealthRow['status'] = 'WARN'
+    let emMsg = 'Not configured'
+    if (s?.smtpUser && s.smtpPass) {
+      if (!isSecretStoredSafely(s.smtpPass)) {
+        em = 'WARN'
+        emMsg = 'SMTP password stored as plaintext — re-save in Settings to encrypt'
+      } else {
+        em = 'PASS'
+        emMsg = 'SMTP set (encrypted at rest)'
+      }
+    } else if (s?.smtpUser) {
+      emMsg = 'SMTP user set but no password'
+    }
+    checks.push({ name: 'EMAIL_CONFIGURED', status: em, message: emMsg })
+  }
 
-  checks.push({
-    name: 'AI_REACHABLE',
-    status: (process.env.ANTHROPIC_API_KEY || s?.openaiApiKey || process.env.OPENAI_API_KEY) ? 'PASS' : 'WARN',
-    message: 'Set ANTHROPIC_API_KEY or OpenAI in settings'
-  })
+  {
+    const hasEnvAi = Boolean(envAnthropicApiKey() || envOpenaiApiKey() || envGeminiApiKey())
+    const keyRaw = s?.openaiApiKey
+    const hasSettingsKey = Boolean(keyRaw)
+    let aiSt: HealthRow['status'] = hasEnvAi || hasSettingsKey ? 'PASS' : 'WARN'
+    let aiMsg = 'Configure an AI provider under Integrations (or legacy env / Settings key)'
+    try {
+      const n = await realPrisma.integrationProvider.count({
+        where: { category: 'ai', enabled: true }
+      })
+      if (n > 0) {
+        aiSt = 'PASS'
+        aiMsg = `${n} AI integration(s) enabled`
+      }
+    } catch {
+      /* table missing */
+    }
+    if (hasSettingsKey && keyRaw && !isSecretStoredSafely(keyRaw)) {
+      aiSt = 'WARN'
+      aiMsg = 'OpenAI key in legacy Settings is plaintext — re-save to encrypt'
+    }
+    checks.push({ name: 'AI_REACHABLE', status: aiSt, message: aiMsg })
+  }
 
   const prof = await prisma.userProfile.findUnique({ where: { id: 'default' } })
   checks.push({
@@ -158,7 +206,7 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
       name: 'NRE_FD_RATE_FRESHNESS',
       status: st,
       message: Number.isFinite(days)
-        ? `Oldest NRE FD rate row: ${days}d since validFrom (warn>=30d, fail>60d)`
+        ? `${days}d stale · warn ≥30d · fail >60d (NRE FD validFrom)`
         : 'No NRE FD rate rows'
     })
   } catch {
@@ -241,8 +289,8 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
       where: { monthYear, status: { in: ['PROPOSED', 'CONFIRMED', 'EXECUTED'] } },
       orderBy: { generatedAt: 'desc' }
     })
-    const rows = (plan?.allocations as unknown) as Array<{ executionStatus?: string }> | null
-    if (!plan || !Array.isArray(rows) || rows.length === 0) {
+    const rows = plan ? await readPlanAllocationsOrEmpty(plan) : []
+    if (!plan || rows.length === 0) {
       checks.push({ name: 'ADHERENCE_KNOWN', status: 'PASS', message: 'No rows / no plan' })
     } else if (day < 15) {
       checks.push({ name: 'ADHERENCE_KNOWN', status: 'PASS', message: 'Before mid-month' })
@@ -329,6 +377,32 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
   }
 
   try {
+    const since = new Date(Date.now() - 26 * 3600000)
+    const last = await prisma.systemHealth.findFirst({
+      where: { checkName: 'STRATEGY_EVALUATOR' },
+      orderBy: { checkedAt: 'desc' }
+    })
+    if (!last) {
+      checks.push({ name: 'STRATEGY_EVALUATOR', status: 'WARN', message: 'Never run' })
+    } else if (last.checkedAt.getTime() < since.getTime()) {
+      const ageH = (Date.now() - last.checkedAt.getTime()) / 3600000
+      checks.push({
+        name: 'STRATEGY_EVALUATOR',
+        status: 'WARN',
+        message: `Last run ${ageH.toFixed(0)}h ago (expected daily)`
+      })
+    } else {
+      checks.push({
+        name: 'STRATEGY_EVALUATOR',
+        status: last.status === 'FAIL' ? 'WARN' : last.status === 'WARN' ? 'WARN' : 'PASS',
+        message: last.message || 'OK'
+      })
+    }
+  } catch {
+    checks.push({ name: 'STRATEGY_EVALUATOR', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
     const u = process.memoryUsage()
     const ratio = u.heapTotal > 0 ? u.heapUsed / u.heapTotal : 0
     const st: HealthRow['status'] = ratio < 0.8 ? 'PASS' : ratio < 0.9 ? 'WARN' : 'FAIL'
@@ -339,6 +413,30 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     })
   } catch {
     checks.push({ name: 'MEMORY_HEALTHY', status: 'WARN', message: 'Skip' })
+  }
+
+  try {
+    const ten = new Date(Date.now() - 10 * 86400000)
+    const lastPrune = await prisma.cronExecution.findFirst({
+      where: { jobName: 'prune-old-rows', status: 'SUCCESS', startedAt: { gte: ten } },
+      orderBy: { startedAt: 'desc' }
+    })
+    const nextSunday = 'Sunday 03:00 Europe/Prague (weekly)'
+    if (lastPrune) {
+      checks.push({
+        name: 'RETENTION_POLICY',
+        status: 'PASS',
+        message: `Last prune: ${lastPrune.startedAt.toISOString().slice(0, 10)}`
+      })
+    } else {
+      checks.push({
+        name: 'RETENTION_POLICY',
+        status: 'WARN',
+        message: `No successful prune in 10d — first run scheduled ${nextSunday}`
+      })
+    }
+  } catch {
+    checks.push({ name: 'RETENTION_POLICY', status: 'WARN', message: 'Skip' })
   }
 
   const pass = checks.filter((c) => c.status === 'PASS').length

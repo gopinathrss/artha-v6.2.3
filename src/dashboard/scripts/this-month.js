@@ -42,6 +42,14 @@
 
   let currentPlan = null
 
+  function strategyMonthFromStrategyApi(s) {
+    const approvedAt = s.approvedAt || s.createdAt || s.proposedAt
+    if (!approvedAt) return 1
+    const ms = new Date(approvedAt).getTime()
+    if (!Number.isFinite(ms)) return 1
+    return Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24 * 30.4)) + 1
+  }
+
   async function loadPriorMonthCard() {
     const slot = document.getElementById('prior-month-slot')
     if (!slot) return
@@ -94,16 +102,27 @@
 
   async function load() {
     try {
-      const res = await fetch('/api/this-month').then((r) => r.json())
+      const [res, stratRes] = await Promise.all([
+        fetch('/api/this-month').then((r) => r.json()),
+        fetch('/api/strategies').then((r) => r.json()).catch(() => ({ success: false }))
+      ])
       const plan = res?.data?.plan || null
       currentPlan = plan
+      /** @type {Record<string, object>} */
+      const strategyByIsin = {}
+      if (stratRes?.success && Array.isArray(stratRes.data)) {
+        for (const s of stratRes.data) {
+          const isin = s.holding?.isin
+          if (isin && (s.status === 'APPROVED' || s.status === 'MONITORING')) strategyByIsin[isin] = s
+        }
+      }
       if (!plan || !Array.isArray(plan.allocations)) {
         renderEmpty()
         await loadPriorMonthCard()
         return
       }
       renderSummary(plan)
-      renderRows(plan)
+      renderRows(plan, strategyByIsin)
       await loadPriorMonthCard()
     } catch (e) {
       renderEmpty()
@@ -180,7 +199,8 @@
     document.getElementById('btn-delete-plan')?.addEventListener('click', deletePlan)
   }
 
-  function renderRows(plan) {
+  function renderRows(plan, strategyByIsin) {
+    const byIsin = strategyByIsin || {}
     const allocs = plan.allocations || []
     const sells = allocs.filter((a) => a.type === 'SELL')
     const reserves = allocs.filter((a) => a.type === 'RESERVE')
@@ -195,7 +215,7 @@
         sectionCard(
           'Sells (free up cash)',
           `${sells.length} ${sells.length === 1 ? 'action' : 'actions'} · ${fmt0(sum(sells))} Kč freed`,
-          sells.map(rowActionable).join('')
+          sells.map((r) => rowActionable(r, byIsin)).join('')
         )
       )
     }
@@ -204,7 +224,7 @@
         sectionCard(
           'Reserves',
           `For upcoming events · ${fmt0(sum(reserves))} Kč`,
-          reserves.map(rowActionable).join('')
+          reserves.map((r) => rowActionable(r, byIsin)).join('')
         )
       )
     }
@@ -213,7 +233,7 @@
         sectionCard(
           'Buys (deploy investable)',
           `${buys.length} ${buys.length === 1 ? 'action' : 'actions'} · ${fmt0(sum(buys))} Kč deployed`,
-          buys.map(rowActionable).join('')
+          buys.map((r) => rowActionable(r, byIsin)).join('')
         )
       )
     }
@@ -245,7 +265,7 @@
     `
   }
 
-  function rowActionable(row) {
+  function rowActionable(row, strategyByIsin) {
     const name =
       row.type === 'SELL'
         ? row.source || row.name || row.isin || '—'
@@ -258,6 +278,19 @@
     const badge = row.sellSubtype
       ? `<span class="badge badge-${badgeColor}">${escapeHtml(row.sellSubtype.replace(/_/g, ' '))}</span>`
       : ''
+
+    let strategyBadge = ''
+    if (row.type === 'BUY' && strategyByIsin && row.isin) {
+      const reasonText = row.reason || ''
+      const isStrategyBuy =
+        reasonText.includes('[Strategy:') || reasonText.includes('Approved strategy')
+      const st = strategyByIsin[row.isin]
+      if (isStrategyBuy && st) {
+        const cm = strategyMonthFromStrategyApi(st)
+        const mt = Number(st.monthsToTarget) || 0
+        strategyBadge = `<span class="badge badge-strategy" title="Strategy: month ${cm} of ${mt}">Month ${cm}/${mt}</span>`
+      }
+    }
 
     const taxLine =
       row.type === 'SELL' && row.taxImpactCzk !== undefined && row.taxImpactCzk !== null
@@ -285,6 +318,7 @@
         <div class="plan-row-main">
           <div class="plan-row-title-line">
             <span class="plan-row-name">${escapeHtml(name)}</span>
+            ${strategyBadge}
             ${badge}
           </div>
           <div class="plan-row-reason">${escapeHtml(row.reason || '')}</div>
@@ -299,6 +333,13 @@
   function rowHold(row) {
     const days = row.daysToAction
     const daysBadge = days != null ? `<span class="badge badge-info">${escapeHtml(String(days))}d</span>` : ''
+    const hr = row.holdReason ? String(row.holdReason).toUpperCase() : ''
+    const holdBadge =
+      hr && hr !== 'NONE'
+        ? `<span class="badge badge-${hr === 'STRATEGY_CAP' ? 'warning' : 'neutral'}">${escapeHtml(
+            hr.replace(/_/g, ' ')
+          )}</span>`
+        : ''
     return `
       <div class="plan-row plan-row-hold">
         <div class="plan-row-icon plan-row-icon-hold">·</div>
@@ -306,6 +347,7 @@
           <div class="plan-row-title-line">
             <span class="plan-row-name plan-row-name-muted">${escapeHtml(row.name || row.isin || '—')}</span>
             ${daysBadge}
+            ${holdBadge}
           </div>
           <div class="plan-row-reason">${escapeHtml(row.reason || '')}</div>
         </div>

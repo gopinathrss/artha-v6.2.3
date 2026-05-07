@@ -43,8 +43,12 @@
       '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 14 V3 M3 11 L7 7 L10 10 L13 5 M13 5 H10 M13 5 V8"/></svg>',
     patterns:
       '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 2 H10 A3 3 0 0 1 13 5 V14 H6 A3 3 0 0 1 3 11 Z M6 14 A3 3 0 0 0 3 11"/></svg>',
+    accounts:
+      '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M2 7 H14 M5 10 H7"/></svg>',
     settings:
-      '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2"/><path d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15 M2.5 2.5 L4 4 M12 12 L13.5 13.5 M2.5 13.5 L4 12 M12 4 L13.5 2.5"/></svg>'
+      '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="2"/><path d="M8 1 V3 M8 13 V15 M1 8 H3 M13 8 H15 M2.5 2.5 L4 4 M12 12 L13.5 13.5 M2.5 13.5 L4 12 M12 4 L13.5 2.5"/></svg>',
+    help:
+      '<svg class="sidebar-nav-item-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M5 3 H11 A2 2 0 0 1 13 5 V11 A2 2 0 0 1 11 13 H5 A2 2 0 0 1 3 11 V5 A2 2 0 0 1 5 3 Z"/><path d="M6 6 H10 M6 9 H10 M8 12 V12.01"/></svg>'
   }
 
   const navItem = (href, key, label) =>
@@ -52,8 +56,11 @@
 
   aside.innerHTML = `
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark">A</div>
-      <div class="sidebar-brand-name">Artha</div>
+      <div class="sidebar-brand-mark"><img src="/assets/pie-logo.svg" width="32" height="32" alt="PIE" /></div>
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-name">PIE</div>
+        <div class="sidebar-brand-sub">Personal Investment Engine</div>
+      </div>
     </div>
 
     <nav class="sidebar-section">
@@ -61,6 +68,7 @@
       <ul class="sidebar-nav">
         ${navItem('/', 'overview', 'Overview')}
         ${navItem('/portfolio', 'portfolio', 'Portfolio')}
+        ${navItem('/accounts', 'accounts', 'Accounts')}
         ${navItem('/this-month', 'this-month', 'This Month')}
         ${navItem('/india', 'india', 'India')}
         ${navItem('/tax-calendar', 'tax-calendar', 'Tax Calendar')}
@@ -71,12 +79,13 @@
     <nav class="sidebar-section">
       <div class="sidebar-section-label">Intelligence</div>
       <ul class="sidebar-nav">
-        ${navItem('/intelligence', 'intelligence', 'Ask Artha')}
+        ${navItem('/intelligence', 'intelligence', 'Ask PIE')}
         ${navItem('/library', 'library', 'Library')}
         ${navItem('/backtest', 'backtest', 'Backtest Lab')}
         ${navItem('/patterns', 'patterns', 'Patterns')}
         ${navItem('/reports', 'reports', 'Reports')}
         ${navItem('/alerts', 'alerts', 'Alerts')}
+        ${navItem('/help', 'help', 'Help')}
       </ul>
     </nav>
 

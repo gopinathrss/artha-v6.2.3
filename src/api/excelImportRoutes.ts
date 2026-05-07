@@ -1,9 +1,9 @@
 import type { Application } from 'express'
 import { importBankingInput } from '../lib/import/excelImport'
-import { arthaUpload } from './uploadMulter'
+import { pieUpload } from './uploadMulter'
 
 export function registerExcelImportRoutes(app: Application) {
-  app.post('/api/import/excel', arthaUpload.single('file'), async (req, res) => {
+  app.post('/api/import/excel', pieUpload.single('file'), async (req, res) => {
     try {
       if (!req.file?.path) {
         return res.status(400).json({ success: false, error: 'No file uploaded' })

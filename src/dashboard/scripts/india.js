@@ -83,8 +83,12 @@
     document.getElementById('stat-fd').textContent = fdCzk > 0 ? fmt0(fdCzk) + ' Kč' : '—'
   }
 
+  let mfRaw = []
+  let fdRaw = []
+
   function renderMutualFunds(mfData) {
     const funds = mfData.funds || []
+    mfRaw = funds.slice()
     const czkPerInr = Number(mfData.czkPerInr) || 0
 
     document.getElementById('mf-subtitle').textContent =
@@ -94,12 +98,14 @@
     const tbody = document.getElementById('mf-tbody')
     if (funds.length === 0) {
       tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="empty-state">
-            <div class="empty-state-message">No Indian mutual funds yet. Add some in Settings.</div>
-          </td>
-        </tr>
-      `
+        <tr><td colspan="7" class="empty-state">
+          <div class="empty-state-cta">
+            <div class="empty-state-message">No Indian mutual funds yet.</div>
+            <button class="btn btn-primary btn-sm" id="empty-mf-btn" type="button">+ Add fund</button>
+          </div>
+        </td></tr>`
+      const e = document.getElementById('empty-mf-btn')
+      if (e) e.addEventListener('click', () => openMfDrawer(null))
       return
     }
 
@@ -108,7 +114,7 @@
         const valueInr = Number(f.valueInr) || (Number(f.units) * Number(f.nav)) || 0
         const valueCzk = Number(f.valueCzk) || valueInr * czkPerInr
         return `
-          <tr>
+          <tr data-id="${escapeHtml(f.id || '')}">
             <td>
               <div class="fund-name">${escapeHtml(f.scheme || f.name || '—')}</div>
               ${f.isin ? `<div class="fund-isin">${escapeHtml(f.isin)}</div>` : ''}
@@ -118,26 +124,39 @@
             <td class="num">${fmt2(f.nav)}</td>
             <td class="num">₹${fmt0(valueInr)}</td>
             <td class="num"><strong>${fmt0(valueCzk)} Kč</strong></td>
-          </tr>
-        `
+            <td class="num">
+              <button class="btn btn-ghost btn-sm" data-mf-act="edit" type="button">Edit</button>
+            </td>
+          </tr>`
       })
       .join('')
+
+    Array.from(tbody.querySelectorAll('button[data-mf-act="edit"]')).forEach((b) =>
+      b.addEventListener('click', (e) => {
+        const id = e.currentTarget.closest('tr').getAttribute('data-id')
+        const f = mfRaw.find((x) => x.id === id)
+        if (f) openMfDrawer(f)
+      })
+    )
   }
 
   function renderFds(fdData) {
     const fds = fdData.fds || []
+    fdRaw = fds.slice()
     document.getElementById('fd-subtitle').textContent =
       fds.length + ' ' + (fds.length === 1 ? 'deposit' : 'deposits')
 
     const tbody = document.getElementById('fd-tbody')
     if (fds.length === 0) {
       tbody.innerHTML = `
-        <tr>
-          <td colspan="6" class="empty-state">
+        <tr><td colspan="7" class="empty-state">
+          <div class="empty-state-cta">
             <div class="empty-state-message">No fixed deposits yet.</div>
-          </td>
-        </tr>
-      `
+            <button class="btn btn-primary btn-sm" id="empty-fd-btn" type="button">+ Add FD</button>
+          </div>
+        </td></tr>`
+      const e = document.getElementById('empty-fd-btn')
+      if (e) e.addEventListener('click', () => openFdDrawer(null))
       return
     }
 
@@ -150,18 +169,204 @@
           daysCell = `<span class="badge ${cls}">${days}d</span>`
         }
         return `
-          <tr>
+          <tr data-id="${escapeHtml(fd.id || '')}">
             <td><strong>${escapeHtml(fd.bank || '—')}</strong></td>
-            <td><span class="text-secondary">${escapeHtml(fd.type || fd.acctType || '—')}</span></td>
+            <td><span class="text-secondary">${escapeHtml(fd.accountType || fd.type || '—')}</span></td>
             <td class="num">₹${fmt0(fd.principalInr || fd.principal)}</td>
-            <td class="num">${fmt2(fd.ratePct || fd.rate)}</td>
+            <td class="num">${fmt2(fd.interestRatePct || fd.ratePct || fd.rate)}</td>
             <td><span class="text-secondary">${escapeHtml(dateStr(fd.maturityDate))}</span></td>
             <td class="num">${daysCell}</td>
-          </tr>
-        `
+            <td class="num">
+              <button class="btn btn-ghost btn-sm" data-fd-act="edit" type="button">Edit</button>
+            </td>
+          </tr>`
       })
       .join('')
+
+    Array.from(tbody.querySelectorAll('button[data-fd-act="edit"]')).forEach((b) =>
+      b.addEventListener('click', (e) => {
+        const id = e.currentTarget.closest('tr').getAttribute('data-id')
+        const fd = fdRaw.find((x) => x.id === id)
+        if (fd) openFdDrawer(fd)
+      })
+    )
   }
+
+  function fHtml(label, name, value, type, attrs) {
+    return (
+      '<div class="pie-form-field"><label for="if_' + name + '">' + escapeHtml(label) + '</label>' +
+      '<input id="if_' + name + '" name="' + name + '" type="' + (type || 'text') + '" value="' +
+      escapeHtml(value == null ? '' : String(value)) + '" ' + (attrs || '') + ' /></div>'
+    )
+  }
+  function selHtml(label, name, value, options) {
+    return (
+      '<div class="pie-form-field"><label for="if_' + name + '">' + escapeHtml(label) + '</label>' +
+      '<select id="if_' + name + '" name="' + name + '">' +
+      options.map((o) =>
+        '<option value="' + escapeHtml(o.value) + '"' +
+        (String(o.value) === String(value) ? ' selected' : '') + '>' + escapeHtml(o.label) + '</option>'
+      ).join('') +
+      '</select></div>'
+    )
+  }
+  function dateInput(d) {
+    if (!d) return ''
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return ''
+    return dt.toISOString().slice(0, 10)
+  }
+
+  function openMfDrawer(f) {
+    const isNew = !f
+    const html = `
+      <form class="pie-form" id="mf-form" autocomplete="off">
+        ${fHtml('Scheme name', 'schemeName', f?.scheme || f?.schemeName, 'text', 'required')}
+        <div class="pie-form-row">
+          ${fHtml('AMFI code', 'amfiCode', f?.amfiCode, 'text', 'required')}
+          ${fHtml('ISIN', 'isin', f?.isin)}
+        </div>
+        <div class="pie-form-row">
+          ${fHtml('AMC', 'amc', f?.amc)}
+          ${selHtml('Category', 'category', f?.category || 'EQUITY', [
+            { value: 'EQUITY', label: 'Equity' },
+            { value: 'DEBT', label: 'Debt' },
+            { value: 'HYBRID', label: 'Hybrid' },
+            { value: 'INDEX', label: 'Index' },
+            { value: 'ELSS', label: 'ELSS (tax saver)' },
+            { value: 'OTHER', label: 'Other' }
+          ])}
+        </div>
+        <div class="pie-form-row">
+          ${fHtml('Units', 'units', f?.units, 'number', 'step="0.0001" required')}
+          ${fHtml('Avg buy NAV (₹)', 'avgNavInr', f?.avgNavInr, 'number', 'step="0.0001"')}
+        </div>
+        <div class="pie-form-row">
+          ${fHtml('Current NAV (₹)', 'currentNavInr', f?.currentNavInr || f?.nav, 'number', 'step="0.0001"')}
+          ${fHtml('Purchase date', 'purchaseDate', dateInput(f?.purchaseDate), 'date', 'required')}
+        </div>
+        <div class="pie-form-row">
+          ${fHtml('Folio number', 'folioNumber', f?.folioNumber)}
+          ${fHtml('Monthly SIP (₹)', 'sipAmountInr', f?.sipAmountInr, 'number', 'step="1"')}
+        </div>
+      </form>`
+    const dr = PieUi.drawer({ title: isNew ? 'Add mutual fund' : 'Edit mutual fund', bodyHtml: html })
+    dr.setFooter([
+      isNew
+        ? null
+        : PieUi.btn('Delete…', async () => {
+            const ok = await PieUi.confirm({
+              title: 'Delete fund?',
+              message: 'Permanent — units, NAV history and SIP rows for this fund will be removed.',
+              tone: 'danger',
+              confirmLabel: 'Delete'
+            })
+            if (!ok) return
+            try {
+              await PieFetch.delete('/api/india/mf/' + encodeURIComponent(f.id))
+              PieUi.toast('Fund deleted', 'success')
+              dr.close()
+              await load()
+            } catch (e) {
+              PieUi.toast('Delete failed: ' + (e.message || e), 'error')
+            }
+          }),
+      PieUi.btn('Cancel', () => dr.close()),
+      PieUi.btn(isNew ? 'Create' : 'Save', async () => {
+        const f2 = document.getElementById('mf-form')
+        if (!f2.reportValidity()) return
+        const fd = new FormData(f2)
+        const body = {}
+        fd.forEach((v, k) => {
+          if (v === '' || v == null) return
+          if (['units', 'avgNavInr', 'currentNavInr', 'sipAmountInr'].includes(k)) body[k] = Number(v)
+          else body[k] = v
+        })
+        if (body.sipAmountInr) body.sipActive = true
+        try {
+          if (isNew) await PieFetch.post('/api/india/mf', body)
+          else await PieFetch.patch('/api/india/mf/' + encodeURIComponent(f.id), body)
+          PieUi.toast('Saved', 'success')
+          dr.close()
+          await load()
+        } catch (e) {
+          PieUi.toast('Save failed: ' + (e.message || e), 'error')
+        }
+      }, 'primary')
+    ])
+  }
+
+  function openFdDrawer(fd) {
+    const isNew = !fd
+    const html = `
+      <form class="pie-form" id="fd-form" autocomplete="off">
+        ${fHtml('Bank', 'bank', fd?.bank, 'text', 'required')}
+        ${selHtml('Account type', 'accountType', fd?.accountType || 'NRE', [
+          { value: 'NRE', label: 'NRE FD' },
+          { value: 'NRO', label: 'NRO FD' },
+          { value: 'FCNR', label: 'FCNR FD' },
+          { value: 'RESIDENT', label: 'Resident FD' }
+        ])}
+        <div class="pie-form-row">
+          ${fHtml('Principal (₹)', 'principalInr', fd?.principalInr, 'number', 'step="1" required')}
+          ${fHtml('Interest rate (% p.a.)', 'interestRatePct', fd?.interestRatePct, 'number', 'step="0.01" required')}
+        </div>
+        <div class="pie-form-row">
+          ${fHtml('Start date', 'startDate', dateInput(fd?.startDate), 'date', 'required')}
+          ${fHtml('Maturity date', 'maturityDate', dateInput(fd?.maturityDate), 'date', 'required')}
+        </div>
+        ${selHtml('Interest type', 'interestType', fd?.interestType || 'CUMULATIVE', [
+          { value: 'CUMULATIVE', label: 'Cumulative (paid at maturity)' },
+          { value: 'PAYOUT', label: 'Periodic payout' }
+        ])}
+      </form>`
+    const dr = PieUi.drawer({ title: isNew ? 'Add fixed deposit' : 'Edit fixed deposit', bodyHtml: html })
+    dr.setFooter([
+      isNew
+        ? null
+        : PieUi.btn('Delete…', async () => {
+            const ok = await PieUi.confirm({
+              title: 'Delete FD?',
+              message: 'Permanent.',
+              tone: 'danger',
+              confirmLabel: 'Delete'
+            })
+            if (!ok) return
+            try {
+              await PieFetch.delete('/api/india/fd/' + encodeURIComponent(fd.id))
+              PieUi.toast('FD deleted', 'success')
+              dr.close()
+              await load()
+            } catch (e) {
+              PieUi.toast('Delete failed: ' + (e.message || e), 'error')
+            }
+          }),
+      PieUi.btn('Cancel', () => dr.close()),
+      PieUi.btn(isNew ? 'Create' : 'Save', async () => {
+        const f2 = document.getElementById('fd-form')
+        if (!f2.reportValidity()) return
+        const fdat = new FormData(f2)
+        const body = {}
+        fdat.forEach((v, k) => {
+          if (v === '' || v == null) return
+          if (['principalInr', 'interestRatePct'].includes(k)) body[k] = Number(v)
+          else body[k] = v
+        })
+        try {
+          if (isNew) await PieFetch.post('/api/india/fd', body)
+          else await PieFetch.patch('/api/india/fd/' + encodeURIComponent(fd.id), body)
+          PieUi.toast('Saved', 'success')
+          dr.close()
+          await load()
+        } catch (e) {
+          PieUi.toast('Save failed: ' + (e.message || e), 'error')
+        }
+      }, 'primary')
+    ])
+  }
+
+  document.getElementById('add-mf-btn')?.addEventListener('click', () => openMfDrawer(null))
+  document.getElementById('add-fd-btn')?.addEventListener('click', () => openFdDrawer(null))
 
   function renderAnalysis(analysis) {
     const best = analysis.bestNre1yr || {}

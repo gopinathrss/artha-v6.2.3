@@ -5,12 +5,13 @@ import { registerExcelImportRoutes } from './excelImportRoutes'
 import { registerEmailIngestionRoutes } from './emailIngestionRoutes'
 import { HEALTH_CHECK_COUNT, runHealthChecks } from '../lib/health'
 import { currentMonthYear, generateMonthlyPlan, getPlanForMonth } from '../lib/allocationPlanner'
-import { sendEmail } from '../lib/emailService'
-import { buildPlanReadyEmail } from '../lib/planEmail'
 import { computeAdherenceStats } from '../lib/adherence'
 import { getMonthlyPlanOutcomes } from '../lib/planHistory'
 import { countPendingInPlan, markAllPendingRowsDone } from '../lib/followThrough'
 import { markPlanRowDone } from '../lib/planRowUpdate'
+import { parsePlanAllocations } from '../lib/allocationPlanSchema'
+import { readPlanAllocationsForMutation } from '../lib/planAllocationsRead'
+import { replacePlanRows, type PlanRowClient } from '../lib/allocationPlanRows'
 import { num } from '../lib/money'
 import {
   runBacktest,
@@ -364,8 +365,12 @@ export function registerCfoRoutes(app: Application) {
     try {
       const plan = await (await getPrisma()).allocationPlan.findUnique({ where: { id: planId } })
       if (!plan) return res.status(404).json({ success: false, error: 'Plan not found' })
+      const parsed = await readPlanAllocationsForMutation(plan)
+      if (rowIndex >= parsed.length) {
+        return res.status(400).json({ success: false, error: 'Invalid row' })
+      }
       const all = plan.allocations as unknown
-      if (!Array.isArray(all) || rowIndex >= all.length) {
+      if (!Array.isArray(all)) {
         return res.status(400).json({ success: false, error: 'Invalid row' })
       }
       const next = all.map((x) => (typeof x === 'object' && x !== null ? { ...(x as object) } : x)) as Record<
@@ -403,30 +408,43 @@ export function registerCfoRoutes(app: Application) {
           rowType === 'SELL'
             ? `Skipped sell ${amt} CZK from ${destLabel}: ${reason}`
             : `Skipped ${amt} CZK to ${destLabel}: ${reason}`
-        await (await getPrisma()).advisorJournal.create({
-          data: {
-            category: 'MISSED',
-            content: skipLine,
-            relatedIsin: r.isin != null ? String(r.isin) : null,
-            impactCzk: null,
-            metadata: { planId, rowIndex, action: 'SKIPPED' } as object
-          }
+        const prisma = await getPrisma()
+        await prisma.$transaction(async (tx) => {
+          await tx.advisorJournal.create({
+            data: {
+              category: 'MISSED',
+              content: skipLine,
+              relatedIsin: r.isin != null ? String(r.isin) : null,
+              impactCzk: null,
+              metadata: { planId, rowIndex, action: 'SKIPPED' } as object
+            }
+          })
+          await tx.allocationPlan.update({
+            where: { id: planId },
+            data: { allocations: next as object }
+          })
+          await replacePlanRows(tx as unknown as PlanRowClient, planId, parsePlanAllocations(next))
         })
-      } else {
-        next[rowIndex] = {
-          ...baseRow,
-          executionStatus: 'PENDING',
-          executedAt: null,
-          executedAmountCzk: null,
-          skipReason: null
-        }
+        const updated = await prisma.allocationPlan.findUnique({ where: { id: planId } })
+        return res.json({ success: true, data: { plan: updated } })
       }
-
-      const updated = await (await getPrisma()).allocationPlan.update({
-        where: { id: planId },
-        data: { allocations: next as object }
+      next[rowIndex] = {
+        ...baseRow,
+        executionStatus: 'PENDING',
+        executedAt: null,
+        executedAmountCzk: null,
+        skipReason: null
+      }
+      const prisma2 = await getPrisma()
+      await prisma2.$transaction(async (tx) => {
+        await tx.allocationPlan.update({
+          where: { id: planId },
+          data: { allocations: next as object }
+        })
+        await replacePlanRows(tx as unknown as PlanRowClient, planId, parsePlanAllocations(next))
       })
-      return res.json({ success: true, data: { plan: updated } })
+      const updatedPlan = await prisma2.allocationPlan.findUnique({ where: { id: planId } })
+      return res.json({ success: true, data: { plan: updatedPlan } })
     } catch (e: unknown) {
       const m = e instanceof Error ? e.message : 'Update failed'
       return res.status(500).json({ success: false, error: m })
@@ -439,7 +457,8 @@ export function registerCfoRoutes(app: Application) {
     try {
       const existing = await (await getPrisma()).allocationPlan.findUnique({ where: { id: planId } })
       if (!existing) return res.status(404).json({ success: false, error: 'Plan not found' })
-      const n = countPendingInPlan(existing.allocations as unknown)
+      const parsedRows = await readPlanAllocationsForMutation(existing)
+      const n = countPendingInPlan(parsedRows as unknown)
       if (n === 0) {
         return res
           .status(400)
@@ -955,6 +974,15 @@ export function registerCfoRoutes(app: Application) {
       const skippedRows = milestone.filter((o) => o.wasExecuted === false)
       const followedPct =
         milestone.length > 0 ? Math.round((followedRows.length / milestone.length) * 100) : null
+      const pendingAll = all.filter((o) => o.status === 'PENDING')
+      let earliestFirstEvalIso: string | null = null
+      for (const o of pendingAll) {
+        const d = new Date(o.recommendedAt)
+        d.setDate(d.getDate() + 30)
+        if (!earliestFirstEvalIso || d.getTime() < new Date(earliestFirstEvalIso).getTime()) {
+          earliestFirstEvalIso = d.toISOString()
+        }
+      }
       const gainsFollowed = followedRows
         .map((o) => (o.gainPctAt90d != null ? Number(o.gainPctAt90d) : null))
         .filter((x): x is number => x != null && Number.isFinite(x))
@@ -977,7 +1005,13 @@ export function registerCfoRoutes(app: Application) {
           avgGainFollowed90d,
           avgGainSkipped90d,
           followedCount: followedRows.length,
-          skippedCount: skippedRows.length
+          skippedCount: skippedRows.length,
+          pendingCount: pendingAll.length,
+          earliestFirstEvaluationIso: earliestFirstEvalIso,
+          pendingBlurb:
+            pendingAll.length > 0
+              ? `No outcomes resolved yet for ${pendingAll.length} open recommendation(s). Earliest 30-day evaluation window ends around ${earliestFirstEvalIso?.slice(0, 10) ?? '—'}.`
+              : null
         }
       })
     } catch (e: unknown) {
@@ -991,8 +1025,7 @@ export function registerCfoRoutes(app: Application) {
       const prisma = await getPrisma()
       const limit = Math.min(Number(req.query.limit) || 20, 100)
       const outcomes = await prisma.recommendationOutcome.findMany({
-        where: { status: { in: ['EXECUTED_90D', 'SKIPPED'] } },
-        orderBy: { evaluatedAt90d: 'desc' },
+        orderBy: { recommendedAt: 'desc' },
         take: limit
       })
       return res.json({ success: true, data: outcomes })

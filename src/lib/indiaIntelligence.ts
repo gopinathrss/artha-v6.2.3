@@ -1,3 +1,4 @@
+import type { PrismaClient } from '@prisma/client'
 import { getPrisma } from './prisma'
 import { num } from './money'
 
@@ -44,8 +45,8 @@ export interface FCNRComparison {
   recommendation: string
 }
 
-export async function fetchRBIRate(): Promise<void> {
-  const prisma = await getPrisma()
+export async function fetchRBIRate(db?: PrismaClient): Promise<void> {
+  const prisma = db ?? (await getPrisma())
   const prev = await prisma.indiaIntelligence.findFirst({
     where: { dataType: 'RBI_RATE' },
     orderBy: { validFrom: 'desc' }
@@ -90,8 +91,8 @@ const NRE_SEED: { bank: string; tenor: string; value: number }[] = [
   { bank: 'Kotak', tenor: '3yr', value: 7.0 }
 ]
 
-export async function seedNREFDRates(): Promise<void> {
-  const prisma = await getPrisma()
+export async function seedNREFDRates(db?: PrismaClient): Promise<void> {
+  const prisma = db ?? (await getPrisma())
   const c = await prisma.indiaIntelligence.count({ where: { dataType: 'NRE_FD_RATE' } })
   if (c > 0) return
   const validFrom = new Date('2026-04-01')

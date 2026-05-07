@@ -55,7 +55,7 @@ for (const page of PAGES) {
         await pw.setViewportSize({ width: size.width, height: size.height })
         await pw.addInitScript((t: string) => {
           try {
-            localStorage.setItem('artha-theme-preference', t)
+            localStorage.setItem('pie-theme-preference', t)
           } catch {}
         }, theme)
 

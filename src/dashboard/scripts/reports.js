@@ -53,6 +53,20 @@
     return 'badge-neutral'
   }
 
+  function firstEvalDate(iso) {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  function addDaysIso(recommendedAt, days) {
+    const d = new Date(recommendedAt)
+    if (Number.isNaN(d.getTime())) return null
+    d.setDate(d.getDate() + days)
+    return d.toISOString()
+  }
+
   async function loadOutcomes() {
     const tbody = document.getElementById('outcomes-tbody')
     try {
@@ -61,6 +75,15 @@
         fetch('/api/outcomes/recent?limit=20').then((r) => r.json())
       ])
       const s = sumRes?.data || {}
+      const pendingNote = document.getElementById('outcomes-pending-note')
+      if (pendingNote) {
+        pendingNote.textContent =
+          s.pendingBlurb ||
+          (s.pendingCount > 0
+            ? `${s.pendingCount} recommendation(s) still in PENDING — first 30d evaluation dates vary by row.`
+            : '')
+        pendingNote.style.display = s.pendingCount > 0 || s.pendingBlurb ? 'block' : 'none'
+      }
       document.getElementById('ot-total').textContent = String(s.totalRecommendations ?? '—')
       document.getElementById('ot-followed').textContent =
         s.followedPct != null ? `${s.followedPct}% (${s.followedCount ?? 0})` : '—'
@@ -76,7 +99,18 @@
       tbody.innerHTML = rows
         .map((o) => {
           const g = o.gainPctAt90d != null ? Number(o.gainPctAt90d) : null
-          const v = g == null ? 'Pending' : g > 0.5 ? 'Positive' : g < -0.5 ? 'Negative' : 'Neutral'
+          const isPending = String(o.status || '') === 'PENDING'
+          const firstEval =
+            isPending && o.recommendedAt ? firstEvalDate(addDaysIso(o.recommendedAt, 30) || '') : null
+          const v = isPending
+            ? `Pending — first evaluation ${firstEval || '—'}`
+            : g == null
+              ? '—'
+              : g > 0.5
+                ? 'Positive'
+                : g < -0.5
+                  ? 'Negative'
+                  : 'Neutral'
           const ex = o.wasExecuted === true ? 'Yes' : o.wasExecuted === false ? 'No' : '—'
           return `
           <tr>

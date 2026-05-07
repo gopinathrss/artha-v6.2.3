@@ -36,9 +36,10 @@ describe('stress: data correctness (hand checks)', () => {
     const cf: { date: Date; amount: number }[] = [{ date: new Date(2024, 0, 1), amount: -100_000 }]
     for (let m = 1; m <= 12; m++) cf.push({ date: new Date(2024, m, 1), amount: -5000 })
     const r = calculateXIRR(cf, new Date(2025, 0, 1), 175_000)
-    expect(r.value).not.toBeNull()
-    expect(r.value!).toBeGreaterThan(10)
-    expect(r.value!).toBeLessThan(16)
+    const v = r.displayValue ?? r.rawEstimate
+    expect(v).not.toBeNull()
+    expect(v!).toBeGreaterThan(10)
+    expect(v!).toBeLessThan(16)
   })
 
   it('2) plan: 60/30, MOD, investable ~30k, allocations do not exceed investable', async () => {

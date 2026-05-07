@@ -297,7 +297,7 @@ export async function seedLibraryWithTopETFs(db?: PrismaClient): Promise<void> {
     })
   }
   // eslint-disable-next-line no-console
-  console.log(`[ARTHA] Instrument library seeded: ${TOP_ETF_SEED.length} instruments`)
+  console.log(`[PIE] Instrument library seeded: ${TOP_ETF_SEED.length} instruments`)
 }
 
 export async function loadAllLibrary(): Promise<InstrumentLibrary[]> {

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ARTHA — Portfolio</title>
+    <title>PIE — Portfolio</title>
     <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -43,25 +43,32 @@
             <h1 class="topbar-page-title">Portfolio</h1>
           </div>
           <div class="topbar-actions">
-            <button
-              class="btn btn-ghost btn-sm"
-              id="refresh-btn"
-              aria-label="Refresh"
-              type="button"
-            >
-              Refresh
+            <button class="btn btn-ghost btn-sm" id="strategy-eval-btn" type="button">
+              Run strategy evaluation
             </button>
-            <a href="/this-month" class="btn btn-primary btn-sm">This month</a>
+            <button class="btn btn-ghost btn-sm" id="refresh-nav-btn" type="button">
+              Refresh NAVs
+            </button>
+            <button class="btn btn-ghost btn-sm" id="refresh-btn" type="button">Refresh</button>
+            <button class="btn btn-primary btn-sm" id="add-holding-btn" type="button">
+              + Add holding
+            </button>
           </div>
         </header>
 
         <div class="content">
           <section class="overview-hero" id="hero">
-            <div class="hero-eyebrow">Total portfolio</div>
+            <div class="hero-eyebrow">Czech mutual funds</div>
             <div class="hero-value-row">
               <div class="hero-value" id="hero-total">—</div>
             </div>
             <div class="hero-meta" id="hero-sub">—</div>
+            <p
+              id="hero-invested-hint"
+              class="callout callout-info"
+              style="display: none; margin-top: var(--space-3); margin-bottom: 0; font-size: var(--text-sm)"
+              role="status"
+            ></p>
 
             <div class="hero-stats">
               <div class="hero-stat">
@@ -73,11 +80,21 @@
                 <div class="hero-stat-value" id="stat-inactive">—</div>
               </div>
               <div class="hero-stat">
-                <div class="hero-stat-label">Total invested</div>
+                <div
+                  class="hero-stat-label"
+                  title="Sum of every SIP / lump cashflow (minus withdrawals), not the monthly SIP column. Your banking sheet has one cell per month per fund — adding months adds to this total."
+                >
+                  Lifetime contributed
+                </div>
                 <div class="hero-stat-value" id="stat-invested">—</div>
               </div>
               <div class="hero-stat">
-                <div class="hero-stat-label">Gain</div>
+                <div
+                  class="hero-stat-label"
+                  title="Today’s Czech fund book minus lifetime contributed (from cashflows), as a % of that contributed total. Not CAGR / XIRR."
+                >
+                  Gain vs contributed
+                </div>
                 <div class="hero-stat-value" id="stat-gain">—</div>
               </div>
             </div>
@@ -102,11 +119,12 @@
                     <th class="num" scope="col">Value</th>
                     <th class="num" scope="col">SIP</th>
                     <th scope="col">Tax-free</th>
+                    <th scope="col" aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody id="holdings-tbody">
                   <tr>
-                    <td colspan="8" class="empty-state">
+                    <td colspan="9" class="empty-state">
                       <div class="empty-state-message">Loading…</div>
                     </td>
                   </tr>
@@ -120,6 +138,8 @@
 
     <script src="/scripts/sidebar.js"></script>
     <script src="/scripts/shell.js"></script>
+    <script src="/scripts/fetchJson.js"></script>
+    <script src="/scripts/pieUi.js"></script>
     <script src="/scripts/portfolio.js"></script>
   </body>
 </html>

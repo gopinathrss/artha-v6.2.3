@@ -22,11 +22,14 @@ export async function fetchUnseenSipEmails(opts: {
   password: string
   mailbox?: string
 }): Promise<IngestedEmail[]> {
+  // V6: explicit timeouts so a hung mailbox can't deadlock the ingest cron.
   const client = new ImapFlow({
     host: opts.host,
     port: opts.port,
     secure: true,
-    auth: { user: opts.user, pass: opts.password }
+    auth: { user: opts.user, pass: opts.password },
+    socketTimeout: 30_000,
+    greetingTimeout: 15_000
   })
 
   const emails: IngestedEmail[] = []
@@ -72,11 +75,14 @@ export async function testImapConnection(opts: {
   password: string
   mailbox?: string
 }): Promise<{ ok: boolean; error?: string }> {
+  // V6: explicit timeouts (test path).
   const client = new ImapFlow({
     host: opts.host,
     port: opts.port,
     secure: true,
-    auth: { user: opts.user, pass: opts.password }
+    auth: { user: opts.user, pass: opts.password },
+    socketTimeout: 30_000,
+    greetingTimeout: 15_000
   })
   try {
     await client.connect()

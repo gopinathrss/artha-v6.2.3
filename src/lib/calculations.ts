@@ -3,16 +3,67 @@ import { d, num } from './money'
 import { FX_STALENESS_FAIL_HOURS, FX_STALENESS_WARN_HOURS } from './currency'
 import { accountToCzk, accountsToCzk, type FxSnapshot } from './accountToCzk'
 
-// XIRR
+// XIRR (Shape A — headline hides unstable / short-horizon estimates)
+export const XIRR_MIN_MONTHS_FOR_DISPLAY = 12
+
+export type XirrDisplayState = 'OK' | 'INSUFFICIENT_HISTORY' | 'ESTIMATE_HIDDEN'
+
 export interface CashflowPoint {
   date: Date
   amount: number
 }
 export interface XIRRResult {
-  value: number | null
+  displayValue: number | null
+  displayLabel: string | null
+  displayState: XirrDisplayState
+  /** Diagnostic only — same numeric the legacy `value` held; never show in UI. */
+  rawEstimate: number | null
   isEstimate: boolean
   note: string
   cashflowCount: number
+  monthsOfHistory: number
+  minMonthsForDisplay: number
+}
+
+function computeXirrDisplay(
+  value: number | null,
+  isEstimate: boolean,
+  note: string,
+  cashflowCount: number,
+  mergedForSpan: CashflowPoint[]
+): XIRRResult {
+  const meanMonthMs = 86400000 * 30.4375
+  let monthsOfHistory = 0
+  if (mergedForSpan.length >= 2) {
+    const t0 = mergedForSpan[0].date.getTime()
+    const t1 = mergedForSpan[mergedForSpan.length - 1].date.getTime()
+    monthsOfHistory = Math.round((t1 - t0) / meanMonthMs)
+  }
+  const isInsufficientHistory = monthsOfHistory < XIRR_MIN_MONTHS_FOR_DISPLAY
+  const displayState: XirrDisplayState = isInsufficientHistory
+    ? 'INSUFFICIENT_HISTORY'
+    : isEstimate
+      ? 'ESTIMATE_HIDDEN'
+      : 'OK'
+  const displayValue =
+    displayState === 'OK' && value != null && Number.isFinite(value) ? value : null
+  const displayLabel =
+    displayState === 'OK'
+      ? null
+      : displayState === 'INSUFFICIENT_HISTORY'
+        ? 'Insufficient history'
+        : 'Short-horizon proxy hidden'
+  return {
+    displayValue,
+    displayLabel,
+    displayState,
+    rawEstimate: value,
+    isEstimate,
+    note,
+    cashflowCount,
+    monthsOfHistory,
+    minMonthsForDisplay: XIRR_MIN_MONTHS_FOR_DISPLAY
+  }
 }
 
 function safeNum(n: number | Prisma.Decimal | null | undefined): number {
@@ -90,7 +141,7 @@ export function calculateXIRR(
   const nonZero = cashflows.filter((c) => Math.abs(safeNum(c.amount)) > 1e-12)
   if (!Number.isFinite(terminalValue) || terminalValue === 0) {
     if (nonZero.length === 0) {
-      return { value: null, isEstimate: true, note: 'no cashflows', cashflowCount: 0 }
+      return computeXirrDisplay(null, true, 'no cashflows', 0, [])
     }
   }
 
@@ -115,7 +166,7 @@ export function calculateXIRR(
 
   const count = merged.length
   if (count < 2) {
-    return { value: null, isEstimate: true, note: 'need cashflows + terminal', cashflowCount: count }
+    return computeXirrDisplay(null, true, 'need cashflows + terminal', count, merged)
   }
 
   const base = merged[0].date
@@ -137,7 +188,7 @@ export function calculateXIRR(
       const ratio = safeNum(last.amount) / inv
       if (Number.isFinite(ratio) && ratio > 0) {
         const est = (Math.pow(ratio, 12 / monthsSpan) - 1) * 100
-        return { value: safeNum(est), isEstimate: true, note: 'annualized estimate', cashflowCount: count }
+        return computeXirrDisplay(safeNum(est), true, 'annualized estimate', count, merged)
       }
     }
   }
@@ -159,7 +210,7 @@ export function calculateXIRR(
     const hasOutflow = merged.some((m) => m.amount < 0)
     const hasInflow = merged.some((m) => m.amount > 0)
     if (!hasOutflow || !hasInflow) {
-      return { value: null, isEstimate: true, note: 'no sign change in cashflows', cashflowCount: count }
+      return computeXirrDisplay(null, true, 'no sign change in cashflows', count, merged)
     }
     const inv = merged.filter((m) => m.amount < 0).reduce((s, m) => s + Math.abs(m.amount), 0)
     const last = merged[merged.length - 1]
@@ -168,19 +219,14 @@ export function calculateXIRR(
       Math.round((last.date.getTime() - merged[0].date.getTime()) / (86400000 * (365.25 / 12)))
     )
     if (inv <= 0) {
-      return { value: null, isEstimate: true, note: 'no invested base', cashflowCount: count }
+      return computeXirrDisplay(null, true, 'no invested base', count, merged)
     }
     const ratio = safeNum(last.amount) / inv
     if (!Number.isFinite(ratio) || ratio <= 0) {
-      return { value: null, isEstimate: true, note: 'invalid terminal ratio', cashflowCount: count }
+      return computeXirrDisplay(null, true, 'invalid terminal ratio', count, merged)
     }
     const est = (Math.pow(ratio, 12 / monthsSpan) - 1) * 100
-    return {
-      value: safeNum(est),
-      isEstimate: true,
-      note: 'annualized estimate',
-      cashflowCount: count
-    }
+    return computeXirrDisplay(safeNum(est), true, 'annualized estimate', count, merged)
   }
 
   const resolved = xirrFromRoot(flowTuples, 0.1)
@@ -191,18 +237,13 @@ export function calculateXIRR(
       1,
       Math.round((last.date.getTime() - merged[0].date.getTime()) / (86400000 * (365.25 / 12)))
     )
-    if (inv <= 0) return { value: null, isEstimate: true, note: 'non-convergent', cashflowCount: count }
+    if (inv <= 0) return computeXirrDisplay(null, true, 'non-convergent', count, merged)
     const ratio = safeNum(last.amount) / inv
     const est = (Math.pow(Math.max(ratio, 1e-9), 12 / monthsSpan) - 1) * 100
-    return { value: safeNum(est), isEstimate: true, note: 'annualized estimate', cashflowCount: count }
+    return computeXirrDisplay(safeNum(est), true, 'annualized estimate', count, merged)
   }
 
-  return {
-    value: safeNum(resolved.rate * 100),
-    isEstimate: false,
-    note: '',
-    cashflowCount: count
-  }
+  return computeXirrDisplay(safeNum(resolved.rate * 100), false, '', count, merged)
 }
 
 // NET WORTH
@@ -225,8 +266,10 @@ export interface NetWorthResult {
   indiaCzk: number
   indiaTotal: number
   czechTotal: number
-  gainCzk: number
-  gainPct: number
+  /** Czech fund book (excl. EXITED) minus lifetime contributed (`totalInvested` from holding cashflows). */
+  inflowWeightedGainCzk: number
+  /** (czechFundsCzk − totalInvested) / totalInvested × 100 when totalInvested > 0; not CAGR / XIRR. */
+  inflowWeightedGainPct: number
   fxRatesUsed: FXRates
   calculatedAt: Date
 }
@@ -373,8 +416,9 @@ export function calculateNetWorth(
   const totalCzk = czechTotal.plus(indiaTotal)
   const totalEur = eczk.gt(0) ? totalCzk.div(eczk) : d(0)
   const inv = d(totalInvested)
-  const gainCzk = totalCzk.minus(inv)
-  const gainPct = inv.isZero() ? d(0) : gainCzk.div(inv).mul(d(100))
+  /** Compare SIP denominator to Czech fund NAV only (savings / India are not in `totalInvested`). */
+  const inflowWeightedGainCzk = czechFundsCzk.minus(inv)
+  const inflowWeightedGainPct = inv.lte(0) ? d(0) : inflowWeightedGainCzk.div(inv).mul(d(100))
 
   return {
     totalCzk: num(totalCzk),
@@ -389,8 +433,8 @@ export function calculateNetWorth(
     indiaCzk: num(indiaTotal),
     indiaTotal: num(indiaTotal),
     czechTotal: num(czechTotal),
-    gainCzk: num(gainCzk),
-    gainPct: num(gainPct),
+    inflowWeightedGainCzk: num(inflowWeightedGainCzk),
+    inflowWeightedGainPct: num(inflowWeightedGainPct),
     fxRatesUsed: { EURCZK: num(eczk), EURINR: num(einr) },
     calculatedAt: now
   }

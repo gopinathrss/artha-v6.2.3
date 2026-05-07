@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+  <title>PIE</title>
+  <defs>
+    <linearGradient id="pie-a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5B21B6"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="pie-b" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F43F5E"/>
+      <stop offset="100%" stop-color="#FB7185"/>
+    </linearGradient>
+    <linearGradient id="pie-c" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#0D9488"/>
+      <stop offset="100%" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="#0f172a" opacity="0.06"/>
+  <!-- Three asymmetric slices + gap = "engine" negative space -->
+  <path fill="url(#pie-a)" d="M32 32 L32 4 A28 28 0 0 1 58 22 Z"/>
+  <path fill="url(#pie-b)" d="M32 32 L58 22 A28 28 0 0 1 52 52 Z"/>
+  <path fill="url(#pie-c)" d="M32 32 L52 52 A28 28 0 0 1 10 48 Z"/>
+  <circle cx="32" cy="32" r="9" fill="#f8fafc" stroke="#1e293b" stroke-width="1.25"/>
+  <circle cx="32" cy="32" r="3" fill="#0f172a"/>
+  <path stroke="#0f172a" stroke-width="1.5" stroke-linecap="round" d="M32 25v-5M39 32h5M32 39v5M25 32h-5"/>
+</svg>

@@ -16,15 +16,15 @@ describe('health trust score math', () => {
     const rows = Array.from({ length: HEALTH_CHECK_COUNT }, () => ({ status: 'FAIL' as const }))
     expect(trustFromCheckRows(rows)).toBe(0)
   })
-  it('6 PASS 10 WARN → trust / HEALTH_CHECK_COUNT', () => {
+  it('6 PASS 11 WARN → trust / HEALTH_CHECK_COUNT (18 checks)', () => {
     const rows = [
       ...Array.from({ length: 6 }, () => ({ status: 'PASS' as const })),
-      ...Array.from({ length: 10 }, () => ({ status: 'WARN' as const }))
+      ...Array.from({ length: 11 }, () => ({ status: 'WARN' as const }))
     ]
-    expect(trustFromCheckRows(rows)).toBe(69)
+    expect(trustFromCheckRows(rows)).toBe(64)
   })
-  it('HEALTH_CHECK_COUNT is 16', () => {
-    expect(HEALTH_CHECK_COUNT).toBe(16)
+  it('HEALTH_CHECK_COUNT is 18', () => {
+    expect(HEALTH_CHECK_COUNT).toBe(18)
   })
 })
 
@@ -53,7 +53,7 @@ vi.mock('../../src/lib/prisma', () => ({
 }))
 
 describe('runHealthChecks (mocked prisma)', () => {
-  it('returns 16 checks and valid trust', async () => {
+  it('returns 18 checks and valid trust', async () => {
     const now = new Date()
     prismaHealth.fXRate.findFirst.mockResolvedValue({ fetchedAt: now, base: 'CZK', quote: 'EUR' } as never)
     prismaHealth.navHistory.findFirst.mockResolvedValue({ date: now } as never)
@@ -71,7 +71,7 @@ describe('runHealthChecks (mocked prisma)', () => {
     prismaHealth.cronExecution.findFirst.mockResolvedValue({ startedAt: now } as never)
     prismaHealth.advisorJournal.findFirst.mockResolvedValue(null)
     const h = await runHealthChecks()
-    expect(h.checks.length).toBe(16)
+    expect(h.checks.length).toBe(18)
     h.checks.forEach((c) => {
       expect(['PASS', 'WARN', 'FAIL']).toContain(c.status)
     })

@@ -4,7 +4,7 @@ import path from 'path'
 import { getPrisma, realPrisma } from '../lib/prisma'
 import { getPortfolioSummary } from '../lib/portfolio'
 import { loadAllLibrary, findBestAlternative, compareFundToETF, scoreInstrument } from '../lib/instrumentLibrary'
-import { askArtha } from '../lib/aiIntelligence'
+import { askPie } from '../lib/aiIntelligence'
 import { sendTestEmail } from '../lib/emailService'
 import { runMorningJob } from '../lib/triggers'
 import { getFXRates } from '../lib/fetchers'
@@ -14,18 +14,34 @@ import {
   getNRIEligibleMutualFunds
 } from '../lib/indiaIntelligence'
 import { registerCfoRoutes } from './cfoRoutes'
+import { registerAppSettingsRoutes } from './appSettingsRoutes'
+import { registerIntegrationsRoutes } from './integrationsRoutes'
+import { registerGoogleMailOAuthRoutes } from './googleMailOAuthRoutes'
+import { registerDashboardAuthRoutes } from './dashboardAuthRoutes'
+import { registerStrategyRoutes } from './strategyRoutes'
+import { registerDashboardApiAuthGate, registerDashboardHtmlAuthGate } from './dashboardAuthMiddleware'
+import { registerExternalReadApiGate } from './externalReadApiGate'
+import { registerRequestContext, send500 } from './requestContext'
 import { num, serializeJsonBody, d } from '../lib/money'
 import { mergedAccountShapeB, balanceCzkSnapshotForWrite } from '../lib/accountShapeB'
 import { getRbiRepoRate } from '../lib/indiaIntelligence'
 
 const app = express()
+// Trust the first reverse proxy (Caddy/NGINX) so req.ip and req.protocol are real.
+app.set('trust proxy', 1)
 app.use(express.json({ limit: '10mb' }))
+registerRequestContext(app)
 app.use((_req, res, next) => {
   const send = res.json.bind(res)
   res.json = (body: unknown) => send(serializeJsonBody(body))
   next()
 })
-// Avoid stale dashboard during dev: browsers cache /artha-ui.css & HTML aggressively
+
+registerDashboardAuthRoutes(app)
+registerDashboardHtmlAuthGate(app)
+registerDashboardApiAuthGate(app)
+
+// Avoid stale dashboard during dev: browsers cache CSS & HTML aggressively
 app.use(
   express.static(path.join(__dirname, '../dashboard'), {
     maxAge: process.env.NODE_ENV === 'production' ? 86_400_000 : 0,
@@ -60,8 +76,9 @@ app.use(
 
 async function isDemoMode(): Promise<{ demo: boolean; persona: string }> {
   try {
-    const s = await realPrisma.settings.findFirst()
-    return { demo: s?.demoModeEnabled ?? false, persona: s?.demoPersona ?? 'engineer' }
+    const { getMergedSettings } = await import('../lib/appSettingsMerge')
+    const m = await getMergedSettings(realPrisma)
+    return { demo: m.demoModeEnabled, persona: m.demoPersona }
   } catch {
     return { demo: false, persona: 'engineer' }
   }
@@ -71,9 +88,8 @@ const askRate: Record<string, { count: number; windowStart: number }> = {}
 const askCache = new Map<string, { at: number; rec: unknown }>()
 
 function clientKey(req: express.Request) {
-  const h = req.headers['x-forwarded-for']
-  const from = Array.isArray(h) ? h[0] : h?.split(',')[0]?.trim()
-  return from || req.socket.remoteAddress || 'local'
+  // With trust proxy=1 above, req.ip is the real client IP behind one proxy.
+  return req.ip || req.socket.remoteAddress || 'local'
 }
 
 async function getIntelligencePortfolio() {
@@ -89,6 +105,7 @@ const PAGES = [
   '/finances',
   '/india',
   '/portfolio',
+  '/accounts',
   '/tax-calendar',
   '/alerts',
   '/reports',
@@ -96,7 +113,8 @@ const PAGES = [
   '/intelligence',
   '/library',
   '/backtest',
-  '/patterns'
+  '/patterns',
+  '/help'
 ]
 const PAGE_FILES: Record<string, string> = {
   '/': 'index.html',
@@ -105,6 +123,7 @@ const PAGE_FILES: Record<string, string> = {
   '/finances': 'finances.html',
   '/india': 'india.html',
   '/portfolio': 'portfolio.html',
+  '/accounts': 'accounts.html',
   '/tax-calendar': 'tax-calendar.html',
   '/alerts': 'alerts.html',
   '/reports': 'reports.html',
@@ -112,7 +131,8 @@ const PAGE_FILES: Record<string, string> = {
   '/intelligence': 'intelligence.html',
   '/library': 'library.html',
   '/backtest': 'backtest.html',
-  '/patterns': 'patterns.html'
+  '/patterns': 'patterns.html',
+  '/help': 'help.html'
 }
 
 PAGES.forEach((route) => {
@@ -127,11 +147,33 @@ app.get('/profile', (_req, res) => {
 })
 
 registerCfoRoutes(app)
+registerAppSettingsRoutes(app)
+registerIntegrationsRoutes(app)
+registerStrategyRoutes(app)
+registerGoogleMailOAuthRoutes(app)
+registerExternalReadApiGate(app)
 
 app.get('/healthz', async (_req, res) => {
   try {
     await realPrisma.$queryRaw`SELECT 1`
-    res.status(200).type('text/plain').send('OK')
+    let aiHint = ''
+    try {
+      const n = await realPrisma.integrationProvider.count({ where: { category: 'ai', enabled: true } })
+      if (n === 0) {
+        aiHint = ' (no AI integrations enabled — optional)'
+        if (process.env.PIE_HEALTHZ_STRICT_AI === '1' || process.env.ARTHA_HEALTHZ_STRICT_AI === '1') {
+          return res
+            .status(503)
+            .type('text/plain')
+            .send(
+              'FAIL: no enabled AI provider (set PIE_HEALTHZ_STRICT_AI=0 or legacy ARTHA_HEALTHZ_STRICT_AI=0, or enable an AI integration)'
+            )
+        }
+      }
+    } catch {
+      /* */
+    }
+    res.status(200).type('text/plain').send(`OK${aiHint}`)
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     res.status(503).type('text/plain').send(`FAIL: ${msg}`)
@@ -167,12 +209,32 @@ app.get('/api/alerts', async (req, res) => {
     const prisma = await getPrisma()
     const q = req.query as Record<string, string | undefined>
     const includeDismissed = q.includeDismissed === '1' || q.includeDismissed === 'true'
+    const take = Math.min(100, Math.max(1, parseInt(String(q.limit || '50'), 10) || 50))
+    const urgencyCsv = (q.urgency || '').trim()
+    const urgencyIn =
+      urgencyCsv.length > 0
+        ? urgencyCsv
+            .split(',')
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean)
+        : null
     const alerts = await prisma.alertLog.findMany({
-      where: includeDismissed ? undefined : { status: { not: 'DISMISSED' } },
+      where: {
+        ...(includeDismissed ? {} : { status: { not: 'DISMISSED' } }),
+        ...(urgencyIn && urgencyIn.length > 0 ? { urgency: { in: urgencyIn } } : {})
+      },
       orderBy: { firedAt: 'desc' },
-      take: 50
+      take
     })
-    res.json({ success: true, data: { alerts }, demo })
+    res.json({
+      success: true,
+      data: {
+        alerts,
+        alertRetentionNote:
+          'Dismissed alerts stay in the log for deduplication; dismissed rows older than 90 days are pruned automatically (weekly job).'
+      },
+      demo
+    })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
   }
@@ -194,8 +256,11 @@ app.get('/api/snapshots', async (_req, res) => {
 
 app.get('/api/settings', async (_req, res) => {
   try {
+    res.setHeader('X-Pie-Deprecation', 'Prefer GET /api/app-settings and GET /api/integrations')
+    res.setHeader('X-Artha-Deprecation', 'Prefer GET /api/app-settings and GET /api/integrations')
     let s = await realPrisma.settings.findFirst()
     if (!s) s = await realPrisma.settings.create({ data: {} })
+    const { secretKeyfilePath } = await import('../lib/secrets')
     const safe = {
       ...s,
       smtpPass: '••••••',
@@ -203,7 +268,13 @@ app.get('/api/settings', async (_req, res) => {
       openaiApiKey: s.openaiApiKey ? 'sk-••••' : null,
       telegramBotToken: s.telegramBotToken ? '••••' : null
     }
-    res.json({ success: true, data: { settings: safe } })
+    const secretsInfo = {
+      keyfilePath: secretKeyfilePath(),
+      message:
+        'API keys and SMTP/IMAP passwords are encrypted at rest (AES-256-GCM) using the local key file above. ' +
+        'To encrypt existing plaintext values, re-enter each secret and save.'
+    }
+    res.json({ success: true, data: { settings: safe, secretsInfo } })
   } catch (e: any) {
     res.status(500).json({ success: false, error: e.message })
   }
@@ -213,16 +284,36 @@ app.post('/api/settings', async (req, res) => {
   try {
     let s = await realPrisma.settings.findFirst()
     const prevDemo = s?.demoModeEnabled ?? false
-    const body = { ...req.body }
+    const rawIn = (req.body || {}) as Record<string, unknown>
+    const body = { ...rawIn } as Record<string, unknown>
+    const { setSecret } = await import('../lib/secrets')
+
     if (body.smtpPass === '••••••') delete body.smtpPass
     if (body.imapPassword === '••••••' || body.imapPassword === '******') delete body.imapPassword
-    if (body.openaiApiKey?.startsWith('sk-••••')) delete body.openaiApiKey
+    if (typeof body.openaiApiKey === 'string' && body.openaiApiKey.startsWith('sk-••••')) delete body.openaiApiKey
     if (body.telegramBotToken === '••••') delete body.telegramBotToken
 
-    if (s) {
-      await realPrisma.settings.update({ where: { id: s.id }, data: body })
-    } else {
-      await realPrisma.settings.create({ data: body })
+    if (!s) s = await realPrisma.settings.create({ data: {} })
+
+    const secretFields = ['smtpPass', 'imapPassword', 'openaiApiKey', 'telegramBotToken'] as const
+    for (const field of secretFields) {
+      if (!Object.prototype.hasOwnProperty.call(rawIn, field)) continue
+      const val = body[field]
+      await setSecret(field, val == null || val === '' ? null : String(val))
+      delete body[field]
+    }
+
+    await realPrisma.settings.update({ where: { id: s.id }, data: body as never })
+
+    try {
+      const { ensureAppSettings, appSettingsPatchData } = await import('../lib/appSettingsMerge')
+      await ensureAppSettings(realPrisma)
+      const patch = appSettingsPatchData(body)
+      if (Object.keys(patch).length > 0) {
+        await realPrisma.appSettings.update({ where: { id: 'default' }, data: patch })
+      }
+    } catch {
+      /* AppSettings table may not exist until migration */
     }
 
     const refreshed = await realPrisma.settings.findFirst()
@@ -264,13 +355,18 @@ app.post('/api/accounts', async (req, res) => {
     delete body[['bal', 'anceCzk'].join('') as keyof typeof body]
     const currency = String(body.currency ?? 'CZK')
     const balanceLocal = body.balanceLocal !== undefined ? body.balanceLocal : 0
-    const snap = balanceCzkSnapshotForWrite(currency, balanceLocal as never, body.balanceCzkSnapshot as never)
+    const localDec = d(balanceLocal as never)
     delete body.balanceCzkSnapshot
+    const cur = currency.toUpperCase().trim()
+    const snap =
+      cur === 'CZK'
+        ? balanceCzkSnapshotForWrite(currency, localDec, localDec)
+        : balanceCzkSnapshotForWrite(currency, localDec, undefined)
     const acc = await prisma.account.create({
       data: {
         ...body,
         currency,
-        balanceLocal: d(balanceLocal as never),
+        balanceLocal: localDec,
         balanceCzkSnapshot: snap
       } as never
     })
@@ -289,6 +385,7 @@ app.put('/api/accounts/:id', async (req, res) => {
     }
     const patch = { ...(req.body as Record<string, unknown>) }
     delete patch[['bal', 'anceCzk'].join('') as keyof typeof patch]
+    delete patch.balanceCzkSnapshot
     const shaped = mergedAccountShapeB(prev, patch)
     const updated = await prisma.account.update({
       where: { id: req.params.id },
@@ -300,16 +397,69 @@ app.put('/api/accounts/:id', async (req, res) => {
       } as never
     })
     res.json({ success: true, data: { account: updated } })
-  } catch (e: any) {
-    res.status(400).json({ success: false, error: e.message })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
   }
 })
+
+// V6: dedicated balance update endpoint — Settings/Accounts pages call this.
+app.patch('/api/accounts/:id/balance', async (req, res) => {
+  try {
+    const prisma = await getPrisma()
+    const prev = await prisma.account.findUnique({ where: { id: req.params.id } })
+    if (!prev) return res.status(404).json({ success: false, error: 'Account not found' })
+    const balanceLocal = (req.body as { balanceLocal?: unknown })?.balanceLocal
+    if (balanceLocal == null) {
+      return res.status(400).json({ success: false, error: 'balanceLocal required' })
+    }
+    const shaped = mergedAccountShapeB(prev, { balanceLocal })
+    const updated = await prisma.account.update({
+      where: { id: req.params.id },
+      data: {
+        balanceLocal: shaped.balanceLocal,
+        balanceCzkSnapshot: shaped.balanceCzkSnapshot
+      } as never
+    })
+    res.json({ success: true, data: { account: updated } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+// V6: soft-delete account — preserves history/snapshots; toggles isActive.
+app.delete('/api/accounts/:id', async (req, res) => {
+  try {
+    const prisma = await getPrisma()
+    const hard = String((req.query as Record<string, string | undefined>).hard || '') === '1'
+    if (hard) {
+      await prisma.account.delete({ where: { id: req.params.id } })
+    } else {
+      await prisma.account.update({ where: { id: req.params.id }, data: { isActive: false } })
+    }
+    res.json({ success: true, data: { id: req.params.id, hardDelete: hard } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+function parsePrismaDateTime(val: unknown): Date | null {
+  if (val == null) return null
+  if (val instanceof Date && !Number.isNaN(val.getTime())) return val
+  const s = String(val).trim()
+  if (!s) return null
+  const withTime = /^\d{4}-\d{2}-\d{2}$/.test(s) ? `${s}T12:00:00.000Z` : s
+  const dt = new Date(withTime)
+  return Number.isNaN(dt.getTime()) ? null : dt
+}
 
 app.post('/api/holdings', async (req, res) => {
   try {
     const prisma = await getPrisma()
-    const body = req.body
-    const purchaseDate = new Date(body.purchaseStartDate)
+    const body = req.body as Record<string, unknown>
+    const purchaseDate = parsePrismaDateTime(body.purchaseStartDate)
+    if (!purchaseDate) {
+      return res.status(400).json({ success: false, error: 'purchaseStartDate must be a valid date (YYYY-MM-DD or ISO)' })
+    }
     const taxFreeDate = new Date(purchaseDate)
     taxFreeDate.setFullYear(taxFreeDate.getFullYear() + 3)
 
@@ -318,8 +468,8 @@ app.post('/api/holdings', async (req, res) => {
         ...body,
         purchaseStartDate: purchaseDate,
         taxFreeDate,
-        currentValueCzk: (body.units ?? 0) * (body.nav ?? 0)
-      }
+        currentValueCzk: (Number(body.units) || 0) * (Number(body.nav) || 0)
+      } as never
     })
     res.status(201).json({ success: true, data: { holding } })
   } catch (e: any) {
@@ -330,18 +480,23 @@ app.post('/api/holdings', async (req, res) => {
 app.put('/api/holdings/:id', async (req, res) => {
   try {
     const prisma = await getPrisma()
-    const body: any = { ...req.body }
+    const body: Record<string, unknown> = { ...(req.body as Record<string, unknown>) }
     if (body.units !== undefined || body.nav !== undefined) {
       const current = await prisma.holding.findUnique({ where: { id: req.params.id } })
-      body.currentValueCzk = (body.units ?? current?.units ?? 0) * (body.nav ?? current?.nav ?? 0)
+      body.currentValueCzk =
+        (Number(body.units ?? current?.units ?? 0) || 0) * (Number(body.nav ?? current?.nav ?? 0) || 0)
     }
-    if (body.purchaseStartDate) {
-      const d = new Date(body.purchaseStartDate)
-      const t = new Date(d)
+    if (body.purchaseStartDate != null && body.purchaseStartDate !== '') {
+      const pd = parsePrismaDateTime(body.purchaseStartDate)
+      if (!pd) {
+        return res.status(400).json({ success: false, error: 'purchaseStartDate must be a valid date (YYYY-MM-DD or ISO)' })
+      }
+      body.purchaseStartDate = pd
+      const t = new Date(pd)
       t.setFullYear(t.getFullYear() + 3)
       body.taxFreeDate = t
     }
-    const updated = await prisma.holding.update({ where: { id: req.params.id }, data: body })
+    const updated = await prisma.holding.update({ where: { id: req.params.id }, data: body as never })
     res.json({ success: true, data: { holding: updated } })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })
@@ -351,10 +506,107 @@ app.put('/api/holdings/:id', async (req, res) => {
 app.delete('/api/holdings/:id', async (req, res) => {
   try {
     const prisma = await getPrisma()
-    await prisma.holding.update({ where: { id: req.params.id }, data: { status: 'EXITED' } })
-    res.json({ success: true })
-  } catch (e: any) {
-    res.status(400).json({ success: false, error: e.message })
+    const hard = String((req.query as Record<string, string | undefined>).hard || '') === '1'
+    if (hard) {
+      await prisma.holding.delete({ where: { id: req.params.id } })
+    } else {
+      await prisma.holding.update({ where: { id: req.params.id }, data: { status: 'EXITED' } })
+    }
+    res.json({ success: true, data: { id: req.params.id, hardDelete: hard } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+// ===== V6 Cashflow CRUD =====
+// List cashflows for a holding (or all when ?holdingId is omitted).
+app.get('/api/cashflows', async (req, res) => {
+  try {
+    const prisma = await getPrisma()
+    const hid = (req.query as Record<string, string | undefined>).holdingId
+    const where = hid ? { holdingId: hid } : {}
+    const rows = await prisma.cashflow.findMany({
+      where,
+      orderBy: { date: 'asc' }
+    })
+    res.json({ success: true, data: { cashflows: rows } })
+  } catch (e: unknown) {
+    res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+const CASHFLOW_TYPES = new Set(['SIP', 'LUMP_SUM', 'WITHDRAWAL', 'DIVIDEND'])
+
+app.post('/api/cashflows', async (req, res) => {
+  try {
+    const prisma = await getPrisma()
+    const body = (req.body || {}) as Record<string, unknown>
+    const holdingId = String(body.holdingId || '')
+    if (!holdingId) return res.status(400).json({ success: false, error: 'holdingId required' })
+    const date = body.date ? new Date(String(body.date)) : null
+    if (!date || Number.isNaN(date.getTime())) {
+      return res.status(400).json({ success: false, error: 'date required (ISO string)' })
+    }
+    if (body.amountCzk == null || body.amountCzk === '') {
+      return res.status(400).json({ success: false, error: 'amountCzk required' })
+    }
+    const type = String(body.type || 'SIP').toUpperCase()
+    if (!CASHFLOW_TYPES.has(type)) {
+      return res.status(400).json({ success: false, error: 'Invalid type' })
+    }
+    const cf = await prisma.cashflow.create({
+      data: {
+        holdingId,
+        date,
+        amountCzk: d(body.amountCzk as never),
+        type,
+        notes: body.notes != null ? String(body.notes) : null
+      }
+    })
+    res.status(201).json({ success: true, data: { cashflow: cf } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+app.patch('/api/cashflows/:id', async (req, res) => {
+  try {
+    const prisma = await getPrisma()
+    const body = (req.body || {}) as Record<string, unknown>
+    const patch: Record<string, unknown> = {}
+    if (body.date !== undefined) {
+      const dt = new Date(String(body.date))
+      if (Number.isNaN(dt.getTime())) {
+        return res.status(400).json({ success: false, error: 'Invalid date' })
+      }
+      patch.date = dt
+    }
+    if (body.amountCzk !== undefined) patch.amountCzk = d(body.amountCzk as never)
+    if (body.type !== undefined) {
+      const t = String(body.type).toUpperCase()
+      if (!CASHFLOW_TYPES.has(t)) {
+        return res.status(400).json({ success: false, error: 'Invalid type' })
+      }
+      patch.type = t
+    }
+    if (body.notes !== undefined) patch.notes = body.notes == null ? null : String(body.notes)
+    const updated = await prisma.cashflow.update({
+      where: { id: req.params.id },
+      data: patch as never
+    })
+    res.json({ success: true, data: { cashflow: updated } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+app.delete('/api/cashflows/:id', async (req, res) => {
+  try {
+    const prisma = await getPrisma()
+    await prisma.cashflow.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
   }
 })
 
@@ -451,10 +703,16 @@ app.post('/api/intelligence/ask', async (req, res) => {
     }
     const portfolio = await getIntelligencePortfolio()
     if (!portfolio) return res.status(500).json({ success: false, error: 'Portfolio unavailable' })
-    const settings = await realPrisma.settings.findFirst()
-    const anthropicKey = process.env.ANTHROPIC_API_KEY || ''
-    const openaiKey = settings?.openaiApiKey || process.env.OPENAI_API_KEY || ''
-    const mem = await askArtha(q, portfolio, { anthropicKey, openaiKey })
+    const { envAnthropicApiKey, envOpenaiApiKey } = await import('../lib/integrations/env-fallback')
+    const { getSecret } = await import('../lib/secrets')
+    let openaiKey = envOpenaiApiKey()
+    try {
+      const sk = await getSecret('openaiApiKey')
+      if (sk) openaiKey = sk
+    } catch {
+      /* plaintext blocked — env / Integrations only */
+    }
+    const mem = await askPie(q, portfolio, { anthropicKey: envAnthropicApiKey(), openaiKey })
     askCache.set(ckey, { at: now, rec: mem })
     res.json({ success: true, data: { memory: mem, cached: false } })
   } catch (e: any) {
@@ -549,6 +807,84 @@ app.post('/api/settings/test-email', async (_req, res) => {
   res.json({ success: true, sent: true })
 })
 
+const portfolioFreshStartLastByIp: Record<string, number> = {}
+
+// V6: backup export — full personal DB JSON snapshot.
+app.get('/api/settings/backup/export', async (_req, res) => {
+  try {
+    const { exportBackup } = await import('../lib/backup')
+    const bundle = await exportBackup(realPrisma)
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    res.setHeader('Content-Disposition', `attachment; filename="pie-backup-${stamp}.json"`)
+    res.setHeader('Content-Type', 'application/json; charset=utf-8')
+    res.status(200).send(JSON.stringify(bundle))
+  } catch (e: unknown) {
+    res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+// V6: backup restore — additive. Skips rows whose id already exists.
+app.post('/api/settings/backup/import', async (req, res) => {
+  try {
+    const body = (req.body || {}) as { bundle?: unknown; confirmPhrase?: string }
+    const phrase = String(body.confirmPhrase || '').trim()
+    if (phrase !== 'restore') {
+      return res.status(400).json({ success: false, error: 'Confirmation must be exactly: restore' })
+    }
+    if (!body.bundle || typeof body.bundle !== 'object') {
+      return res.status(400).json({ success: false, error: 'bundle missing' })
+    }
+    const { restoreBackup } = await import('../lib/backup')
+    const results = await restoreBackup(realPrisma, body.bundle as never)
+    res.json({ success: true, data: { results } })
+  } catch (e: unknown) {
+    res.status(400).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
+app.post('/api/settings/portfolio-fresh-start', async (req, res) => {
+  try {
+    const phrase = String((req.body || {}).confirmPhrase || '').trim()
+    if (phrase !== 'reset') {
+      return res.status(400).json({ success: false, error: 'Confirmation must be exactly the word: reset' })
+    }
+    const s0 = await realPrisma.settings.findFirst()
+    if (s0?.demoModeEnabled) {
+      return res.status(400).json({
+        success: false,
+        error:
+          'Turn Demo mode off first. This reset clears your personal database (DATABASE_URL) only — not the isolated demo database.'
+      })
+    }
+    const ip = clientKey(req)
+    const prev = portfolioFreshStartLastByIp[ip] || 0
+    if (Date.now() - prev < 90_000) {
+      return res.status(429).json({ success: false, error: 'Wait at least 90 seconds between reset attempts.' })
+    }
+    portfolioFreshStartLastByIp[ip] = Date.now()
+    const { wipePersonalPortfolioTables, markOnboardingIncomplete } = await import('../lib/portfolioFreshStart')
+    const { tables } = await wipePersonalPortfolioTables(realPrisma)
+    await markOnboardingIncomplete(realPrisma)
+    await realPrisma.systemHealth.create({
+      data: {
+        checkName: 'PORTFOLIO_FRESH_START',
+        status: 'INFO',
+        message: `Personal portfolio data wiped (${tables.length} tables truncated). Settings, AppSettings, and integrations were kept.`,
+        metadata: { truncatedTableCount: tables.length } as object
+      }
+    })
+    res.json({
+      success: true,
+      data: {
+        truncatedTableCount: tables.length,
+        message: 'Personal portfolio cleared. Onboarding is marked incomplete — add holdings and accounts again.'
+      }
+    })
+  } catch (e: unknown) {
+    res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) })
+  }
+})
+
 app.post('/api/scheduler/run-now', async (_req, res) => {
   try {
     const r = await runMorningJob()
@@ -610,38 +946,56 @@ app.post('/api/library/reseed', async (_req, res) => {
 const PORT = process.env.PORT || 3002
 if (process.env.NODE_ENV !== 'test') {
   void (async () => {
+    // V6: boot contract. In production any FAIL aborts startup with a clear log.
+    const { runBootContract } = await import('../lib/bootContract')
+    const { ok: contractOk } = await runBootContract({ realPrisma })
+    if (!contractOk && process.env.NODE_ENV === 'production') {
+      // eslint-disable-next-line no-console
+      console.error('[PIE] Boot contract failed in production — refusing to start.')
+      process.exit(1)
+    }
+
     const { seedLibraryWithTopETFs } = await import('../lib/instrumentLibrary')
-    const { seedNREFDRates } = await import('../lib/indiaIntelligence')
+    const { seedNREFDRates, fetchRBIRate } = await import('../lib/indiaIntelligence')
     const { startScheduler } = await import('../lib/scheduler')
     const { startTelegramBot } = await import('../lib/telegram/bot')
     const { ensureFreshRatesIfStale } = await import('../lib/currency')
     try {
       await ensureFreshRatesIfStale().catch((e) => {
         // eslint-disable-next-line no-console
-        console.error('[ARTHA] FX bootstrap:', e)
+        console.error('[PIE] FX bootstrap:', e)
       })
-      await seedLibraryWithTopETFs()
-      await seedNREFDRates()
+      // V6 safety: every boot-time seed/bootstrap goes against realPrisma so demo
+      // mode cannot poison personal data on first run, and vice versa.
+      const { bootstrapIntegrationsFromEnvIfNeeded } = await import('../lib/integrations/store')
+      await bootstrapIntegrationsFromEnvIfNeeded(realPrisma)
+      const { ensureAppSettings } = await import('../lib/appSettingsMerge')
+      await ensureAppSettings(realPrisma)
+      const { refreshDashboardAuthEnabledFromDb } = await import('../lib/dashboardAuth')
+      await refreshDashboardAuthEnabledFromDb(realPrisma)
+      const { bootstrapSystemHealth } = await import('../lib/bootstrapSystemHealth')
+      await bootstrapSystemHealth(realPrisma)
+      await seedLibraryWithTopETFs(realPrisma)
+      await seedNREFDRates(realPrisma)
       const rbiN = await realPrisma.indiaIntelligence.count({ where: { dataType: 'RBI_RATE' } })
       if (rbiN === 0) {
-        const { fetchRBIRate } = await import('../lib/indiaIntelligence')
-        await fetchRBIRate()
+        await fetchRBIRate(realPrisma)
       }
       startScheduler()
       await startTelegramBot()
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error('[ARTHA] Startup init failed', e)
+      console.error('[PIE] Startup init failed', e)
     }
+    app.listen(PORT, () => {
+      // eslint-disable-next-line no-console
+      console.log(`PIE (Personal Investment Engine) running at http://localhost:${PORT}`)
+      // eslint-disable-next-line no-console
+      console.log(`Dashboard: http://localhost:${PORT}`)
+      // eslint-disable-next-line no-console
+      console.log(`Settings:  http://localhost:${PORT}/settings`)
+    })
   })()
-  app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`ARTHA running at http://localhost:${PORT}`)
-    // eslint-disable-next-line no-console
-    console.log(`Dashboard: http://localhost:${PORT}`)
-    // eslint-disable-next-line no-console
-    console.log(`Settings:  http://localhost:${PORT}/settings`)
-  })
 }
 
 export default app

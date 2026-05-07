@@ -12,6 +12,12 @@ import {
   calculateConfidence
 } from '../../src/lib/calculations'
 
+/** Stress harness headline rate: prefer displayed IRR, else diagnostic proxy. */
+function xirrNumeric(x: ReturnType<typeof calculateXIRR> | undefined): number | null {
+  if (!x) return null
+  return x.displayValue ?? x.rawEstimate
+}
+
 const MONTHS = 60
 const SIP = 25_500
 const V0 = 50_000
@@ -146,11 +152,11 @@ function runSim(globalScale: number, feeMonthly: number) {
     final: rows[rows.length - 1].total,
     m18v,
     m32v,
-    x12: at(12)?.xirr.value,
-    x24: at(24)?.xirr.value,
-    x36: at(36)?.xirr.value,
-    x48: at(48)?.xirr.value,
-    x60: at(60)?.xirr.value,
+    x12: xirrNumeric(at(12)?.xirr),
+    x24: xirrNumeric(at(24)?.xirr),
+    x36: xirrNumeric(at(36)?.xirr),
+    x48: xirrNumeric(at(48)?.xirr),
+    x60: xirrNumeric(at(60)?.xirr),
     maxDd,
     maxDdMonth,
     navDrop,
@@ -261,8 +267,8 @@ crit.push({
       new Date('2020-12-15'),
       0
     )
-    if (a.value == null || b.value == null) return true
-    return Math.abs(a.value - b.value) <= 2.5
+    if (a.rawEstimate == null || b.rawEstimate == null) return true
+    return Math.abs(a.rawEstimate - b.rawEstimate) <= 2.5
   })()
 })
 
@@ -296,7 +302,12 @@ crit.push({
   name: 'Empty portfolio: all zeros, finite',
   pass: (() => {
     const n = calculateNetWorth([], [], 0, { EURCZK: 25, EURINR: 90 })
-    return n.czechFundsCzk === 0 && n.indiaMfCzk === 0 && n.gainCzk === 0 && n.gainPct === 0
+    return (
+      n.czechFundsCzk === 0 &&
+      n.indiaMfCzk === 0 &&
+      n.inflowWeightedGainCzk === 0 &&
+      n.inflowWeightedGainPct === 0
+    )
   })()
 })
 

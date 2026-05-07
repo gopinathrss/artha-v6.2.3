@@ -9,6 +9,7 @@ import { indiaMfTaxBadge } from '../indiaTax'
 import { num } from '../money'
 import { accountToCzk } from '../accountToCzk'
 import { ensureRowType } from '../allocationRowTypes'
+import { readPlanAllocationsOrEmpty } from '../planAllocationsRead'
 
 export type ReportAudience = 'INTERNAL' | 'CLIENT'
 
@@ -174,7 +175,7 @@ export async function buildReportData(
   const momCzk = mom.czk ?? 0
   const momPct = mom.pct ?? 0
   const momLabel = mom.label ? String(mom.label) : ''
-  const xirrV = p?.xirr?.value as number | null
+  const xirrV = p?.xirr?.displayValue as number | null
 
   const traj: [number, number][] = (snaps || [])
     .map((s) => [new Date(s.date).getTime(), Number(s.netWorthCzk) || 0] as [number, number])
@@ -186,7 +187,11 @@ export async function buildReportData(
 
   const startNw = traj.length > 0 ? traj[0]![1] : total - momCzk
   const gains = total - startNw
-  const contrib = Math.max(0, p?.totalInvested ? total - (p?.netWorth?.gainCzk ?? 0) - startNw : gains * 0.3)
+  const inv = Number(p?.totalInvested) || 0
+  const contrib =
+    p?.totalInvested != null && Number.isFinite(inv)
+      ? Math.max(0, inv - startNw)
+      : gains * 0.3
   const waterfall = [
     { name: 'Start', value: Math.round(startNw) },
     { name: 'Contributions', value: Math.round(contrib) },
@@ -202,7 +207,9 @@ export async function buildReportData(
 
   const planRows: PremiumReportData['planVsExecuted']['rows'] = []
   const skippedNotes: string[] = []
-  const allocs = (plan?.allocations as Array<Record<string, unknown>>) || []
+  const allocs = plan
+    ? ((await readPlanAllocationsOrEmpty(plan)) as unknown as Array<Record<string, unknown>>)
+    : []
   for (const row of allocs) {
     const dest = String(row.destination || '—')
     const planned = Number(row.amountCzk) || 0
@@ -403,7 +410,7 @@ export async function buildReportData(
     periodLabel: my,
     generatedAtIso: gen.toISOString(),
     cover: {
-      titleLine: `ARTHA — Monthly Report — ${my}`,
+      titleLine: `PIE — Monthly Report — ${my}`,
       netWorthCzk: total,
       momCzk,
       momPct,

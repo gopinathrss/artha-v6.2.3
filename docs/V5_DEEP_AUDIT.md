@@ -32,39 +32,39 @@ _(none confirmed in this pass)_
 
 ### HIGH
 
-- **F1.1** — `AllocationPlan.allocations` remains schema-unenforced `Json`  
+- **F1.1** — `AllocationPlan.allocations` remains schema-unenforced `Json` — **CLOSED (V5.1 Area 3)** — `AllocationPlanRow` + write-time validation + dual-write  
 - **F2.1** — NRE `Account.balanceCzk` can diverge from live INR→CZK conversion used in net worth  
 - **F2.2** — `calculateAllocation` equity/bond/cash % ignores NRE/NRO/FD account balances (India book)  
 - **F2.3** — `XIRR` headline value can be wildly misleading (`annualized estimate` path)  
 - **F3.1** — `buildMonthlyPlanPayload` emergency / cash bucket uses `balanceCzk` for NRE (stale) instead of `accountToCzk`  
-- **F3.2** — Current month plan BUY reasons lack appended lesson narrative while `HistoricalNavStats` exist (stale plan / test plans / ordering)  
-- **F10.1** — When populated, API keys / IMAP password are stored **plaintext** in `Settings` (schema `String` fields)
+- **F3.2** — Current month plan BUY reasons lack appended lesson narrative while `HistoricalNavStats` exist (stale plan / test plans / ordering) — **CLOSED (V5.1 Area 3)** — regen + linkage; see `docs/V51_AREA3_REPORT.md`  
+- **F10.1** — When populated, API keys / IMAP password are stored **plaintext** in `Settings` (schema `String` fields) — **CLOSED (V5.1 Area 4)** — AES-256-GCM + keyfile; `getSecret` / `setSecret`; `npm run migrate:secrets`
 
 ### MEDIUM
 
 - **F2.4** — MoM uses a ±3 day snapshot window; easy to show “unavailable” despite snapshots existing  
 - **F2.5** — `gainPct` is `(totalCzk − totalInvested) / totalInvested` where `totalInvested` is SIP outflows only — not intuitive “portfolio return”  
-- **F3.3** — Within 90 days of tax-free, planner may still emit reduced **BUY** to existing equity (not “HOLD-only silence”)  
-- **F4.1** — All `RecommendationOutcome` rows `PENDING` (no 30d/90d completions yet in this DB)  
+- **F3.3** — Within 90 days of tax-free, planner may still emit reduced **BUY** to existing equity (not “HOLD-only silence”) — **CLOSED (V5.1 Area 3)** — default HOLD; `Settings.taxFreeWindowAllowsBuy`  
+- **F4.1** — All `RecommendationOutcome` rows `PENDING` (no 30d/90d completions yet in this DB) — **CLOSED (V5.1 Area 4)** — `/api/outcomes/summary` + `/reports` copy for first evaluation date  
 - **F4.2** — `ARTHA_DEBUG_AI_CONTEXT` outcome-history logging not exercised in this pass  
-- **F6.1** — `SystemHealth` table empty until subsystems write rows (AI/AMFI paths); observability gap for fresh installs  
-- **F6.2** — `CronExecution` sample shows only a subset of registered jobs have run in this DB window  
-- **F8.1** — `/api/health` reports `NAV_FRESHNESS: FAIL` when `NavHistory` empty (expected here, but noisy for new users)  
-- **F9.1** — Malformed JSON / concurrent `generate-now` behaviour not exercised in this pass (**SUSPECTED** — see end)  
-- **F9.2** — Historical import per-ISIN failure aggregation under outage not re-simulated (**SUSPECTED** details)  
+- **F6.1** — `SystemHealth` table empty until subsystems write rows (AI/AMFI paths); observability gap for fresh installs — **CLOSED (V5.1 Area 4)** — `bootstrapSystemHealth` on startup  
+- **F6.2** — `CronExecution` sample shows only a subset of registered jobs have run in this DB window — **CLOSED (V5.1 Area 4)** — `SCHEDULED` placeholder rows per registered job  
+- **F8.1** — `/api/health` reports `NAV_FRESHNESS: FAIL` when `NavHistory` empty (expected here, but noisy for new users) — **CLOSED (V5.1 Area 4)** — WARN for Erste-only portfolios  
+- **F9.1** — Malformed JSON / concurrent `generate-now` behaviour not exercised in this pass — **DOCUMENTED (V5.1 Area 4)** — see `tests/smoke/faultInjection.md`  
+- **F9.2** — Historical import per-ISIN failure aggregation under outage not re-simulated — **DOCUMENTED (V5.1 Area 4)** — see `tests/smoke/faultInjection.md`  
 - **F10.2** — Demo / onboarding rapid-toggle stress not re-run (**SUSPECTED**)  
-- **F11.1** — No TTL pruning observed for `CronExecution` / `SystemHealth` / `EmailIngestionPreview` growth  
-- **F11.2** — Alert “30 day” behaviour is **dedup window**, not guaranteed physical row purge  
-- **F12.2** — Backtest determinism + Yahoo spot-check not re-run (**SUSPECTED** without fresh double-run)
+- **F11.1** — No TTL pruning observed for `CronExecution` / `SystemHealth` / `EmailIngestionPreview` growth — **CLOSED (V5.1 Area 4)** — weekly `prune-old-rows` + Settings retention days  
+- **F11.2** — Alert “30 day” behaviour is **dedup window**, not guaranteed physical row purge — **CLOSED (V5.1 Area 4)** — comment in `dedup.ts` + dismissed `AlertLog` pruning + UI/API notes  
+- **F12.2** — Backtest determinism + Yahoo spot-check not re-run — **CLOSED (V5.1 Area 4)** — `tests/unit/backtest/determinism.test.ts` (live DB)  
 
 ### LOW
 
 - **F1.2** — `chart.js` uses `.toFixed` on chart pixel coordinates only (non-money)  
 - **F5.1** — Visual / a11y / loading / error-state quality across 14 routes not re-audited in browser this run  
 - **F7.1** — Smart report HTML section completeness vs Sprint 5 spec not re-validated byte-for-byte in this pass  
-- **F8.2** — Health check count is 16 while some docs/smoke text still say “14+”  
+- **F8.2** — Health check count is 16 while some docs/smoke text still say “14+” — **CLOSED (V5.1 Area 4)** — `HEALTH_CHECK_COUNT` = 17 (`RETENTION_POLICY`); update lingering “14+” docs to **17**  
 - **F12.1** — Pattern YAML cites external studies; factual accuracy not independently verified  
-- **F12.3** — Ad-hoc `AllocationPlan` rows for far-future `monthYear` (e.g. `2030-07`) clutter DB and confuse lesson linkage audits
+- **F12.3** — Ad-hoc `AllocationPlan` rows for far-future `monthYear` (e.g. `2030-07`) clutter DB and confuse lesson linkage audits — **CLOSED (V5.1 Area 3)** — `assertValidMonthYear` on writes + cleanup SQL script  
 
 ## Findings by track
 
@@ -74,7 +74,7 @@ _(none confirmed in this pass)_
 
 **Severity:** HIGH  
 **Track:** 1  
-**Status:** OPEN  
+**Status:** CLOSED — V5.1 Area 3 (`docs/V51_AREA3_REPORT.md`): `AllocationPlanRow` + dual-write + strict JSON validation; legacy JSON-only plans still readable via `parsePlanAllocations` fallback.  
 **Sprint origin:** V4 (carried); still true in V5.0  
 
 **Evidence:**
@@ -287,7 +287,7 @@ Live API (`curl /api/overview`) with ~438k CZK India NRE still shows:
 
 **Severity:** HIGH  
 **Track:** 3  
-**Status:** OPEN  
+**Status:** CLOSED — V5.1 Area 3: transactional lesson extraction + far-future cleanup SQL + current-month regen; confirm on your DB with `/api/this-month` after running `scripts/area3-cleanup-far-future-plans.sql`.  
 **Sprint origin:** V5-S5  
 
 **Evidence:**
@@ -322,7 +322,7 @@ No `5-year CAGR` fragment while `psql` shows:
 
 **Severity:** MEDIUM  
 **Track:** 3  
-**Status:** OPEN  
+**Status:** CLOSED — V5.1 Area 3: default no reduced BUY in 90d window; `Settings.taxFreeWindowAllowsBuy` + settings UI.  
 **Sprint origin:** V5-S4  
 
 **Evidence:** `allocationPlanner.ts` lines ~288–314: when `nearTax`, code still calls `addBuy` with reduced amount to **existing** equity.
@@ -492,10 +492,10 @@ while `psql` shows `NavHistory` count `0`.
 
 **Severity:** LOW  
 **Track:** 8  
-**Status:** OPEN  
+**Status:** CLOSED (V5.1 Area 4)  
 **Sprint origin:** V5-S2  
 
-**Evidence:** `curl /api/health` → `checks` array length `16` (`HEALTH_CHECK_COUNT` constant in `src/lib/health.ts`).
+**Evidence:** `curl /api/health` → `checks` array length **17** (`HEALTH_CHECK_COUNT` in `src/lib/health.ts`, includes `RETENTION_POLICY`).
 
 **Reproduction:** `curl.exe -s http://127.0.0.1:3002/api/health | findstr "\"name\""`
 
@@ -547,7 +547,7 @@ while `psql` shows `NavHistory` count `0`.
 
 **Severity:** HIGH  
 **Track:** 10  
-**Status:** OPEN  
+**Status:** CLOSED — V5.1 Area 4: `src/lib/secrets.ts`, Settings save path encrypts; plaintext blocked via `PlaintextSecretError` + `SystemHealth`; see `docs/METHODOLOGY.md` § Secrets.  
 **Sprint origin:** V4 / V5-S1  
 
 **Evidence:** `prisma/schema.prisma` `Settings` model includes `smtpPass`, `imapPassword`, `openaiApiKey`, `telegramBotToken` as plain `String?`. Current DB shows `imapPassword` / `openaiApiKey` null (no live secret rows to dump here), but the schema still permits storing raw secrets.
@@ -655,7 +655,7 @@ const DISMISS_RETENTION_MS = 30 * 86400000
 
 **Severity:** LOW  
 **Track:** 12  
-**Status:** OPEN  
+**Status:** CLOSED — V5.1 Area 3: `assertValidMonthYear` on production plan generation + `scripts/area3-cleanup-far-future-plans.sql` for one-shot DB cleanup.  
 **Sprint origin:** unknown  
 
 **Evidence:** `psql` shows plan `cmonu3dap0000q1r065xfgn84` with `monthYear = 2030-07` linked from `BacktestLesson`.
@@ -686,7 +686,7 @@ const DISMISS_RETENTION_MS = 30 * 86400000
 - **Dashboard money formatters** reviewed (`overview.js`, `library.js`, `backtest.js`, `portfolio.js`, `this-month.js`, `patterns.js`) — `Number()` precedes `.toFixed` on monetary paths audited.  
 - **Tax-window sell protection for drift sells** — `inTaxDeferWindow` skips candidates in `rebalanceDrift.ts` lines 12–21, 68–69.  
 - **`INACTIVE` holdings** — live plan shows **3× `TACTICAL_HOLD`** rows matching `psql` inactive count `3`.  
-- **`/api/health` returns 16 checks** with JSON 200 while DB healthy.  
+- **`/api/health` returns 17 checks** with JSON 200 while DB healthy (post–Area 4).  
 - **Continuity metadata** present on plan (`droppedFunds`, `unchangedFundsCount`, …) from `allocationPlanner.ts`.  
 - **Alert dedup module** implements `fireCount` increments instead of duplicate rows for same `alertKey` while dismissed within 30d.
 

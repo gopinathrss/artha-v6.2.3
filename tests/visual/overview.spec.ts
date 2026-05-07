@@ -22,7 +22,7 @@ for (const size of SIZES) {
       // Set theme via localStorage before any page script runs.
       await page.addInitScript((t: string) => {
         try {
-          localStorage.setItem('artha-theme-preference', t)
+          localStorage.setItem('pie-theme-preference', t)
         } catch {}
       }, theme)
 

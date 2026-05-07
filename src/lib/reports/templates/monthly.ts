@@ -1,4 +1,5 @@
 import { getPrisma } from '../../prisma'
+import { readPlanAllocationsOrEmpty } from '../../planAllocationsRead'
 import { getPortfolioSummary } from '../../portfolio'
 import { aiExecutiveSummary } from '../aiBrief'
 import { esc, wrapReportHtml } from '../reportShell'
@@ -28,10 +29,10 @@ export async function generateMonthlyReport(period?: { start: Date; end: Date })
 
   const alloc = portfolio.success && portfolio.data ? portfolio.data.allocation : null
   const plan = await prisma.allocationPlan.findFirst({ orderBy: { generatedAt: 'desc' } })
-  const rows = plan?.allocations ? (plan.allocations as { type?: string; executionStatus?: string }[]) : []
-  const done = rows.filter((r) => r.executionStatus === 'DONE').length
-  const skipped = rows.filter((r) => r.executionStatus === 'SKIPPED').length
-  const pend = rows.filter((r) => r.executionStatus === 'PENDING').length
+  const rows = plan ? await readPlanAllocationsOrEmpty(plan) : []
+  const done = rows.filter((r) => (r.executionStatus || 'PENDING').toUpperCase() === 'DONE').length
+  const skipped = rows.filter((r) => (r.executionStatus || 'PENDING').toUpperCase() === 'SKIPPED').length
+  const pend = rows.filter((r) => (r.executionStatus || 'PENDING').toUpperCase() === 'PENDING').length
 
   const since = new Date(start)
   const outcomes30 = await prisma.recommendationOutcome.findMany({
@@ -57,7 +58,7 @@ export async function generateMonthlyReport(period?: { start: Date; end: Date })
   })
 
   const exec = await aiExecutiveSummary(
-    `Monthly ARTHA report context (JSON): ${ctx}. Summarize risks and positives for the user.`,
+    `Monthly PIE report context (JSON): ${ctx}. Summarize risks and positives for the user.`,
     3
   )
 

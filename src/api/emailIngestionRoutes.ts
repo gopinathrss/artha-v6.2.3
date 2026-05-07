@@ -4,7 +4,7 @@ import { realPrisma } from '../lib/prisma'
 import { runEmailIngestion } from '../lib/ingestion/orchestrator'
 import { testImapConnection } from '../lib/ingestion/imap'
 import { processCasPdf } from '../lib/ingestion/cas'
-import { arthaUpload } from './uploadMulter'
+import { pieUpload } from './uploadMulter'
 
 export function registerEmailIngestionRoutes(app: Application) {
   app.post('/api/ingestion/run', async (_req, res) => {
@@ -122,8 +122,15 @@ export function registerEmailIngestionRoutes(app: Application) {
       const host = b.imapHost || s?.imapHost
       const port = b.imapPort ?? s?.imapPort ?? 993
       const user = b.imapUser || s?.imapUser
-      let pass = b.imapPassword || s?.imapPassword
-      if (pass === '••••••' || pass === '******') pass = s?.imapPassword ?? ''
+      const { getSecret } = await import('../lib/secrets')
+      let pass = b.imapPassword || ''
+      if (pass === '••••••' || pass === '******' || !pass) {
+        try {
+          pass = (await getSecret('imapPassword')) ?? ''
+        } catch {
+          pass = ''
+        }
+      }
       if (!host || !user || !pass) {
         return res.status(400).json({ success: false, error: 'IMAP host, user, and password required' })
       }
@@ -136,7 +143,7 @@ export function registerEmailIngestionRoutes(app: Application) {
     }
   })
 
-  app.post('/api/ingestion/cas', arthaUpload.single('file'), async (req, res) => {
+  app.post('/api/ingestion/cas', pieUpload.single('file'), async (req, res) => {
     try {
       if (!req.file?.path) {
         return res.status(400).json({ success: false, error: 'No file' })

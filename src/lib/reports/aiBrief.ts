@@ -1,9 +1,12 @@
 import OpenAI from 'openai'
 import { realPrisma } from '../prismaProvider'
+import { getSecret } from '../secrets'
+import { getProviderDecrypted } from '../integrations/store'
+import { envOpenaiApiKey } from '../integrations/env-fallback'
 
 function fallback(maxSentences: number): string {
   const parts = [
-    'Portfolio metrics below are computed from your live ARTHA database.',
+    'Portfolio metrics below are computed from your live PIE database.',
     'Enable an OpenAI API key in Settings for a richer executive narrative on future runs.',
     'Review allocation drift and adherence before acting on any single number.'
   ]
@@ -12,7 +15,15 @@ function fallback(maxSentences: number): string {
 
 export async function aiExecutiveSummary(prompt: string, maxSentences: number): Promise<string> {
   const s = await realPrisma.settings.findFirst()
-  const key = String(s?.openaiApiKey || process.env.OPENAI_API_KEY || '').trim()
+  let key = envOpenaiApiKey()
+  const integ = await getProviderDecrypted(realPrisma, 'ai.openai').catch(() => null)
+  if (integ?.secrets?.apiKey) key = integ.secrets.apiKey.trim()
+  try {
+    const sk = s ? await getSecret('openaiApiKey') : null
+    if (sk) key = sk.trim()
+  } catch {
+    /* plaintext blocked — env / integration only */
+  }
   if (!key) return fallback(maxSentences)
   try {
     const client = new OpenAI({ apiKey: key })

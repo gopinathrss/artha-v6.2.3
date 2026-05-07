@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ARTHA — India</title>
+    <title>PIE — India</title>
     <script src="/scripts/theme.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -91,6 +91,7 @@
                 <h2 class="card-title">Indian mutual funds</h2>
                 <p class="card-subtitle" id="mf-subtitle">—</p>
               </div>
+              <button class="btn btn-primary btn-sm" id="add-mf-btn" type="button">+ Add fund</button>
             </div>
             <div class="table-wrap">
               <table class="table" id="mf-table">
@@ -102,6 +103,7 @@
                     <th class="num" scope="col">NAV</th>
                     <th class="num" scope="col">Value (INR)</th>
                     <th class="num" scope="col">Value (CZK)</th>
+                    <th scope="col" aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody id="mf-tbody"></tbody>
@@ -115,6 +117,7 @@
                 <h2 class="card-title">Fixed deposits</h2>
                 <p class="card-subtitle" id="fd-subtitle">—</p>
               </div>
+              <button class="btn btn-primary btn-sm" id="add-fd-btn" type="button">+ Add FD</button>
             </div>
             <div class="table-wrap">
               <table class="table" id="fd-table">
@@ -126,6 +129,7 @@
                     <th class="num" scope="col">Rate %</th>
                     <th scope="col">Maturity</th>
                     <th class="num" scope="col">Days left</th>
+                    <th scope="col" aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody id="fd-tbody"></tbody>
@@ -185,6 +189,8 @@
 
     <script src="/scripts/sidebar.js"></script>
     <script src="/scripts/shell.js"></script>
+    <script src="/scripts/fetchJson.js"></script>
+    <script src="/scripts/pieUi.js"></script>
     <script src="/scripts/india.js"></script>
   </body>
 </html>

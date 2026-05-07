@@ -84,8 +84,17 @@ export function buildReportSections(
     <table class="rep-tbl"><thead><tr><th>Name / label</th><th>Class</th><th class="right">Value</th></tr></thead><tbody>
     ${rows.length ? rows.join('') : '<tr><td colspan="3" class="muted">No holdings on file.</td></tr>'}</tbody></table>`
 
-  const xv = xirr?.value
-  const s5 = `<p>XIRR (money-weighted, estimate): <strong>${xv == null ? 'n/a' : (xv as number).toFixed(2) + '%'}</strong>${xirr?.isEstimate ? ' (est.)' : ''}.</p>
+  let xirrLine =
+    'IRR (money-weighted): not yet available — fewer than 12 months of cashflow history in the model window.'
+  if (xirr?.displayState === 'OK' && xirr.displayValue != null) {
+    xirrLine = `IRR (money-weighted, 12+ months of history): <strong>${(xirr.displayValue as number).toFixed(2)}%</strong>.`
+  } else if (xirr?.displayState === 'ESTIMATE_HIDDEN') {
+    xirrLine =
+      'IRR: headline hidden — solver fell back to a short-horizon annualization; see docs/METHODOLOGY.md (not shown to avoid misleading figures).'
+  } else if (xirr?.displayState === 'INSUFFICIENT_HISTORY') {
+    xirrLine = `IRR: not yet shown — need at least ${xirr?.minMonthsForDisplay ?? 12} months of cashflow history (${xirr?.monthsOfHistory ?? 0} months recorded).`
+  }
+  const s5 = `<p>${xirrLine}</p>
     <p>Blended policy return (illustrative): ${pct(p?.blendedReturn ?? 0)}.</p>`
 
   const s6 = `<p>Czech + India notional in net worth (see overview for breakdown). Cash-like sleeves captured in allocation.</p>
@@ -112,10 +121,10 @@ export function buildReportSections(
 
   const s10 = client
     ? `<p><strong>Disclaimer:</strong> This report is for discussion only, not an offer or advice. Past performance does not guarantee future results. Verify all numbers independently.</p>
-       <p>ARTHA — Client snapshot · ${esc(monthYear)}</p>`
+       <p>PIE — Client snapshot · ${esc(monthYear)}</p>`
     : `<p><strong>Next steps:</strong> Revisit /this-month for allocation follow-through, /finances for cashflow, /settings for delivery &amp; targets.</p>
        <p><strong>Disclaimer:</strong> For personal use; not regulated investment advice.</p>
-       <p>ARTHA — Internal report · ${esc(monthYear)}</p>`
+       <p>PIE — Internal report · ${esc(monthYear)}</p>`
 
   return [
     { id: '1', title: '1 · Executive summary', html: s1 },
@@ -158,7 +167,7 @@ export function renderTenSectionReportHtml(params: {
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex"/>
-<title>ARTHA — ${esc(params.type)}</title>
+<title>PIE — ${esc(params.type)}</title>
 <style>
   :root { --ink: #0a1628; --paper: #f7f3ea; --gold: #b8922a; --muted: #5a6578; --bd: #e8e4dc; }
   @page { size: A4; margin: 14mm; }
@@ -195,7 +204,7 @@ export function renderTenSectionReportHtml(params: {
     <p class="no-print"><a href="javascript:window.print()">Print / Save as PDF</a></p>
     <div class="rep-top">
       <div>
-        <h1>ARTHA — ${esc(params.type)}</h1>
+        <h1>PIE — ${esc(params.type)}</h1>
         <p class="muted">${esc(String(params.periodLabel))} · Generated ${esc(new Date(params.createdAt).toISOString().slice(0, 19))}Z</p>
       </div>
       ${badge}

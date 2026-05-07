@@ -75,7 +75,7 @@ export async function generateQuarterlyReport(period?: { start: Date; end: Date 
   })
 
   const exec = await aiExecutiveSummary(
-    `Quarterly ARTHA report. JSON: ${ctx}. Compare discipline vs benchmarks and name one behavioral takeaway.`,
+    `Quarterly PIE report. JSON: ${ctx}. Compare discipline vs benchmarks and name one behavioral takeaway.`,
     5
   )
 

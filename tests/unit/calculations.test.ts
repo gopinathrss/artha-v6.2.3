@@ -14,8 +14,10 @@ describe('XIRR', () => {
   test('no data — zero flows', () => {
     const r = calculateXIRR([], new Date('2024-01-01'), 0)
     expect(r.cashflowCount).toBe(0)
+    expect(r.displayState).toBe('INSUFFICIENT_HISTORY')
+    expect(r.displayValue).toBeNull()
   })
-  test('Benchmark 1: profitable short history (annualized estimate path)', () => {
+  test('Benchmark 1: profitable short history — estimate hidden until 12+ months', () => {
     const cashflows = [
       { date: new Date('2024-01-01'), amount: -4550 },
       { date: new Date('2024-02-01'), amount: -4550 },
@@ -25,9 +27,11 @@ describe('XIRR', () => {
     ]
     const r = calculateXIRR(cashflows, new Date('2024-06-01'), 27803)
     expect(r.isEstimate).toBe(true)
-    expect(r.value).not.toBeNull()
-    expect(r.value!).toBeGreaterThanOrEqual(40)
-    expect(r.value!).toBeLessThanOrEqual(80)
+    expect(r.displayState).toBe('INSUFFICIENT_HISTORY')
+    expect(r.displayValue).toBeNull()
+    expect(r.rawEstimate).not.toBeNull()
+    expect(r.rawEstimate!).toBeGreaterThanOrEqual(40)
+    expect(r.rawEstimate!).toBeLessThanOrEqual(80)
   })
 
   test('Benchmark 2: long history convergent', () => {
@@ -39,21 +43,24 @@ describe('XIRR', () => {
     ]
     const r = calculateXIRR(cashflows, new Date('2024-01-01'), 310000)
     expect(r.isEstimate).toBe(false)
-    expect(r.value).not.toBeNull()
+    expect(r.displayState).toBe('OK')
+    expect(r.displayValue).not.toBeNull()
     // Excel-style XIRR for these irregular dates lands ~16.2–18.5% depending on day-count; keep a tight band.
-    expect(r.value!).toBeGreaterThanOrEqual(16)
-    expect(r.value!).toBeLessThanOrEqual(20)
+    expect(r.displayValue!).toBeGreaterThanOrEqual(16)
+    expect(r.displayValue!).toBeLessThanOrEqual(20)
   })
 
-  test('Benchmark 3: losing portfolio — negative XIRR, finite', () => {
+  test('Benchmark 3: losing portfolio — negative XIRR, finite (12+ mo window)', () => {
     const cashflows = [
-      { date: new Date('2023-01-01'), amount: -100000 },
-      { date: new Date('2023-06-01'), amount: -50000 }
+      { date: new Date('2022-01-01'), amount: -100000 },
+      { date: new Date('2022-07-01'), amount: -50000 },
+      { date: new Date('2023-01-01'), amount: -50000 }
     ]
     const r = calculateXIRR(cashflows, new Date('2024-01-01'), 120000)
-    expect(r.value).not.toBeNull()
-    expect(Number.isFinite(r.value!)).toBe(true)
-    expect(r.value!).toBeLessThan(0)
+    const v = r.displayValue ?? r.rawEstimate
+    expect(v).not.toBeNull()
+    expect(Number.isFinite(v!)).toBe(true)
+    expect(v!).toBeLessThan(0)
   })
 })
 
@@ -71,8 +78,7 @@ describe('calculateNetWorth', () => {
     expect(r.indiaCzk).toBeCloseTo(r.indiaNRECzk, 1)
     expect(r.indiaCzk).toBeCloseTo(r.indiaTotal, 1)
     expect(r.indiaCzk).not.toBeCloseTo(r.indiaMfCzk, 1)
-    const total = r.czechFundsCzk + r.indiaNRECzk
-    expect(r.gainCzk).toBeCloseTo(total - totalInvested, 1)
+    expect(r.inflowWeightedGainCzk).toBeCloseTo(r.czechFundsCzk - totalInvested, 1)
     expect(r.totalCzk).toBeCloseTo(r.czechTotal + r.indiaTotal, 1)
   })
 

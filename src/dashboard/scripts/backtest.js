@@ -86,7 +86,8 @@
         { label: '60/30/10', color: colors[2], points: balanced.monthlyValues.map((p) => ({ x: p.date, y: p.valueCzk })) }
       ]
       const el = document.getElementById('qc-chart')
-      if (window.ArthaChart) window.ArthaChart.renderSvgMultiLineChart(el, series)
+      const ch = window.PieChart || window.ArthaChart
+      if (ch) ch.renderSvgMultiLineChart(el, series)
     } catch (e) {
       document.getElementById('qc-results').innerHTML =
         '<p class="text-negative">' + (e.message || 'Error') + '</p>'
@@ -150,8 +151,9 @@
         (d.cached ? '<p class="card-subtitle">Served from 24h cache.</p>' : '') +
         warns
       const el = document.getElementById('cb-chart')
-      if (window.ArthaChart && d.monthlyValues)
-        window.ArthaChart.renderSvgMultiLineChart(el, [
+      const ch2 = window.PieChart || window.ArthaChart
+      if (ch2 && d.monthlyValues)
+        ch2.renderSvgMultiLineChart(el, [
           { label: 'Portfolio', color: 'var(--color-accent-base)', points: d.monthlyValues.map((p) => ({ x: p.date, y: p.valueCzk })) }
         ])
       loadRuns()

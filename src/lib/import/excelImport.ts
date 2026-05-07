@@ -226,6 +226,14 @@ export async function importBankingInput(
       result.fundsImported++
     }
 
+    const IMPORT_CF_NOTE = 'Imported from Banking_Input.xlsx'
+    const removed = await tx.cashflow.deleteMany({ where: { notes: IMPORT_CF_NOTE } })
+    if (removed.count > 0) {
+      result.warnings.push(
+        `Removed ${removed.count} prior ${IMPORT_CF_NOTE} cashflow rows so re-import does not double-count.`
+      )
+    }
+
     for (const c of cashRows) {
       const notationId = String(c['Fund ID'] ?? '').trim()
       if (!notationId) continue
@@ -251,7 +259,7 @@ export async function importBankingInput(
             date,
             amountCzk,
             type: 'SIP',
-            notes: 'Imported from Banking_Input.xlsx'
+            notes: IMPORT_CF_NOTE
           }
         })
         result.cashflowsImported++
