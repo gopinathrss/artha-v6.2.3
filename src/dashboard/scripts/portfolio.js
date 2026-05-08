@@ -210,6 +210,7 @@
     if (t.length <= maxLen) return `<p class="strategy-card__reasoning-text">${escapeHtml(t)}</p>`
     const short = t.slice(0, maxLen).trim()
     return (
+      '<div data-reasoning-wrapper>' +
       '<p class="reasoning-preview">' +
       escapeHtml(short) +
       '… ' +
@@ -219,6 +220,7 @@
       '</p>' +
       '<div class="reasoning-full" style="display:none">' +
       `<p class="strategy-card__reasoning-text">${escapeHtml(t)}</p>` +
+      '</div>' +
       '</div>'
     )
   }
@@ -226,13 +228,22 @@
   // Exposed for inline onclick toggles (no framework).
   window.toggleReasoning = function toggleReasoning(btn) {
     try {
-      const wrap = btn && btn.closest ? btn.closest('.strategy-card__reasoning') : null
-      if (!wrap) return
-      const full = wrap.querySelector('.reasoning-full')
-      if (!full) return
-      const isHidden = full.style.display === 'none' || full.style.display === ''
-      full.style.display = isHidden ? 'block' : 'none'
-      btn.textContent = isHidden ? 'Show less ▲' : 'Show more ▼'
+      const wrapper = btn && btn.closest ? btn.closest('[data-reasoning-wrapper]') : null
+      if (!wrapper) return
+      const preview = wrapper.querySelector('.reasoning-preview')
+      const full = wrapper.querySelector('.reasoning-full')
+      if (!preview || !full) return
+
+      const isExpanded = full.style.display !== 'none' && full.style.display !== ''
+      if (isExpanded) {
+        full.style.display = 'none'
+        preview.style.display = ''
+        btn.textContent = 'Show more ▼'
+      } else {
+        preview.style.display = 'none'
+        full.style.display = 'block'
+        btn.textContent = 'Show less ▲'
+      }
     } catch {
       /* */
     }

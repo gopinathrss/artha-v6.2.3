@@ -950,6 +950,40 @@
     }).then((r) => r.json())
   }
 
+  async function saveDisplayPreferences() {
+    const tzRaw = document.getElementById('as_timezone')?.value
+    const acRaw = document.getElementById('as_accent')?.value
+    const ccRaw = document.getElementById('as_categories')?.value || ''
+    const cats = ccRaw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+
+    const body = {
+      displayCurrency: document.getElementById('as_display_ccy')?.value,
+      timezone: tzRaw || 'Europe/Prague',
+      accentColor: (acRaw || 'BLUE').toUpperCase(),
+      customCategories: cats
+    }
+
+    if (window.PieTheme && body.accentColor) {
+      try {
+        window.PieTheme.setAccent(body.accentColor)
+      } catch {
+        /* */
+      }
+    }
+
+    const res = await fetchJsonTimeout('/api/app-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    if (!res.success) throw new Error(res.error || 'Save failed')
+    await loadAppPreferences()
+    return res
+  }
+
   async function withButton(id, label, action) {
     const btn = document.getElementById(id)
     if (!btn) return action()
@@ -1185,6 +1219,11 @@
       }
     })
   )
+
+    // Expose for Display preferences card button (keeps logic centralized here)
+    window.saveDisplayPreferences = function () {
+      return saveDisplayPreferences().catch((e) => window.alert(String(e?.message || e)))
+    }
 
   document.getElementById('reload-integrations')?.addEventListener('click', async () => {
     const btn = document.getElementById('reload-integrations')

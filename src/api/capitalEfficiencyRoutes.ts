@@ -2,6 +2,7 @@ import type { Express } from 'express'
 import { Prisma, AccountRole } from '@prisma/client'
 import { getPrisma } from '../lib/prisma'
 import { computeCapitalEfficiency } from '../lib/intelligence/sleepingMoneyEngine'
+import { validateInterestTiers } from '../lib/intelligence/interestTiers'
 
 const ALLOWED_ROLE = new Set<string>(Object.values(AccountRole))
 
@@ -29,10 +30,15 @@ export function registerCapitalEfficiencyRoutes(app: Express): void {
       if (interestTiers !== undefined) {
         const parsed =
           typeof interestTiers === 'string' ? JSON.parse(interestTiers) : interestTiers
-        if (!Array.isArray(parsed)) {
-          return res.status(400).json({ success: false, error: 'interestTiers must be an array' })
+        const validation = validateInterestTiers(parsed)
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid interest tier structure',
+            details: validation.errors
+          })
         }
-        tiersJson = parsed as Prisma.InputJsonValue
+        tiersJson = validation.tiers as unknown as Prisma.InputJsonValue
       }
 
       const data: Prisma.AccountUpdateInput = {}

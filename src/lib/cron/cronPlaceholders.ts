@@ -5,6 +5,8 @@ export const REGISTERED_CRON_JOB_NAMES = [
   'fx-refresh-weekday',
   'morning-job-weekday',
   'daily-snapshot',
+  'evaluate-strategies',
+  'monitor-profit-caps',
   'monthly-letter',
   'weekly-backup',
   'eom-journal',

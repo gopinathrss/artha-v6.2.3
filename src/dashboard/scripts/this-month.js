@@ -289,6 +289,7 @@
     if (t.length <= maxLen) return escapeHtml(t)
     const short = t.slice(0, maxLen).trim()
     return (
+      '<span data-reasoning-wrapper>' +
       '<span class="reasoning-preview">' +
       escapeHtml(short) +
       '… ' +
@@ -298,21 +299,29 @@
       '</span>' +
       '<span class="reasoning-full" style="display:none">' +
       escapeHtml(t) +
+      '</span>' +
       '</span>'
     )
   }
 
   window.toggleReasoningText = function toggleReasoningText(btn) {
     try {
-      const wrap = btn && btn.parentElement ? btn.parentElement : null
-      if (!wrap) return
-      const full = wrap.parentElement && wrap.parentElement.querySelector
-        ? wrap.parentElement.querySelector('.reasoning-full')
-        : null
-      if (!full) return
-      const isHidden = full.style.display === 'none' || full.style.display === ''
-      full.style.display = isHidden ? 'inline' : 'none'
-      btn.textContent = isHidden ? 'Show less ▲' : 'Show more ▼'
+      const wrapper = btn && btn.closest ? btn.closest('[data-reasoning-wrapper]') : null
+      if (!wrapper) return
+      const preview = wrapper.querySelector('.reasoning-preview')
+      const full = wrapper.querySelector('.reasoning-full')
+      if (!preview || !full) return
+
+      const isExpanded = full.style.display !== 'none' && full.style.display !== ''
+      if (isExpanded) {
+        full.style.display = 'none'
+        preview.style.display = ''
+        btn.textContent = 'Show more ▼'
+      } else {
+        preview.style.display = 'none'
+        full.style.display = 'inline'
+        btn.textContent = 'Show less ▲'
+      }
     } catch {
       /* */
     }

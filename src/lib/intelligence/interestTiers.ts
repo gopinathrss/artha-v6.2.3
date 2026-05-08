@@ -4,13 +4,90 @@ export type InterestTier = {
   ratePct: number
 }
 
+export type InterestTierValidationError = {
+  index: number
+  message: string
+}
+
+export function validateInterestTiers(
+  tiers: unknown
+): { valid: true; tiers: InterestTier[] } | { valid: false; errors: InterestTierValidationError[] } {
+  if (!Array.isArray(tiers)) {
+    return { valid: false, errors: [{ index: -1, message: 'Must be an array' }] }
+  }
+  if (tiers.length === 0) {
+    // Empty array is valid — means "no tier data"
+    return { valid: true, tiers: [] }
+  }
+
+  const errors: InterestTierValidationError[] = []
+  const validated: InterestTier[] = []
+
+  for (let i = 0; i < tiers.length; i++) {
+    const t = tiers[i]
+    if (typeof t !== 'object' || t === null) {
+      errors.push({ index: i, message: 'Each tier must be an object' })
+      continue
+    }
+    const tier = t as Record<string, unknown>
+
+    // ratePct must be a finite number
+    if (typeof tier.ratePct !== 'number' || !isFinite(tier.ratePct)) {
+      errors.push({ index: i, message: `ratePct must be a finite number, got: ${String(tier.ratePct)}` })
+      continue
+    }
+    if (tier.ratePct < 0 || tier.ratePct > 100) {
+      errors.push({ index: i, message: `ratePct must be 0-100, got: ${tier.ratePct}` })
+      continue
+    }
+
+    // Must have exactly one of: upTo, above
+    const hasUpTo = 'upTo' in tier && tier.upTo !== undefined
+    const hasAbove = 'above' in tier && tier.above !== undefined
+    if (hasUpTo === hasAbove) {
+      errors.push({ index: i, message: 'Each tier must have exactly one of: upTo, above' })
+      continue
+    }
+
+    const boundary = hasUpTo ? tier.upTo : tier.above
+    if (typeof boundary !== 'number' || !isFinite(boundary) || boundary < 0) {
+      errors.push({ index: i, message: `${hasUpTo ? 'upTo' : 'above'} must be a non-negative number` })
+      continue
+    }
+
+    validated.push({
+      ...(hasUpTo ? { upTo: boundary as number } : {}),
+      ...(hasAbove ? { above: boundary as number } : {}),
+      ratePct: tier.ratePct as number
+    })
+  }
+
+  if (errors.length > 0) return { valid: false, errors }
+  return { valid: true, tiers: validated }
+}
+
 export function parseInterestTiersJson(raw: unknown): InterestTier[] {
   if (raw == null) return []
-  if (Array.isArray(raw)) return raw as InterestTier[]
+  if (Array.isArray(raw)) {
+    const result = validateInterestTiers(raw)
+    if (!result.valid) {
+      // eslint-disable-next-line no-console
+      console.warn('[interestTiers] Invalid tier data, ignoring:', result.errors)
+      return []
+    }
+    return result.tiers
+  }
   if (typeof raw === 'string') {
     try {
       const p = JSON.parse(raw) as unknown
-      return Array.isArray(p) ? (p as InterestTier[]) : []
+      if (!Array.isArray(p)) return []
+      const result = validateInterestTiers(p)
+      if (!result.valid) {
+        // eslint-disable-next-line no-console
+        console.warn('[interestTiers] Invalid tier data, ignoring:', result.errors)
+        return []
+      }
+      return result.tiers
     } catch {
       return []
     }

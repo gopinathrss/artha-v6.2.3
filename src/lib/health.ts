@@ -1,4 +1,7 @@
 import { AccountRole } from '@prisma/client'
+import { existsSync, statSync } from 'fs'
+import os from 'os'
+import path from 'path'
 import { getPrisma, realPrisma } from './prisma'
 import { num } from './money'
 import { isAdherenceRow } from './allocationRowTypes'
@@ -11,7 +14,7 @@ import { getRbiRepoRate, getStalestNREFDAge } from './indiaIntelligence'
 export type HealthRow = { name: string; status: 'PASS' | 'WARN' | 'FAIL'; message?: string }
 
 /** Spec target: named checks (trust score divides by this count). */
-export const HEALTH_CHECK_COUNT = 19
+export const HEALTH_CHECK_COUNT = 20
 
 /** When the DB is unreachable, return named rows so `/api/health` stays JSON 200 (observability). */
 function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trustScore: number } {
@@ -32,6 +35,7 @@ function healthChecksWhenDbDown(dbMessage: string): { checks: HealthRow[]; trust
     'CRON_HEALTH',
     'STRATEGY_EVALUATOR',
     'CAPITAL_EFFICIENCY',
+    'SECRET_KEYFILE',
     'MEMORY_HEALTHY',
     'RETENTION_POLICY'
   ]
@@ -424,6 +428,49 @@ export async function runHealthChecks(): Promise<{ checks: HealthRow[]; trustSco
     }
   } catch {
     checks.push({ name: 'CAPITAL_EFFICIENCY', status: 'WARN', message: 'Skip' })
+  }
+
+  // Secret keyfile must exist and be 32 bytes, otherwise encrypted values become unreadable (new key generation).
+  try {
+    const keyfilePath =
+      process.env.ARTHA_SECRET_KEY_PATH ??
+      (process.env.APPDATA
+        ? path.join(process.env.APPDATA, 'artha', 'secret.key')
+        : path.join(os.homedir(), '.artha', 'secret.key'))
+
+    if (!existsSync(keyfilePath)) {
+      checks.push({
+        name: 'SECRET_KEYFILE',
+        status: 'FAIL',
+        message:
+          `Secret keyfile not found: ${keyfilePath}. ` +
+          `Copy your secret.key to this path before re-entering API keys. ` +
+          `PIE will generate a new key if you proceed, making saved secrets unreadable.`
+      })
+    } else {
+      const size = statSync(keyfilePath).size
+      if (size !== 32) {
+        checks.push({
+          name: 'SECRET_KEYFILE',
+          status: 'FAIL',
+          message:
+            `Secret keyfile at ${keyfilePath} is ${size} bytes (expected 32). ` +
+            `File may be corrupt or wrong file.`
+        })
+      } else {
+        checks.push({
+          name: 'SECRET_KEYFILE',
+          status: 'PASS',
+          message: `Keyfile present and correct size (${keyfilePath})`
+        })
+      }
+    }
+  } catch (e: unknown) {
+    checks.push({
+      name: 'SECRET_KEYFILE',
+      status: 'WARN',
+      message: e instanceof Error ? e.message : 'Skip'
+    })
   }
 
   try {
