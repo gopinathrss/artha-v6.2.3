@@ -85,7 +85,52 @@
     }
   }
 
+  function formatNetWorthHero(czk) {
+    const v = Number(czk) || 0
+    const abs = Math.abs(v)
+    let compact = ''
+    let unit = ''
+    if (abs >= 1_000_000) {
+      compact = (v / 1_000_000).toFixed(2).replace(/\.?0+$/, '')
+      unit = 'M'
+    } else if (abs >= 1_000) {
+      compact = (v / 1_000).toFixed(1).replace(/\.?0+$/, '')
+      unit = 'K'
+    } else {
+      compact = v.toLocaleString('cs-CZ')
+      unit = ''
+    }
+    return {
+      primary: `${compact}${unit} Kč`,
+      secondary: v.toLocaleString('cs-CZ') + ' Kč'
+    }
+  }
+
+  function renderFxStrip(ratesPayload) {
+    const fxRates = (ratesPayload && ratesPayload.czkPerUnit) || {}
+    const entries = []
+    const eurCzk = Number(fxRates.EUR)
+    const inrCzk = Number(fxRates.INR)
+    if (eurCzk) {
+      entries.push(`1 EUR = ${eurCzk.toFixed(2)} Kč`)
+    }
+    if (inrCzk) {
+      entries.push(`1 INR = ${inrCzk.toFixed(4)} Kč`)
+      entries.push(`1 Kč = ${(1 / inrCzk).toFixed(2)} INR`)
+    }
+    if (entries.length === 0) return ''
+    const ageMin = ratesPayload && ratesPayload.ageMinutes != null ? Number(ratesPayload.ageMinutes) : null
+    const ageText = ageMin != null && Number.isFinite(ageMin) ? `FX age ${Math.round(ageMin)}m` : ''
+    return (
+      '<div class="fx-strip" title="Exchange rates — updated hourly">' +
+      entries.map((e) => `<span class="fx-strip__item">${escapeHtml(e)}</span>`).join('') +
+      `<span class="fx-strip__age" id="fx-age">${escapeHtml(ageText)}</span>` +
+      '</div>'
+    )
+  }
+
   async function loadOverview() {
+    const ph = window.PiePageHealth
     try {
       hideOverviewError()
       const [overviewRes, ratesRes, healthRes, planRes, alertsRes, strategiesRes] =
@@ -104,19 +149,26 @@
       }
       cachedRatesPayload = ratesPayload
 
+      const fetchedAtIso = new Date().toISOString()
       if (overviewRes.status === 'fulfilled') {
         const ov = overviewRes.value
         if (!ov.success) {
           showOverviewError(ov.error || 'Overview request failed')
+          if (ph) ph.updatePageHealthDot('overview', null, true, 'Failed to load overview')
         } else if (ov.data) {
           cachedOverviewData = ov.data
           renderHero(ov.data, ratesPayload)
           renderAllocation(ov.data)
           renderHoldings(ov.data)
           renderTaxCalendar(ov.data)
+          if (ph) {
+            const tt = 'Data fresh as of ' + new Date(fetchedAtIso).toLocaleTimeString('cs-CZ')
+            ph.updatePageHealthDot('overview', fetchedAtIso, false, tt)
+          }
         }
       } else {
         showOverviewError('Network error loading overview')
+        if (ph) ph.updatePageHealthDot('overview', null, true, 'Network error loading overview')
       }
       if (healthRes.status === 'fulfilled' && healthRes.value?.data) {
         renderHealth(healthRes.value.data)
@@ -143,6 +195,12 @@
     } catch (e) {
       console.error('[Overview] load failed:', e)
       showOverviewError(String(e && e.message ? e.message : e))
+      try {
+        const ph = window.PiePageHealth
+        if (ph) ph.updatePageHealthDot('overview', null, true, 'Failed to load data')
+      } catch {
+        /* */
+      }
     }
   }
 
@@ -173,8 +231,21 @@
     const total = Number(nw.totalCzk || 0)
     const ccy = getDisplayCurrency()
     const lines = formatNetWorthDisplay(total, nw.totalEur, ratesPayload, ccy)
-    document.getElementById('hero-networth').textContent = lines.primary
-    document.getElementById('hero-eur').textContent = lines.secondary
+    const hero = ccy === 'CZK' ? formatNetWorthHero(total) : { primary: lines.primary, secondary: lines.secondary }
+    const heroEl = document.getElementById('hero-networth')
+    if (heroEl) {
+      heroEl.textContent = hero.primary
+      heroEl.classList.add('net-worth-hero__primary')
+    }
+    const metaEl = document.getElementById('hero-eur')
+    if (metaEl) {
+      metaEl.textContent = hero.secondary
+      metaEl.classList.add('net-worth-hero__secondary')
+    }
+    const fxSlot = document.getElementById('fx-strip-slot')
+    if (fxSlot) {
+      fxSlot.innerHTML = renderFxStrip(ratesPayload)
+    }
 
     const sel = document.getElementById('hero-display-ccy')
     if (sel) {

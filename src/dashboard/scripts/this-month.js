@@ -101,13 +101,21 @@
   }
 
   async function load() {
+    const ph = window.PiePageHealth
     try {
-      const [res, stratRes] = await Promise.all([
+      const [res, stratRes, ovRes] = await Promise.all([
         fetch('/api/this-month').then((r) => r.json()),
-        fetch('/api/strategies').then((r) => r.json()).catch(() => ({ success: false }))
+        fetch('/api/strategies').then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/overview').then((r) => r.json()).catch(() => ({ data: {} }))
       ])
       const plan = res?.data?.plan || null
       currentPlan = plan
+      const holdings = ovRes?.data?.holdings || []
+      const holdingIsins = new Set((holdings || []).map((h) => h && h.isin).filter(Boolean))
+      const holdingMap = {}
+      for (const h of holdings || []) {
+        if (h && h.isin) holdingMap[h.isin] = h.name || h.isin
+      }
       /** @type {Record<string, object>} */
       const strategyByIsin = {}
       if (stratRes?.success && Array.isArray(stratRes.data)) {
@@ -119,14 +127,24 @@
       if (!plan || !Array.isArray(plan.allocations)) {
         renderEmpty()
         await loadPriorMonthCard()
+        if (ph) ph.updatePageHealthDot('thisMonth', null, false, 'No plan generated yet')
         return
       }
       renderSummary(plan)
-      renderRows(plan, strategyByIsin)
+      renderRows(plan, strategyByIsin, holdingIsins, holdingMap)
       await loadPriorMonthCard()
+      if (ph) {
+        const planAge = plan.generatedAt || null
+        const tt =
+          planAge != null
+            ? `Plan generated ${new Date(planAge).toLocaleDateString('cs-CZ')}`
+            : 'Plan loaded'
+        ph.updatePageHealthDot('thisMonth', planAge || new Date().toISOString(), false, tt)
+      }
     } catch (e) {
       renderEmpty()
       await loadPriorMonthCard()
+      if (ph) ph.updatePageHealthDot('thisMonth', null, true, 'Failed to load plan')
     }
   }
 
@@ -199,7 +217,7 @@
     document.getElementById('btn-delete-plan')?.addEventListener('click', deletePlan)
   }
 
-  function renderRows(plan, strategyByIsin) {
+  function renderRows(plan, strategyByIsin, holdingIsins, holdingMap) {
     const byIsin = strategyByIsin || {}
     const allocs = plan.allocations || []
     const sells = allocs.filter((a) => a.type === 'SELL')
@@ -215,7 +233,7 @@
         sectionCard(
           'Sells (free up cash)',
           `${sells.length} ${sells.length === 1 ? 'action' : 'actions'} · ${fmt0(sum(sells))} Kč freed`,
-          sells.map((r) => rowActionable(r, byIsin)).join('')
+          sells.map((r) => rowActionable(r, byIsin, holdingIsins, holdingMap)).join('')
         )
       )
     }
@@ -224,7 +242,7 @@
         sectionCard(
           'Reserves',
           `For upcoming events · ${fmt0(sum(reserves))} Kč`,
-          reserves.map((r) => rowActionable(r, byIsin)).join('')
+          reserves.map((r) => rowActionable(r, byIsin, holdingIsins, holdingMap)).join('')
         )
       )
     }
@@ -233,7 +251,7 @@
         sectionCard(
           'Buys (deploy investable)',
           `${buys.length} ${buys.length === 1 ? 'action' : 'actions'} · ${fmt0(sum(buys))} Kč deployed`,
-          buys.map((r) => rowActionable(r, byIsin)).join('')
+          buys.map((r) => rowActionable(r, byIsin, holdingIsins, holdingMap)).join('')
         )
       )
     }
@@ -242,7 +260,7 @@
         sectionCard(
           'Holds (no action)',
           `${holds.length} ${holds.length === 1 ? 'holding' : 'holdings'} unchanged`,
-          holds.map(rowHold).join('')
+          holds.map((r) => rowHold(r, holdingMap)).join('')
         )
       )
     }
@@ -265,7 +283,42 @@
     `
   }
 
-  function rowActionable(row, strategyByIsin) {
+  function renderReasonCollapsed(text, maxLen = 100) {
+    const t = String(text || '')
+    if (!t) return ''
+    if (t.length <= maxLen) return escapeHtml(t)
+    const short = t.slice(0, maxLen).trim()
+    return (
+      '<span class="reasoning-preview">' +
+      escapeHtml(short) +
+      '… ' +
+      '<button class="btn-link reasoning-toggle" type="button" onclick="toggleReasoningText(this)">' +
+      'Show more ▼' +
+      '</button>' +
+      '</span>' +
+      '<span class="reasoning-full" style="display:none">' +
+      escapeHtml(t) +
+      '</span>'
+    )
+  }
+
+  window.toggleReasoningText = function toggleReasoningText(btn) {
+    try {
+      const wrap = btn && btn.parentElement ? btn.parentElement : null
+      if (!wrap) return
+      const full = wrap.parentElement && wrap.parentElement.querySelector
+        ? wrap.parentElement.querySelector('.reasoning-full')
+        : null
+      if (!full) return
+      const isHidden = full.style.display === 'none' || full.style.display === ''
+      full.style.display = isHidden ? 'inline' : 'none'
+      btn.textContent = isHidden ? 'Show less ▲' : 'Show more ▼'
+    } catch {
+      /* */
+    }
+  }
+
+  function rowActionable(row, strategyByIsin, holdingIsins, holdingMap) {
     const name =
       row.type === 'SELL'
         ? row.source || row.name || row.isin || '—'
@@ -312,16 +365,26 @@
              <span class="badge badge-${status === 'DONE' ? 'positive' : 'neutral'}">${status === 'DONE' ? 'Done' : 'Skipped'}</span>
            </div>`
 
+    const isinLine =
+      row.type === 'BUY' && row.isin
+        ? `<span class="fund-isin">${escapeHtml(String(row.isin))}</span>`
+        : ''
+
+    const isNew = row.type === 'BUY' && row.isin && holdingIsins && !holdingIsins.has(row.isin)
+    const newBadge = isNew ? '<span class="badge badge--new">NEW</span>' : ''
+
     return `
       <div class="plan-row" data-row-key="${escapeHtml(row.rowKey)}">
         <div class="plan-row-icon plan-row-icon-${row.type}">${icon}</div>
         <div class="plan-row-main">
           <div class="plan-row-title-line">
             <span class="plan-row-name">${escapeHtml(name)}</span>
+            ${newBadge}
             ${strategyBadge}
             ${badge}
           </div>
-          <div class="plan-row-reason">${escapeHtml(row.reason || '')}</div>
+          ${isinLine}
+          <div class="plan-row-reason">${renderReasonCollapsed(row.reason || '')}</div>
           ${taxLine}
         </div>
         <div class="plan-row-amount">${fmt0(row.amountCzk)} Kč</div>
@@ -330,7 +393,7 @@
     `
   }
 
-  function rowHold(row) {
+  function rowHold(row, holdingMap) {
     const days = row.daysToAction
     const daysBadge = days != null ? `<span class="badge badge-info">${escapeHtml(String(days))}d</span>` : ''
     const hr = row.holdReason ? String(row.holdReason).toUpperCase() : ''
@@ -340,15 +403,18 @@
             hr.replace(/_/g, ' ')
           )}</span>`
         : ''
+    const isin = row.isin || ''
+    const nm = (holdingMap && isin && holdingMap[isin]) || row.name || isin || '—'
     return `
       <div class="plan-row plan-row-hold">
         <div class="plan-row-icon plan-row-icon-hold">·</div>
         <div class="plan-row-main">
           <div class="plan-row-title-line">
-            <span class="plan-row-name plan-row-name-muted">${escapeHtml(row.name || row.isin || '—')}</span>
+            <span class="plan-row-name plan-row-name-muted">${escapeHtml(nm)}</span>
             ${daysBadge}
             ${holdBadge}
           </div>
+          ${isin ? `<span class="fund-isin">${escapeHtml(String(isin))}</span>` : ''}
           <div class="plan-row-reason">${escapeHtml(row.reason || '')}</div>
         </div>
         <div class="plan-row-amount plan-row-amount-muted">${fmt0(row.currentValueCzk || 0)} Kč</div>

@@ -53,6 +53,7 @@
   }
 
   async function load() {
+    const ph = window.PiePageHealth
     let data = {}
     try {
       const res = await fetch('/api/overview').then((r) => r.json())
@@ -111,6 +112,11 @@
       free.length === 0
         ? `<div class="empty-state"><div class="empty-state-message">Nothing has crossed tax-free yet.</div></div>`
         : free.map((h) => row(h, 'positive', /*isFree*/ true)).join('')
+
+    if (ph) {
+      const last = new Date().toISOString()
+      ph.updatePageHealthDot('taxCalendar', last, false, 'Tax calendar loaded')
+    }
   }
 
   function row(h, badgeColor, isFree = false) {
@@ -127,7 +133,15 @@
       <div class="tax-calendar-row">
         <div>
           <div class="tax-calendar-row-name">${escapeHtml(h.name)}</div>
-          <div class="tax-calendar-row-meta">${escapeHtml(h.isin)} · ${escapeHtml(dateStr(h.taxFreeDate))}</div>
+          <div class="fund-isin">${escapeHtml(h.isin)}</div>
+          <div class="tax-calendar-row-meta">${escapeHtml(dateStr(h.taxFreeDate))} · ${escapeHtml(
+            days != null ? String(Math.abs(days)) + 'd' + (isFree ? ' ago' : ' remaining') : '—'
+          )}</div>
+          ${
+            isFree
+              ? '<div class="tax-calendar-row-meta">Consider selling to lock in gains tax-free. Check strategy before acting.</div>'
+              : ''
+          }
         </div>
         <div class="tax-calendar-row-value">${fmt0(h.valueCzk)} Kč</div>
         <span class="badge badge-${badgeColor}">${escapeHtml(badgeText)}</span>
@@ -138,6 +152,12 @@
   document.getElementById('refresh-btn')?.addEventListener('click', () => location.reload())
 
   load().catch(() => {
+    try {
+      const ph = window.PiePageHealth
+      if (ph) ph.updatePageHealthDot('taxCalendar', null, true, 'Could not load tax calendar')
+    } catch {
+      /* */
+    }
     document.getElementById('imminent-list').innerHTML =
       `<div class="empty-state"><div class="empty-state-message">Could not load tax calendar.</div></div>`
   })

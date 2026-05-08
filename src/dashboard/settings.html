@@ -48,486 +48,569 @@
         </header>
 
         <div class="content settings-stack">
-          <section class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Appearance</h2>
-                <p class="card-subtitle">One control — persisted in <code>AppSettings.themeMode</code> and local cache.</p>
-              </div>
-            </div>
-            <div class="theme-segmented" role="radiogroup" aria-label="Theme">
-              <button type="button" class="theme-seg" data-theme-seg="auto" aria-pressed="false">Auto</button>
-              <button type="button" class="theme-seg" data-theme-seg="light" aria-pressed="false">Light</button>
-              <button type="button" class="theme-seg" data-theme-seg="dark" aria-pressed="false">Dark</button>
-            </div>
-            <div id="st_theme" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
-          </section>
+          <nav class="settings-nav" aria-label="Settings sections">
+            <a href="#section-security">🔐 Security</a>
+            <a href="#section-finance">📊 Finance</a>
+            <a href="#section-connect">🔌 Integrations</a>
+            <a href="#section-prefs">🎨 Preferences</a>
+            <a href="#section-system">⚙️ System</a>
+          </nav>
 
-          <section class="card" id="app-prefs-v52">
-            <div class="card-header">
+          <section class="settings-section" id="section-security">
+            <div class="settings-section__header">
+              <div class="settings-section__icon settings-section__icon--security">🔐</div>
               <div>
-                <h2 class="card-title">App preferences (V5.2)</h2>
-                <p class="card-subtitle">Stored in <code>AppSettings</code> — synced with legacy <code>Settings</code> where applicable.</p>
-              </div>
-              <button class="btn btn-primary btn-sm" id="save-app-prefs" type="button">Save</button>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label class="form-field-label" for="as_display_ccy">Display currency</label>
-                <select id="as_display_ccy" class="form-field-select">
-                  <option value="CZK">CZK</option>
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
-                  <option value="INR">INR</option>
-                </select>
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="as_risk">Risk profile</label>
-                <select id="as_risk" class="form-field-select">
-                  <option value="CONSERVATIVE">Conservative</option>
-                  <option value="MODERATE">Moderate</option>
-                  <option value="AGGRESSIVE">Aggressive</option>
-                </select>
+                <h2 class="settings-section__title">Profile &amp; Security</h2>
+                <p class="settings-section__subtitle">Your identity, login credentials, and encryption settings.</p>
               </div>
             </div>
-            <p class="form-field-help" id="as_risk_priority_note" style="margin-top: 0">
-              Note: risk profile is also set on the Finances page. The Finances page value takes priority.
-            </p>
-            <p class="form-field-help" id="risk-profile-source" style="margin-top: calc(-1 * var(--space-2))">
-              Set on <a href="/finances">Finances page</a> — affects strategy guardrails and drift tolerance.
-            </p>
-            <div class="form-row">
-              <div class="form-field">
-                <label class="form-field-label" for="as_target_wealth">Annual / lifetime target (Kč)</label>
-                <input id="as_target_wealth" type="number" min="0" step="10000" class="form-field-input" />
-                <p class="form-field-help">Used by Overview hero progress and "This month" planner.</p>
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="as_target_date">Target date</label>
-                <input id="as_target_date" type="date" class="form-field-input" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label class="form-field-label" for="as_timezone">Timezone</label>
-                <select id="as_timezone" class="form-field-select">
-                  <option value="Europe/Prague">Europe/Prague</option>
-                  <option value="Europe/London">Europe/London</option>
-                  <option value="Europe/Berlin">Europe/Berlin</option>
-                  <option value="Asia/Kolkata">Asia/Kolkata</option>
-                  <option value="America/New_York">America/New_York</option>
-                  <option value="UTC">UTC</option>
-                </select>
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="as_accent">Accent color</label>
-                <select id="as_accent" class="form-field-select">
-                  <option value="BLUE">Blue (default)</option>
-                  <option value="GREEN">Green</option>
-                  <option value="PURPLE">Purple</option>
-                  <option value="AMBER">Amber</option>
-                  <option value="ROSE">Rose</option>
-                </select>
-                <p class="form-field-help">Applied immediately on save (refresh other tabs).</p>
-              </div>
-            </div>
-            <div class="form-field">
-              <label class="form-field-label" for="as_categories">Custom categories (comma separated)</label>
-              <input id="as_categories" type="text" class="form-field-input"
-                placeholder="Coffee, Books, Travel, Hobbies" />
-              <p class="form-field-help">
-                Used by This Month planner to label discretionary buckets. Existing entries are kept.
-              </p>
-            </div>
-            <div class="form-field" style="margin-top: var(--space-4)">
-              <label class="form-field-label" for="min-sell-threshold">Min sell threshold (Kč)</label>
-              <input
-                type="number"
-                id="min-sell-threshold"
-                name="minSellThresholdCzk"
-                min="0"
-                step="100"
-                class="form-field-input"
-              />
-              <p class="form-field-help">
-                Sell rebalancing rows below this amount are suppressed. Default: 1 000 Kč. Prevents trivial sells
-                where tax exceeds benefit.
-              </p>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">AI debug logging</div>
-                <div class="toggle-row-desc">Extra server logs for AI context (also respects <code>PIE_DEBUG_AI_CONTEXT=1</code> or legacy <code>ARTHA_DEBUG_AI_CONTEXT=1</code>).</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="as_ai_debug" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="toggle-row" style="margin-top: var(--space-4)">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">Dashboard login</div>
-                <div class="toggle-row-desc">
-                  When on, the browser must sign in. First visit: open <a href="/login.html">/login.html</a> and use the
-                  <strong>bootstrap phrase</strong> you set below (stored hashed) <em>or</em>
-                  <code>PIE_AUTH_BOOTSTRAP_KEY</code> from <code>.env</code>. Set <code>PIE_DASHBOARD_AUTH=0</code> in
-                  <code>.env</code> only if you lock yourself out (forces login off).
+            <div class="settings-section__body">
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Dashboard login</h2>
+                    <p class="card-subtitle">Protect access to PIE in the browser.</p>
+                  </div>
                 </div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="as_dashboard_auth" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="form-field" style="margin-top: var(--space-4)">
-              <label class="form-field-label" for="as_bootstrap_phrase">Bootstrap phrase (optional)</label>
-              <input
-                id="as_bootstrap_phrase"
-                type="password"
-                class="form-field-input"
-                autocomplete="new-password"
-                placeholder="Leave blank to keep unchanged · min 8 characters when setting"
-              />
-              <p id="as_bootstrap_hint" class="form-field-help" style="margin-top: var(--space-2)"></p>
-            </div>
-            <div id="st_app_prefs" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
-          </section>
-
-          <section class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Allocation targets</h2>
-                <p class="card-subtitle">Equity + Bonds + Cash must sum to 100%.</p>
-              </div>
-              <button class="btn btn-primary btn-sm" id="save-targets" type="button">Save</button>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label class="form-field-label" for="t_eq">Equity %</label>
-                <input id="t_eq" type="number" min="0" max="100" step="1" class="form-field-input" />
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="t_bd">Bonds %</label>
-                <input id="t_bd" type="number" min="0" max="100" step="1" class="form-field-input" />
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="t_cs">Cash %</label>
-                <input id="t_cs" type="number" min="0" max="100" step="1" class="form-field-input" />
-              </div>
-            </div>
-            <div class="form-field-help" id="targets-sum">—</div>
-            <div class="toggle-row" style="margin-top: var(--space-4)">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">Allow BUY in tax-free window</div>
-                <div
-                  class="toggle-row-desc"
-                  title="When off, the planner emits HOLD instead of reduced BUY within 90 days of tax-free anniversary. Recommended for tax optimization."
-                >
-                  Off = HOLD only before tax-free (default).
+                <div class="toggle-row" style="margin-top: var(--space-2)">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">Require login</div>
+                    <div class="toggle-row-desc">
+                      When on, the browser must sign in. First visit: open <a href="/login.html">/login.html</a> and use the
+                      <strong>bootstrap phrase</strong> you set below (stored hashed) <em>or</em>
+                      <code>PIE_AUTH_BOOTSTRAP_KEY</code> from <code>.env</code>. Set <code>PIE_DASHBOARD_AUTH=0</code> in
+                      <code>.env</code> only if you lock yourself out (forces login off).
+                    </div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="as_dashboard_auth" />
+                    <span class="toggle-slider"></span>
+                  </label>
                 </div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="tax_window_buy" />
-                <span class="toggle-slider"></span>
-              </label>
+                <div class="form-field" style="margin-top: var(--space-4)">
+                  <label class="form-field-label" for="as_bootstrap_phrase">Bootstrap phrase (optional)</label>
+                  <input
+                    id="as_bootstrap_phrase"
+                    type="password"
+                    class="form-field-input"
+                    autocomplete="new-password"
+                    placeholder="Leave blank to keep unchanged · min 8 characters when setting"
+                  />
+                  <p id="as_bootstrap_hint" class="form-field-help" style="margin-top: var(--space-2)"></p>
+                </div>
+                <p id="secrets-at-rest-note" class="form-field-help" style="margin: var(--space-4) 0 0"></p>
+              </section>
             </div>
-            <div id="st_targets" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
           </section>
 
-          <p id="secrets-at-rest-note" class="form-field-help" style="margin: 0 var(--space-4) var(--space-4)"></p>
-
-          <section class="card">
-            <div class="card-header">
+          <section class="settings-section" id="section-finance">
+            <div class="settings-section__header">
+              <div class="settings-section__icon settings-section__icon--finance">📊</div>
               <div>
-                <h2 class="card-title">Email ingestion</h2>
-                <p class="card-subtitle">IMAP poll for transaction emails (Path B).</p>
-              </div>
-              <button class="btn btn-primary btn-sm" id="save-imap" type="button">Save</button>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">Auto-ingest emails</div>
-                <div class="toggle-row-desc">Hourly poll between 09:00 and 21:00 Europe/Prague.</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="i_auto" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="form-row" style="margin-top: var(--space-3);">
-              <div class="form-field">
-                <label class="form-field-label" for="i_host">IMAP host</label>
-                <input id="i_host" type="text" class="form-field-input" placeholder="imap.gmail.com" />
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="i_port">Port</label>
-                <input id="i_port" type="number" class="form-field-input" placeholder="993" />
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="i_user">User</label>
-                <input id="i_user" type="email" class="form-field-input" />
-              </div>
-              <div class="form-field">
-                <label class="form-field-label" for="i_pwd">App password</label>
-                <input id="i_pwd" type="password" class="form-field-input" placeholder="••••••" />
+                <h2 class="settings-section__title">Financial Intelligence</h2>
+                <p class="settings-section__subtitle">Core parameters that drive your monthly plan and strategies.</p>
               </div>
             </div>
-            <div class="form-actions">
-              <button class="btn btn-ghost btn-sm" id="test-imap" type="button">Test connection</button>
-              <button class="btn btn-secondary btn-sm" id="run-imap" type="button">Run now</button>
+            <div class="settings-section__body">
+              <section class="card">
+                <div class="intelligence-summary-widget">
+                  <div class="isw-header">
+                    <span class="isw-title">Intelligence summary</span>
+                    <a href="/portfolio" class="isw-link">Manage strategies →</a>
+                  </div>
+                  <div class="isw-grid">
+                    <div class="isw-item">
+                      <span class="isw-label">Approved strategies</span>
+                      <span class="isw-value" id="isw-approved">—</span>
+                    </div>
+                    <div class="isw-item">
+                      <span class="isw-label">Pending approval</span>
+                      <span class="isw-value" id="isw-proposed">—</span>
+                    </div>
+                    <div class="isw-item">
+                      <span class="isw-label">Sleeping cash</span>
+                      <span class="isw-value" id="isw-sleeping">—</span>
+                    </div>
+                    <div class="isw-item">
+                      <span class="isw-label">Annual real loss</span>
+                      <span class="isw-value isw-value--warn" id="isw-loss">—</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Allocation targets</h2>
+                    <p class="card-subtitle">Equity + Bonds + Cash must sum to 100%.</p>
+                  </div>
+                  <button class="btn btn-primary btn-sm" id="save-targets" type="button">Save</button>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-field-label" for="t_eq">Equity %</label>
+                    <input id="t_eq" type="number" min="0" max="100" step="1" class="form-field-input" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="t_bd">Bonds %</label>
+                    <input id="t_bd" type="number" min="0" max="100" step="1" class="form-field-input" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="t_cs">Cash %</label>
+                    <input id="t_cs" type="number" min="0" max="100" step="1" class="form-field-input" />
+                  </div>
+                </div>
+                <div class="form-field-help" id="targets-sum">—</div>
+                <div class="toggle-row" style="margin-top: var(--space-4)">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">Allow BUY in tax-free window</div>
+                    <div
+                      class="toggle-row-desc"
+                      title="When off, the planner emits HOLD instead of reduced BUY within 90 days of tax-free anniversary. Recommended for tax optimization."
+                    >
+                      Off = HOLD only before tax-free (default).
+                    </div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="tax_window_buy" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div id="st_targets" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Financial settings (V5.2)</h2>
+                    <p class="card-subtitle">Stored in <code>AppSettings</code> — drives strategy guardrails and planning.</p>
+                  </div>
+                  <button class="btn btn-primary btn-sm" id="save-app-prefs" type="button">Save</button>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-field-label" for="as_risk">Risk profile</label>
+                    <select id="as_risk" class="form-field-select">
+                      <option value="CONSERVATIVE">Conservative</option>
+                      <option value="MODERATE">Moderate</option>
+                      <option value="AGGRESSIVE">Aggressive</option>
+                    </select>
+                  </div>
+                </div>
+                <p class="form-field-help" id="as_risk_priority_note" style="margin-top: 0">
+                  Note: risk profile is also set on the Finances page. The Finances page value takes priority.
+                </p>
+                <p class="form-field-help" id="risk-profile-source" style="margin-top: calc(-1 * var(--space-2))">
+                  Set on <a href="/finances">Finances page</a> — affects strategy guardrails and drift tolerance.
+                </p>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-field-label" for="as_target_wealth">Annual / lifetime target (Kč)</label>
+                    <input id="as_target_wealth" type="number" min="0" step="10000" class="form-field-input" />
+                    <p class="form-field-help">Used by Overview hero progress and "This month" planner.</p>
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="as_target_date">Target date</label>
+                    <input id="as_target_date" type="date" class="form-field-input" />
+                  </div>
+                </div>
+                <div class="form-field" style="margin-top: var(--space-4)">
+                  <label class="form-field-label" for="min-sell-threshold">Min sell threshold (Kč)</label>
+                  <input
+                    type="number"
+                    id="min-sell-threshold"
+                    name="minSellThresholdCzk"
+                    min="0"
+                    step="100"
+                    class="form-field-input"
+                  />
+                  <p class="form-field-help">
+                    Sell rebalancing rows below this amount are suppressed. Default: 1 000 Kč. Prevents trivial sells
+                    where tax exceeds benefit.
+                  </p>
+                </div>
+                <div id="st_app_prefs" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+              </section>
             </div>
-            <div id="st_imap" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
           </section>
 
-          <section class="card">
-            <div class="card-header">
+          <section class="settings-section" id="section-connect">
+            <div class="settings-section__header">
+              <div class="settings-section__icon settings-section__icon--connect">🔌</div>
               <div>
-                <h2 class="card-title">Notifications</h2>
-                <p class="card-subtitle">Email + Telegram channels.</p>
-              </div>
-              <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end">
-                <button class="btn btn-ghost btn-sm" id="send-test-email" type="button">Send test email</button>
-                <button class="btn btn-primary btn-sm" id="save-notify" type="button">Save</button>
+                <h2 class="settings-section__title">Accounts &amp; Integrations</h2>
+                <p class="settings-section__subtitle">AI providers, email, Telegram, and external data sources.</p>
               </div>
             </div>
-            <p class="form-field-help" style="margin-top: calc(-1 * var(--space-2)); margin-bottom: var(--space-3)">
-              Sends a real message to <strong>Alert email</strong> below (saved in Settings). Uses <code>comms.smtp</code> if
-              configured (Gmail OAuth uses the Gmail API over HTTPS; app password uses SMTP). Otherwise legacy SMTP fields.
-              Integrations <strong>Test</strong> only checks connectivity — it does not send mail. Bot token for Telegram lives
-              under <strong>Other integrations → Telegram Bot</strong> (<code>comms.telegram</code>); <strong>Test Telegram</strong> below uses that token plus the chat ID here (or the one saved on the integration).
-            </p>
-            <div class="form-row">
-              <div class="form-field">
-                <label class="form-field-label" for="n_email">Alert email</label>
-                <input id="n_email" type="email" class="form-field-input" />
-              </div>
-              <div class="form-field" style="flex: 1; min-width: 14rem">
-                <label class="form-field-label" for="n_tg">Telegram chat ID</label>
-                <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: stretch">
-                  <input id="n_tg" type="text" class="form-field-input" style="flex: 1; min-width: 10rem" />
-                  <button class="btn btn-ghost btn-sm" id="test-telegram-notify" type="button" style="align-self: flex-end">
-                    Test Telegram
+            <div class="settings-section__body">
+              <section class="card" id="ai-provider-v52">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">AI providers</h2>
+                    <p class="card-subtitle">
+                      Exactly one active model at a time — <code>AppSettings.defaultAiProviderKey</code> + encrypted keys in
+                      <code>IntegrationProvider</code>. Test results in <code>IntegrationStatus</code>.
+                    </p>
+                  </div>
+                </div>
+                <div class="ai-provider-toolbar">
+                  <div class="form-field" style="min-width: 14rem; flex: 1">
+                    <label class="form-field-label" for="ai_active_provider">Active AI provider</label>
+                    <select id="ai_active_provider" class="form-field-select" aria-describedby="ai_active_help">
+                      <option value="">— None —</option>
+                      <option value="ai.openai">OpenAI</option>
+                      <option value="ai.anthropic">Claude (Anthropic)</option>
+                      <option value="ai.gemini">Gemini (Google)</option>
+                    </select>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="ai_apply_active" style="display: none">
+                    Apply selection
                   </button>
                 </div>
-                <p class="form-field-help" style="margin-top: var(--space-2)">
-                  Use your <strong>numeric</strong> user id (digits), not the bot’s @name. Message your bot <code>/start</code>
-                  first, then Save — or paste the id from @userinfobot. Same value can appear on the Telegram integration row.
+                <p id="ai_active_banner" class="form-field-help" style="margin-top: var(--space-2); margin-bottom: var(--space-3)"></p>
+                <div id="st_ai_apply" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-2)" aria-live="polite"></div>
+                <p id="ai_active_help" class="form-field-help" style="margin-top: calc(-1 * var(--space-2)); margin-bottom: var(--space-3)">
+                  Choose who is <strong>live</strong> for Ask PIE, then click <strong>Apply selection</strong>. Saving a card
+                  below also sets that provider active.
                 </p>
-              </div>
+                <div id="ai_unconfigured_warn" class="callout callout-warning" style="display: none; margin-bottom: var(--space-4)"></div>
+                <div id="ai_provider_cards" class="ai-provider-cards-grid"></div>
+                <div id="ai_status_mount" class="ai-status-panel ai-status-muted" aria-live="polite"></div>
+              </section>
+
+              <section class="card" id="integrations-v52">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Email, Telegram &amp; data sources</h2>
+                    <p class="card-subtitle">
+                      SMTP (incl. Gmail OAuth), Telegram Bot, IMAP test config, FX API — secrets in <code>IntegrationProvider</code>.
+                    </p>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" id="reload-integrations" type="button">Reload</button>
+                </div>
+                <div class="callout callout-info" style="margin-bottom: var(--space-4)">
+                  IMAP email <strong>ingestion</strong> still uses the “Email ingestion” card below (<code>Settings.imap*</code>).
+                  Configure <code>comms.imap</code> here for future wiring / tests.
+                </div>
+                <div id="integrations-grid" class="integrations-grid" aria-live="polite">
+                  <div class="empty-state"><div class="empty-state-message">Loading integrations…</div></div>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Email ingestion</h2>
+                    <p class="card-subtitle">IMAP poll for transaction emails (Path B).</p>
+                  </div>
+                  <button class="btn btn-primary btn-sm" id="save-imap" type="button">Save</button>
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">Auto-ingest emails</div>
+                    <div class="toggle-row-desc">Hourly poll between 09:00 and 21:00 Europe/Prague.</div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="i_auto" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="form-row" style="margin-top: var(--space-3);">
+                  <div class="form-field">
+                    <label class="form-field-label" for="i_host">IMAP host</label>
+                    <input id="i_host" type="text" class="form-field-input" placeholder="imap.gmail.com" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="i_port">Port</label>
+                    <input id="i_port" type="number" class="form-field-input" placeholder="993" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="i_user">User</label>
+                    <input id="i_user" type="email" class="form-field-input" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="i_pwd">App password</label>
+                    <input id="i_pwd" type="password" class="form-field-input" placeholder="••••••" />
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-ghost btn-sm" id="test-imap" type="button">Test connection</button>
+                  <button class="btn btn-secondary btn-sm" id="run-imap" type="button">Run now</button>
+                </div>
+                <div id="st_imap" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+              </section>
             </div>
-            <div class="toggle-row">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">Monthly letter</div>
-                <div class="toggle-row-desc">CFO snapshot delivered on the 1st of each month.</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="n_monthly" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="toggle-row">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">Alerts enabled</div>
-                <div class="toggle-row-desc">Drift, tax window, FD maturity warnings.</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="n_alerts" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div id="st_notify" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
           </section>
 
-          <section class="card">
-            <div class="card-header">
+          <section class="settings-section" id="section-prefs">
+            <div class="settings-section__header">
+              <div class="settings-section__icon settings-section__icon--prefs">🎨</div>
               <div>
-                <h2 class="card-title">Demo mode</h2>
-                <p class="card-subtitle">Switch the dashboard to a simulated portfolio.</p>
+                <h2 class="settings-section__title">Preferences</h2>
+                <p class="settings-section__subtitle">Display, theme, and personalisation.</p>
               </div>
-              <button class="btn btn-primary btn-sm" id="save-demo" type="button">Apply</button>
             </div>
-            <div class="callout callout-warning" style="margin-bottom: var(--space-4);">
-              Toggling demo on wipes and reseeds the demo database (<span style="font-family: var(--font-mono);">artha_v4_demo</span>).
-              Your real portfolio is unaffected. Integrations and the demo flag itself stay on the main DB.
+            <div class="settings-section__body">
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Appearance</h2>
+                    <p class="card-subtitle">One control — persisted in <code>AppSettings.themeMode</code> and local cache.</p>
+                  </div>
+                </div>
+                <div class="theme-segmented" role="radiogroup" aria-label="Theme">
+                  <button type="button" class="theme-seg" data-theme-seg="auto" aria-pressed="false">Auto</button>
+                  <button type="button" class="theme-seg" data-theme-seg="light" aria-pressed="false">Light</button>
+                  <button type="button" class="theme-seg" data-theme-seg="dark" aria-pressed="false">Dark</button>
+                </div>
+                <div id="st_theme" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Display preferences (V5.2)</h2>
+                    <p class="card-subtitle">Stored in <code>AppSettings</code>. Save uses the Financial settings button above.</p>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-field-label" for="as_display_ccy">Display currency</label>
+                    <select id="as_display_ccy" class="form-field-select">
+                      <option value="CZK">CZK</option>
+                      <option value="EUR">EUR</option>
+                      <option value="USD">USD</option>
+                      <option value="INR">INR</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-field-label" for="as_timezone">Timezone</label>
+                    <select id="as_timezone" class="form-field-select">
+                      <option value="Europe/Prague">Europe/Prague</option>
+                      <option value="Europe/London">Europe/London</option>
+                      <option value="Europe/Berlin">Europe/Berlin</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata</option>
+                      <option value="America/New_York">America/New_York</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label class="form-field-label" for="as_accent">Accent color</label>
+                    <select id="as_accent" class="form-field-select">
+                      <option value="BLUE">Blue (default)</option>
+                      <option value="GREEN">Green</option>
+                      <option value="PURPLE">Purple</option>
+                      <option value="AMBER">Amber</option>
+                      <option value="ROSE">Rose</option>
+                    </select>
+                    <p class="form-field-help">Applied immediately on save (refresh other tabs).</p>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label class="form-field-label" for="as_categories">Custom categories (comma separated)</label>
+                  <input id="as_categories" type="text" class="form-field-input"
+                    placeholder="Coffee, Books, Travel, Hobbies" />
+                  <p class="form-field-help">
+                    Used by This Month planner to label discretionary buckets. Existing entries are kept.
+                  </p>
+                </div>
+              </section>
             </div>
-            <div class="toggle-row">
-              <div class="toggle-row-text">
-                <div class="toggle-row-title">Enable demo mode</div>
-                <div class="toggle-row-desc">Routes portfolio + planning queries to the demo DB.</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" id="d_enabled" />
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="form-field" style="margin-top: var(--space-3);">
-              <label class="form-field-label" for="d_persona">Persona</label>
-              <select id="d_persona" class="form-field-select">
-                <option value="engineer">Engineer</option>
-                <option value="executive">Executive</option>
-                <option value="fire">FIRE</option>
-                <option value="family">Family</option>
-                <option value="starter">Starter</option>
-              </select>
-            </div>
-            <div id="st_demo" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
           </section>
 
-          <section class="card" id="ai-provider-v52">
-            <div class="card-header">
+          <section class="settings-section" id="section-system">
+            <div class="settings-section__header">
+              <div class="settings-section__icon settings-section__icon--system">⚙️</div>
               <div>
-                <h2 class="card-title">AI provider (V5.2)</h2>
-                <p class="card-subtitle">
-                  Exactly one active model at a time — <code>AppSettings.defaultAiProviderKey</code> + encrypted keys in
-                  <code>IntegrationProvider</code>. Test results in <code>IntegrationStatus</code>.
+                <h2 class="settings-section__title">System &amp; Data</h2>
+                <p class="settings-section__subtitle">Demo mode, backups, diagnostics, and advanced settings.</p>
+              </div>
+            </div>
+            <div class="settings-section__body">
+              <section class="card">
+                <div class="toggle-row">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">AI debug logging</div>
+                    <div class="toggle-row-desc">Extra server logs for AI context (also respects <code>PIE_DEBUG_AI_CONTEXT=1</code> or legacy <code>ARTHA_DEBUG_AI_CONTEXT=1</code>).</div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="as_ai_debug" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Demo mode</h2>
+                    <p class="card-subtitle">Switch the dashboard to a simulated portfolio.</p>
+                  </div>
+                  <button class="btn btn-primary btn-sm" id="save-demo" type="button">Apply</button>
+                </div>
+                <div class="callout callout-warning" style="margin-bottom: var(--space-4);">
+                  Toggling demo on wipes and reseeds the demo database (<span style="font-family: var(--font-mono);">artha_v4_demo</span>).
+                  Your real portfolio is unaffected. Integrations and the demo flag itself stay on the main DB.
+                </div>
+                <div class="toggle-row">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">Enable demo mode</div>
+                    <div class="toggle-row-desc">Routes portfolio + planning queries to the demo DB.</div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="d_enabled" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="form-field" style="margin-top: var(--space-3);">
+                  <label class="form-field-label" for="d_persona">Persona</label>
+                  <select id="d_persona" class="form-field-select">
+                    <option value="engineer">Engineer</option>
+                    <option value="executive">Executive</option>
+                    <option value="fire">FIRE</option>
+                    <option value="family">Family</option>
+                    <option value="starter">Starter</option>
+                  </select>
+                </div>
+                <div id="st_demo" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Data &amp; backups</h2>
+                    <p class="card-subtitle">Local-only snapshots; nothing leaves the box without your action.</p>
+                  </div>
+                  <a class="btn btn-ghost btn-sm" href="/help#databases">Help: databases &amp; hosting</a>
+                </div>
+                <div class="callout callout-info">
+                  Local-only snapshot. The export bundle is a JSON file containing your holdings,
+                  accounts, India MFs/FDs, settings, and integrations <em>(secrets remain encrypted)</em>.
+                  Use it to migrate to a new box or hand off to a backup tool. Nothing leaves your
+                  server until you click Download.
+                </div>
+                <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3)">
+                  <button type="button" class="btn btn-primary btn-sm" id="backup-export-btn">
+                    Download backup
+                  </button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="backup-import-btn">
+                    Restore from backup…
+                  </button>
+                  <input type="file" id="backup-file" accept="application/json" style="display:none" />
+                </div>
+                <div id="st_backup" class="ai-status-panel settings-section-status ai-status-muted"
+                  style="display: none; margin-top: var(--space-3)" aria-live="polite"></div>
+                <div class="callout callout-warning" style="margin-top: var(--space-4)">
+                  <div class="toggle-row-title" style="margin-bottom: var(--space-2)">Reset portfolio (fresh start)</div>
+                  <p class="form-field-help" style="margin-top: 0">
+                    Clears <strong>personal</strong> portfolio data on <code>DATABASE_URL</code> (holdings, accounts,
+                    snapshots, plans, AI memory, etc.). Keeps <strong>Settings</strong>, <strong>AppSettings</strong>,
+                    <strong>integrations</strong>, and the instrument <strong>library</strong>. Not available while
+                    <strong>Demo mode</strong> is on. <a href="/help#reset">Full details →</a>
+                  </p>
+                  <div class="form-field" style="margin-top: var(--space-3)">
+                    <label class="form-field-label" for="fresh-start-confirm">Type <code>reset</code> to confirm</label>
+                    <input id="fresh-start-confirm" type="text" class="form-field-input" placeholder="reset" autocomplete="off" />
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm" id="fresh-start-btn" style="margin-top: var(--space-3)">
+                    Reset my portfolio
+                  </button>
+                  <div
+                    id="st_portfolio_reset"
+                    class="ai-status-panel settings-section-status ai-status-muted"
+                    style="display: none; margin-top: var(--space-3)"
+                    aria-live="polite"
+                  ></div>
+                </div>
+              </section>
+
+              <section class="card" id="health">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">System health</h2>
+                    <p class="card-subtitle">
+                      <span id="h-passing">—</span> of <span id="h-total">—</span> checks · trust
+                      <span id="h-trust">—</span>
+                    </p>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" id="reload-health" type="button">Re-check</button>
+                </div>
+                <div
+                  id="health-recheck-wrap"
+                  class="health-recheck-wrap"
+                  style="display: none"
+                  aria-hidden="true"
+                >
+                  <div id="health-recheck-label" class="health-recheck-label" aria-live="polite"></div>
+                  <div class="health-recheck-track" role="progressbar" aria-valuemin="0" aria-valuemax="1">
+                    <div id="health-recheck-indeterminate" class="health-recheck-bar"></div>
+                  </div>
+                </div>
+                <div id="st_health" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+                <div id="health-grid" class="health-checks-grid"></div>
+              </section>
+
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h2 class="card-title">Notifications</h2>
+                    <p class="card-subtitle">Email + Telegram channels.</p>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end">
+                    <button class="btn btn-ghost btn-sm" id="send-test-email" type="button">Send test email</button>
+                    <button class="btn btn-primary btn-sm" id="save-notify" type="button">Save</button>
+                  </div>
+                </div>
+                <p class="form-field-help" style="margin-top: calc(-1 * var(--space-2)); margin-bottom: var(--space-3)">
+                  Sends a real message to <strong>Alert email</strong> below (saved in Settings). Uses <code>comms.smtp</code> if
+                  configured (Gmail OAuth uses the Gmail API over HTTPS; app password uses SMTP). Otherwise legacy SMTP fields.
+                  Integrations <strong>Test</strong> only checks connectivity — it does not send mail. Bot token for Telegram lives
+                  under <strong>Other integrations → Telegram Bot</strong> (<code>comms.telegram</code>); <strong>Test Telegram</strong> below uses that token plus the chat ID here (or the one saved on the integration).
                 </p>
-              </div>
-            </div>
-            <div class="ai-provider-toolbar">
-              <div class="form-field" style="min-width: 14rem; flex: 1">
-                <label class="form-field-label" for="ai_active_provider">Active AI provider</label>
-                <select id="ai_active_provider" class="form-field-select" aria-describedby="ai_active_help">
-                  <option value="">— None —</option>
-                  <option value="ai.openai">OpenAI</option>
-                  <option value="ai.anthropic">Claude (Anthropic)</option>
-                  <option value="ai.gemini">Gemini (Google)</option>
-                </select>
-              </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="ai_apply_active" style="display: none">
-                Apply selection
-              </button>
-            </div>
-            <p id="ai_active_banner" class="form-field-help" style="margin-top: var(--space-2); margin-bottom: var(--space-3)"></p>
-            <div id="st_ai_apply" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-2)" aria-live="polite"></div>
-            <p id="ai_active_help" class="form-field-help" style="margin-top: calc(-1 * var(--space-2)); margin-bottom: var(--space-3)">
-              Choose who is <strong>live</strong> for Ask PIE, then click <strong>Apply selection</strong>. Saving a card
-              below also sets that provider active.
-            </p>
-            <div id="ai_unconfigured_warn" class="callout callout-warning" style="display: none; margin-bottom: var(--space-4)"></div>
-            <div id="ai_provider_cards" class="ai-provider-cards-grid"></div>
-            <div id="ai_status_mount" class="ai-status-panel ai-status-muted" aria-live="polite"></div>
-          </section>
-
-          <section class="card" id="integrations-v52">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Other integrations (V5.2)</h2>
-                <p class="card-subtitle">
-                  SMTP, Telegram, optional IMAP test config, FX API — secrets in <code>IntegrationProvider</code>. Each row has
-                  <strong>Test</strong> (where supported), <strong>Save</strong>, and clear/remove actions — scroll to find
-                  <strong>Telegram Bot</strong> after SMTP.
-                </p>
-              </div>
-              <button class="btn btn-ghost btn-sm" id="reload-integrations" type="button">Reload</button>
-            </div>
-            <div class="callout callout-info" style="margin-bottom: var(--space-4)">
-              IMAP email <strong>ingestion</strong> still uses the “Email ingestion” card above (<code>Settings.imap*</code>).
-              Configure <code>comms.imap</code> here for future wiring / tests.
-            </div>
-            <div id="integrations-grid" class="integrations-grid" aria-live="polite">
-              <div class="empty-state"><div class="empty-state-message">Loading integrations…</div></div>
-            </div>
-          </section>
-
-          <section class="card">
-            <div class="intelligence-summary-widget">
-              <div class="isw-header">
-                <span class="isw-title">Intelligence summary</span>
-                <a href="/portfolio" class="isw-link">Manage strategies →</a>
-              </div>
-              <div class="isw-grid">
-                <div class="isw-item">
-                  <span class="isw-label">Approved strategies</span>
-                  <span class="isw-value" id="isw-approved">—</span>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-field-label" for="n_email">Alert email</label>
+                    <input id="n_email" type="email" class="form-field-input" />
+                  </div>
+                  <div class="form-field" style="flex: 1; min-width: 14rem">
+                    <label class="form-field-label" for="n_tg">Telegram chat ID</label>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: stretch">
+                      <input id="n_tg" type="text" class="form-field-input" style="flex: 1; min-width: 10rem" />
+                      <button class="btn btn-ghost btn-sm" id="test-telegram-notify" type="button" style="align-self: flex-end">
+                        Test Telegram
+                      </button>
+                    </div>
+                    <p class="form-field-help" style="margin-top: var(--space-2)">
+                      Use your <strong>numeric</strong> user id (digits), not the bot’s @name. Message your bot <code>/start</code>
+                      first, then Save — or paste the id from @userinfobot. Same value can appear on the Telegram integration row.
+                    </p>
+                  </div>
                 </div>
-                <div class="isw-item">
-                  <span class="isw-label">Pending approval</span>
-                  <span class="isw-value" id="isw-proposed">—</span>
+                <div class="toggle-row">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">Monthly letter</div>
+                    <div class="toggle-row-desc">CFO snapshot delivered on the 1st of each month.</div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="n_monthly" />
+                    <span class="toggle-slider"></span>
+                  </label>
                 </div>
-                <div class="isw-item">
-                  <span class="isw-label">Sleeping cash</span>
-                  <span class="isw-value" id="isw-sleeping">—</span>
+                <div class="toggle-row">
+                  <div class="toggle-row-text">
+                    <div class="toggle-row-title">Alerts enabled</div>
+                    <div class="toggle-row-desc">Drift, tax window, FD maturity warnings.</div>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" id="n_alerts" />
+                    <span class="toggle-slider"></span>
+                  </label>
                 </div>
-                <div class="isw-item">
-                  <span class="isw-label">Annual real loss</span>
-                  <span class="isw-value isw-value--warn" id="isw-loss">—</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section class="card" id="health">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">System health</h2>
-                <p class="card-subtitle">
-                  <span id="h-passing">—</span> of <span id="h-total">—</span> checks · trust
-                  <span id="h-trust">—</span>
-                </p>
-              </div>
-              <button class="btn btn-ghost btn-sm" id="reload-health" type="button">Re-check</button>
-            </div>
-            <div
-              id="health-recheck-wrap"
-              class="health-recheck-wrap"
-              style="display: none"
-              aria-hidden="true"
-            >
-              <div id="health-recheck-label" class="health-recheck-label" aria-live="polite"></div>
-              <div class="health-recheck-track" role="progressbar" aria-valuemin="0" aria-valuemax="1">
-                <div id="health-recheck-indeterminate" class="health-recheck-bar"></div>
-              </div>
-            </div>
-            <div id="st_health" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
-            <div id="health-grid" class="health-checks-grid"></div>
-          </section>
-
-          <section class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Data &amp; backups</h2>
-                <p class="card-subtitle">Local-only snapshots; nothing leaves the box without your action.</p>
-              </div>
-              <a class="btn btn-ghost btn-sm" href="/help#databases">Help: databases &amp; hosting</a>
-            </div>
-            <div class="callout callout-info">
-              Local-only snapshot. The export bundle is a JSON file containing your holdings,
-              accounts, India MFs/FDs, settings, and integrations <em>(secrets remain encrypted)</em>.
-              Use it to migrate to a new box or hand off to a backup tool. Nothing leaves your
-              server until you click Download.
-            </div>
-            <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3)">
-              <button type="button" class="btn btn-primary btn-sm" id="backup-export-btn">
-                Download backup
-              </button>
-              <button type="button" class="btn btn-ghost btn-sm" id="backup-import-btn">
-                Restore from backup…
-              </button>
-              <input type="file" id="backup-file" accept="application/json" style="display:none" />
-            </div>
-            <div id="st_backup" class="ai-status-panel settings-section-status ai-status-muted"
-              style="display: none; margin-top: var(--space-3)" aria-live="polite"></div>
-            <div class="callout callout-warning" style="margin-top: var(--space-4)">
-              <div class="toggle-row-title" style="margin-bottom: var(--space-2)">Reset portfolio (fresh start)</div>
-              <p class="form-field-help" style="margin-top: 0">
-                Clears <strong>personal</strong> portfolio data on <code>DATABASE_URL</code> (holdings, accounts,
-                snapshots, plans, AI memory, etc.). Keeps <strong>Settings</strong>, <strong>AppSettings</strong>,
-                <strong>integrations</strong>, and the instrument <strong>library</strong>. Not available while
-                <strong>Demo mode</strong> is on. <a href="/help#reset">Full details →</a>
-              </p>
-              <div class="form-field" style="margin-top: var(--space-3)">
-                <label class="form-field-label" for="fresh-start-confirm">Type <code>reset</code> to confirm</label>
-                <input id="fresh-start-confirm" type="text" class="form-field-input" placeholder="reset" autocomplete="off" />
-              </div>
-              <button type="button" class="btn btn-secondary btn-sm" id="fresh-start-btn" style="margin-top: var(--space-3)">
-                Reset my portfolio
-              </button>
-              <div
-                id="st_portfolio_reset"
-                class="ai-status-panel settings-section-status ai-status-muted"
-                style="display: none; margin-top: var(--space-3)"
-                aria-live="polite"
-              ></div>
+                <div id="st_notify" class="ai-status-panel settings-section-status ai-status-muted" style="display: none; margin-top: var(--space-4)" aria-live="polite"></div>
+              </section>
             </div>
           </section>
         </div>

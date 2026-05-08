@@ -153,6 +153,8 @@
         <button type="button" class="btn btn-ghost btn-sm" data-strategy-action="propose" data-holding-id="${escapeHtml(h.id)}">Propose strategy</button>`
         : ''
 
+    const reasoningHtml = renderReasoningCollapsed(String(strategy.proposalReasoning || ''))
+
     return `
       <div class="strategy-card" data-holding-id="${escapeHtml(h.id)}" data-strategy-id="${escapeHtml(strategy.id)}">
         <div class="strategy-card__header">
@@ -196,15 +198,44 @@
             <div class="progress-bar__fill ${capProgress >= 90 ? 'progress-bar__fill--warning' : ''}" style="width:${capProgress}%"></div>
           </div>
         </div>
-        <div class="strategy-card__reasoning">
-          <details>
-            <summary>Reasoning</summary>
-            <p class="strategy-card__reasoning-text">${escapeHtml(strategy.proposalReasoning || '')}</p>
-          </details>
-        </div>
+        <div class="strategy-card__reasoning">${reasoningHtml}</div>
         <div class="strategy-card__actions">${proposedActions}${approvedActions}${rejectedActions}</div>
         ${signalsHtml}
       </div>`
+  }
+
+  function renderReasoningCollapsed(text, maxLen = 120) {
+    const t = String(text || '')
+    if (!t) return '<p class="strategy-card__reasoning-text">—</p>'
+    if (t.length <= maxLen) return `<p class="strategy-card__reasoning-text">${escapeHtml(t)}</p>`
+    const short = t.slice(0, maxLen).trim()
+    return (
+      '<p class="reasoning-preview">' +
+      escapeHtml(short) +
+      '… ' +
+      '<button class="btn-link reasoning-toggle" type="button" onclick="toggleReasoning(this)">' +
+      'Show more ▼' +
+      '</button>' +
+      '</p>' +
+      '<div class="reasoning-full" style="display:none">' +
+      `<p class="strategy-card__reasoning-text">${escapeHtml(t)}</p>` +
+      '</div>'
+    )
+  }
+
+  // Exposed for inline onclick toggles (no framework).
+  window.toggleReasoning = function toggleReasoning(btn) {
+    try {
+      const wrap = btn && btn.closest ? btn.closest('.strategy-card__reasoning') : null
+      if (!wrap) return
+      const full = wrap.querySelector('.reasoning-full')
+      if (!full) return
+      const isHidden = full.style.display === 'none' || full.style.display === ''
+      full.style.display = isHidden ? 'block' : 'none'
+      btn.textContent = isHidden ? 'Show less ▲' : 'Show more ▼'
+    } catch {
+      /* */
+    }
   }
 
   function wirePortfolioStrategyTable() {
@@ -267,6 +298,7 @@
   }
 
   async function load() {
+    const ph = window.PiePageHealth
     try {
       const [h, o, stratRes] = await Promise.all([
         PieFetch.get('/api/holdings'),
@@ -282,11 +314,28 @@
       }
       renderHero(cachedHoldings, o?.data || {})
       renderTable(cachedHoldings)
+      if (ph) {
+        const nowIso = new Date().toISOString()
+        let newestMs = null
+        let anyVeryStale = false
+        for (const row of cachedHoldings || []) {
+          const t = row && (row.navLastFetchedAt || row.updatedAt || row.createdAt)
+          if (!t) continue
+          const ms = new Date(t).getTime()
+          if (!Number.isFinite(ms)) continue
+          if (newestMs == null || ms > newestMs) newestMs = ms
+          const ageDays = (Date.now() - ms) / 86400000
+          if (ageDays > 7) anyVeryStale = true
+        }
+        const last = newestMs != null ? new Date(newestMs).toISOString() : nowIso
+        ph.updatePageHealthDot('portfolio', last, false, anyVeryStale ? 'Some NAVs are older than 7 days' : 'Portfolio loaded')
+      }
     } catch (e) {
       document.getElementById('holdings-tbody').innerHTML =
         '<tr><td colspan="9" class="empty-state"><div class="empty-state-message">' +
         escapeHtml('Could not load holdings: ' + (e.message || e)) +
         '</div></td></tr>'
+      if (ph) ph.updatePageHealthDot('portfolio', null, true, 'Failed to load holdings')
     }
   }
 

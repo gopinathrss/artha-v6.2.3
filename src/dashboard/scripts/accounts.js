@@ -51,6 +51,7 @@
   }
 
   async function load() {
+    const ph = window.PiePageHealth
     try {
       const [a, fx] = await Promise.all([
         PieFetch.get('/api/accounts'),
@@ -66,11 +67,24 @@
       }
       renderHero(cached)
       renderTable(cached)
+      if (ph) {
+        let newestMs = null
+        for (const row of cached || []) {
+          const t = row && (row.updatedAt || row.createdAt)
+          if (!t) continue
+          const ms = new Date(t).getTime()
+          if (!Number.isFinite(ms)) continue
+          if (newestMs == null || ms > newestMs) newestMs = ms
+        }
+        const last = newestMs != null ? new Date(newestMs).toISOString() : new Date().toISOString()
+        ph.updatePageHealthDot('accounts', last, false, 'Accounts loaded')
+      }
     } catch (e) {
       document.getElementById('accounts-tbody').innerHTML =
         '<tr><td colspan="8" class="empty-state"><div class="empty-state-message">' +
         escapeHtml('Could not load accounts: ' + (e.message || e)) +
         '</div></td></tr>'
+      if (ph) ph.updatePageHealthDot('accounts', null, true, 'Failed to load accounts')
     }
   }
 
@@ -94,6 +108,39 @@
       active.length + ' active · ' + (accounts.length - active.length) + ' inactive'
   }
 
+  function rateLabel(a) {
+    const tiers = a && a.interestTiers
+    if (Array.isArray(tiers) && tiers.length > 0) {
+      return tiers
+        .map((t) => {
+          const upTo = t && t.upTo != null ? Number(t.upTo) : null
+          const r = t && t.ratePct != null ? Number(t.ratePct) : null
+          if (!Number.isFinite(r)) return null
+          if (upTo != null && Number.isFinite(upTo)) return `${r}% (up to ${fmt0(upTo)})`
+          return `${r}%`
+        })
+        .filter(Boolean)
+        .join(' · ')
+    }
+    if (a && a.interestRatePct != null) return fmt2(a.interestRatePct) + '%'
+    return '—'
+  }
+
+  function roleBadge(a) {
+    const role = String(a?.accountRole || '').toUpperCase()
+    const note = String(a?.capitalEfficiencyNote || '').trim()
+    if ((role === 'SLEEPING' || role === 'LONG_TERM_RESERVE') && note) {
+      return `<span class="badge badge-warning" title="${escapeHtml(note)}">💤 Sleeping</span>`
+    }
+    if (role === 'GEO_STRATEGIC') {
+      return `<span class="badge badge-info" title="Strategic account (geo allocation / intentional idle)">Strategic</span>`
+    }
+    if (role === 'LOCKED') {
+      return `<span class="badge badge-neutral" title="Locked / not deployable">Locked</span>`
+    }
+    return ''
+  }
+
   function renderTable(accounts) {
     const tbody = document.getElementById('accounts-tbody')
     if (!accounts.length) {
@@ -108,8 +155,32 @@
       if (a) a.addEventListener('click', () => openDrawer(null))
       return
     }
-    tbody.innerHTML = accounts
+    const czk = accounts.filter((a) => String(a.currency || 'CZK').toUpperCase() === 'CZK')
+    const inr = accounts.filter((a) => String(a.currency || '').toUpperCase() === 'INR')
+    const other = accounts.filter(
+      (a) => !['CZK', 'INR'].includes(String(a.currency || 'CZK').toUpperCase())
+    )
+
+    const parts = []
+    const sectionRow = (label) =>
+      `<tr class="table-section-row"><td colspan="8" class="table-section-label">${escapeHtml(label)}</td></tr>`
+
+    if (czk.length) {
+      parts.push(sectionRow('Czech accounts'))
+      parts.push(...czk)
+    }
+    if (inr.length) {
+      parts.push(sectionRow('India accounts'))
+      parts.push(...inr)
+    }
+    if (other.length) {
+      parts.push(sectionRow('Other accounts'))
+      parts.push(...other)
+    }
+
+    tbody.innerHTML = parts
       .map((a) => {
+        if (typeof a === 'string') return a
         const c = String(a.currency || 'CZK').toUpperCase()
         const bal = Number(a.balanceLocal) || 0
         const czk = toCzk(bal, c)
@@ -119,12 +190,12 @@
             <div class="fund-name">${escapeHtml(a.name)}</div>
             ${a.notes ? '<div class="fund-isin">' + escapeHtml(a.notes) + '</div>' : ''}
           </td>
-          <td><span class="pie-chip">${escapeHtml(a.type || '—')}</span></td>
+          <td><span class="pie-chip">${escapeHtml(a.type || '—')}</span> ${roleBadge(a)}</td>
           <td>${escapeHtml(a.institution || '—')}</td>
           <td>${escapeHtml(a.country || '—')}</td>
           <td class="num"><strong>${fmt0(bal)} ${escapeHtml(c)}</strong></td>
           <td class="num">${czk != null ? fmt0(czk) + ' Kč' : '—'}</td>
-          <td class="num">${a.interestRatePct != null ? fmt2(a.interestRatePct) + '%' : '—'}</td>
+          <td class="num">${escapeHtml(rateLabel(a))}</td>
           <td class="num">
             <button class="btn btn-ghost btn-sm" data-act="edit" type="button">Edit</button>
           </td>
