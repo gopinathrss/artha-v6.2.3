@@ -1,0 +1,528 @@
+=== Page 25 Table 1: 2 rows x 10 cols ===
+ |  |  |  |  |  |  |  | 3: Fast Discharge | 
+F01C | 电机转速 Motor speed | 3 | 1…2 | 1…16 |  |  |  | 精度：1 rpm/bit 偏移量：- 32000 范围：-32000~33535rpm Accura | 
+
+=== Page 25 Table 2: 7 rows x 10 cols ===
+ |  |  |  | 诊断仪码 |  |  |  | 车型 vehicle type | 
+序号 |  |  |  |  |  |  |  |  | 
+Serial | 故障描述 Fault Description | SPN | FMI | Diagnostic | 故障显示 Fault Display | 维修指导 Repair Guide | 故障等级 | 5000 | 6000
+number |  |  |  | Instrument |  |  | Fault Level |  | 
+ |  |  |  | Code |  |  |  |  | 
+ |  |  |  |  |  |  |  |  | 
+1 | 电机速度传感器开路故障 Motor speed sensor open circuit fault | 522591 | 5 | P1A 01 00 |  |  | A |  | 
+
+=== Page 26 Table 1: 12 rows x 10 cols ===
+2 | 电机速度传感器对电源短路故障 Motor speed sensor short circuit fa | 522591 | 3 | P1A 01 01 |  |  | B |  | 
+3 | 电机速度传感器对地短路故障 Motor speed sensor short circuit to  | 522591 | 4 | P1A 01 02 |  |  | B |  | 
+4 | 电机壳体温度传感器开路故障 Motor case temperature sensor open c | 522601 | 5 | P1A 01 03 |  |  | A |  | 
+5 | 电机壳体温度传感器对电源短路 故障 Motor Case Temperature Sensor Sh | 522601 | 3 | P1A 01 04 |  |  | A |  | 
+6 | 电机壳体温度传感器对地短路故 障 Motor Case Temperature Sensor Sho | 522601 | 4 | P1A 01 05 |  |  | B |  | 
+7 | IGBT 温度传感器开路故障 IGBT temperature sensor open circui | 522324 | 5 | P1A 01 06 |  |  | B |  | 
+8 | IGBT 温度传感器对电源短路故 障 IGBT temperature sensor short-  | 522324 | 3 | P1A 01 07 |  |  | B |  | 
+9 | IGBT 温度传感器对地短路故障 IGBT temperature sensor short-cir | 522324 | 4 | P1A 01 08 |  |  | A |  | 
+10 | 电压传感器开路故障Voltage sensor open circuit fault | 522594 | 5 | P1A 01 09 |  |  | A |  | 
+11 | 电压传感器对电源短路故障 Voltage Sensor Short Circuit Fault to | 522594 | 3 | P1A 01 0A |  |  | A |  | 
+12 | 电压传感器对地短路故障 Voltage sensor to ground short circuit | 522594 | 4 | P1A 01 0B |  |  | B |  | 
+13 | 高压电源欠压二级故障 High voltage power supply undervoltage  | 522594 | 23 | P1A 01 0C |  |  | A |  | 
+
+=== Page 27 Table 1: 13 rows x 10 cols ===
+14 | 高压电源欠压三级故障 Voltage sensor to power supply short- c | 522594 | 24 | P1A 01 0D |  |  | B |  | 
+15 | 高压电源过压二级故障 High- voltage power supply overvoltage  | 522594 | 25 | P1A 01 0E |  |  | A |  | 
+16 | 高压电源过压三级故障 High- voltage power supply overvoltage  | 522594 | 26 | P1A 01 0F |  |  | A |  | 
+17 | 动力电池电压下限不在控制器设 定范围 Power battery voltage lower lim | 522594 | 27 | P1A 01 10 |  |  | A |  | 
+18 | 动力电池电压上限不在控制器设 定范围 Power battery voltage upper lim | 522594 | 28 | P1A 01 11 |  |  | A |  | 
+19 | 电机过温二级故障 Motor over- temperature secondary fault | 522601 | 16 | P1A 01 12 |  |  | B |  | 
+20 | 电机过温三级故障 Motor over- temperature level 3 fault | 522601 | 0 | P1A 01 13 |  |  | A |  | 
+21 | 电机控制器过温二级故障 Motor controller over- temperature lev | 522602 | 16 | P1A 01 14 |  |  | B |  | 
+22 | 电机控制器过温三级故障 Motor controller over- temperature lev | 522602 | 0 | P1A 01 15 |  |  | A |  | 
+23 | 电机过速二级报警 Motor overspeed level 2 alarm | 522591 | 16 | P1A 01 16 |  |  | B |  | 
+24 | 电机过速三级报警 Motor overspeed third level alarm | 522591 | 0 | P1A 01 17 |  |  | A |  | 
+25 | 电机堵转故障 Motor blocking fault | 522591 | 8 | P1A 01 18 |  |  | B |  | 
+26 | 电机过载故障 Motor overload fault | 522591 | 20 | P1A 01 19 |  |  | A |  | 
+
+=== Page 28 Table 1: 1 rows x 10 cols ===
+27 | 电机实际转速偏差过大 Motor actual speed deviation is too lar | 522591 | 21 | P1A 01 1A |  |  | A |  | 
+
+=== Page 28 Table 2: 11 rows x 10 cols ===
+28 | 电机带转速上电故障 Motor power up with speed fault | 522591 | 22 | P1A 01 1B |  |  | A |  | 
+29 | U 相电流传感器开路故障 U- phase current sensor open circuit  | 522321 | 5 | P1A 01 1C |  |  | A |  | 
+30 | U 相电流传感器对电源短路故障 U phase current sensor short circu | 522321 | 3 | P1A 01 1D |  |  | A |  | 
+31 | U 相电流传感器对地短路故障U Phase current sensor short- circui | 522321 | 4 | P1A 01 1E |  |  | A |  | 
+32 | U 相电流传感器零漂过大故障U Phase current sensor zero- drift f | 522321 | 2 | P1A 01 1F |  |  | A |  | 
+33 | U 相输出对地短路故障 U phase output short circuit to ground | 522321 | 20 | P1A 01 20 |  |  | A |  | 
+34 | U 相缺相故障 U-phase phase loss fault | 522321 | 21 | P1A 01 21 |  |  | A |  | 
+35 | V 相电流传感器开路故障 V phase current sensor open circuit f | 522322 | 5 | P1A 01 22 |  |  | A |  | 
+36 | V 相电流传感器对电源短路故障 V phase current sensor short to po | 522322 | 3 | P1A 01 23 |  |  | A |  | 
+37 | V 相电流传感器对地短路故障V phase current sensor short to grou | 522322 | 4 | P1A 01 24 |  |  | A |  | 
+38 | V 相电流传感器零漂过大故障V Phase current sensor zero- drift f | 522322 | 2 | P1A 01 25 |  |  | A |  | 
+
+=== Page 29 Table 1: 14 rows x 10 cols ===
+39 | V 相输出对地短路故障 V Phase output shorted to ground fault | 522322 | 20 | P1A 01 26 |  |  | A |  | 
+40 | V 相缺相故障 V Phase phase missing phase fault | 522322 | 21 | P1A 01 27 |  |  | A |  | 
+41 | W 相电流传感器开路故障 W phase current sensor open circuit f | 522323 | 5 | P1A 01 28 |  |  | A |  | 
+42 | W 相电流传感器对电源短路故障 W phase current sensor short circu | 522323 | 3 | P1A 01 29 |  |  | A |  | 
+43 | W 相电流传感器对地短路故障 W Phase current sensor short-circui | 522323 | 4 | P1A 01 2A |  |  | A |  | 
+44 | W 相电流传感器零漂过大故障 W Phase current sensor zero- drift  | 522323 | 2 | P1A 01 2B |  |  | A |  | 
+45 | W 相输出对地短路故障 W phase output shorted to ground fault | 522323 | 20 | P1A 01 2C |  |  | A |  | 
+46 | W 相缺相故障 W phase phase missing phase fault | 522323 | 21 | P1A 01 2D |  |  | A |  | 
+47 | EEPROM 故障 EEPROM fault | 522603 | 12 | P1A 01 2E |  |  | A |  | 
+48 | 控制器变频器过载 Controller inverter overload | 522603 | 20 | 2 F |  |  | A |  | 
+49 | 控制器主动放电故障 Controller active discharge fault | 522603 | 21 | P1A 01 30 |  |  | A |  | 
+50 | 控制器输出硬件过流二级故障 Controller output hardware overcurre | 522603 | 16 | P1A 01 31 |  |  | B |  | 
+51 | 控制器输出硬件过流三级故障 Controller Output Hardware Overcurre | 522603 | 0 | P1A 01 32 |  |  | A |  | 
+52 | 控制器输出逐波过流二级故障 Controller Output Wave-by- | 522603 | 23 | P1A 01 33 |  |  | B |  | 
+
+=== Page 30 Table 1: 9 rows x 10 cols ===
+ | Wave Overcurrent Level 2 Fault |  |  |  |  |  |  |  | 
+53 | 控制器输出逐波过流三级故障 Controller output wave-by- wave over | 522603 | 24 | P1A 01 34 |  |  | A |  | 
+54 | 功率模块故障 Power module fault | 522603 | 17 | P1A 01 35 |  |  | A |  | 
+55 | 功率模块驱动欠压故障 Power module drive undervoltage fault | 522603 | 22 | P1A 01 36 |  |  |  |  | 
+56 | 控制器温度传感器开路故障 Controller temperature sensor open ci | 522602 | 5 | P1A 01 37 |  |  | A |  | 
+57 | 控制器温度传感器对电源短路故 障 Controller temperature sensor sho | 522602 | 3 | P1A 01 38 |  |  | A |  | 
+58 | 控制器温度传感器对地短路故障 Controller temperature sensor short | 522602 | 4 | P1A 01 39 |  |  | A |  | 
+59 | 母线电流传感器开路故障 Bus current sensor open circuit fault | 522595 | 5 | P1A 01 3A |  |  | A |  | 
+60 | 母线电流传感器对电源短路故障 Bus current sensor to power supply  | 522595 | 3 | P1A 01 3B |  |  | A |  | 
+
+=== Page 30 Table 2: 2 rows x 10 cols ===
+61 | 母线电流传感器对地短路故障 Busbar current sensor short to groun | 522595 | 4 | P1A 01 3C |  |  | A |  | 
+62 | 母线二级欠压故障 Busbar secondary undervoltage fault | 522595 | 18 | P1A 01 3D |  |  | B |  | 
+
+=== Page 31 Table 1: 14 rows x 10 cols ===
+63 | 母线三级欠压故障 Busbar undervoltage fault at third level | 522595 | 1 | P1A 01 3E |  |  | A |  | 
+64 | 母线二级过压故障 Busbar secondary overvoltage fault | 522595 | 16 | P1A 01 3F |  |  | B |  | 
+65 | 母线三级过压故障 Bus level 3 overvoltage fault | 522595 | 0 | P1A 01 40 |  |  | A |  | 
+66 | 母线快速过压 Fast bus overvoltage | 522595 | 20 | P1A 01 41 |  |  | A |  | 
+67 | 主驱系统预充电故障 Pre- charging fault in the main drive sy | 522320 | 20 | P1A 01 42 |  |  | A |  | 
+68 | 主驱系统存在反向压差 Reverse differential pressure in main d | 522320 | 21 | P1A 01 43 |  |  | A |  | 
+69 | 辅机系统预充电故障 Auxiliary system pre-charge fault | 522320 | 22 | P1A 01 44 |  |  | A |  | 
+70 | 辅机系统存在反向压差 Reverse differential pressure in auxili | 522320 | 23 | P1A 01 45 |  |  | A |  | 
+71 | 主驱系统预充电主接触器粘连故 障 Main drive system pre-charge main | 522320 | 0 | P1A 01 46 |  |  | A |  | 
+72 | 辅机系统预充电主接触器粘连 Auxiliary system pre- charging main  | 522320 | 1 | P1A 01 47 |  |  | A |  | 
+73 | 辅机系统接触器粘连故障 Auxiliary system contactor sticking fa | 522320 | 3 | P1A 01 48 |  |  | A |  | 
+74 | 24V 欠压故障 24V undervoltage fault | 522328 | 1 | P1A 01 49 | 24V 欠压故障 24V undervoltage fault |  | A |  | 
+75 | 与整车连接 CAN Busoff 故障 Connection to vehicle CAN Buso | 522390 | 0 | U1A 01 00 |  |  | A |  | 
+76 | 接收 TSC1_DM(0x0C09F027x) 报 文 超 时 故 障 Receive | 522390 | 1 | U1A 01 01 |  |  | A |  | 
+
+=== Page 32 Table 1: 11 rows x 10 cols ===
+ | TSC1_DM(0x0C09F027x) message timeout fault |  |  |  |  |  |  |  | 
+77 | 24v 过压故障 24v overvoltage fault | 522328 | 0 | P1A 01 4A | 电压大于 36V Voltage greater than 36V |  | B/2 |  | 
+78 | 驱动器低压供电电源欠压故障 Driver low voltage supply undervolta | 522328 | 2 | P1A 01 4B | 硬件触发 Hardware Trigger |  | A/3 |  | 
+79 | 过压基准错误 Overvoltage reference error | 522396 | 0 | P1A 01 4C | 过压基准异常 Overvoltage reference abnormality | 检查控制板 Check the control board | A/3 |  | 
+80 | 硬件过压故障 Hardware overvoltage fault | 522396 | 1 | P1A 01 4D | 硬件触发 Hardware Trigger |  | A/3 |  | 
+81 | 旋转接头松动异常故障 Rotary Joint Loose Abnormal Fault | 522396 | 2 | P1A 01 4E | 硬件触发 Hardware Trigger |  | A/3 |  | 
+82 | 驱动器驱动异常故障 Drive Drive Abnormal Fault | 522396 | 3 | 4 F | 硬件触发 Hardware Trigger |  | A/3 |  | 
+83 | 驱动板电源软件检测超限故障 Driver board power supply software d | 522396 | 4 | P1A 01 50 | 硬件触发 Hardware Trigger |  | A/3 |  | 
+84 | 高速异常换挡 High speed abnormal shift | 522396 | 5 | P1A 01 51 | 运行频率大于 50HZ 时 进行档位切换 Gear switching at operating f |  | B/2 |  | 
+85 | 上限频率与旋变分辨率参数设置 互斥故障 Upper limit frequency and rota | 522396 | 6 | P1A 01 52 | 软件参数设置不当 Improper setting of software parameters | 检查参数设置 Checking parameter settings | A/3 |  | 
+86 | 实际方向与档位异常故障 Actual direction and gear abnormal fau | 522396 | 7 | P1A 01 53 | 软件参数设置不当 Improper setting of software parameters | 检查参数设置 Checking parameter settings | A/3 |  | 
+
+=== Page 33 Table 1: 10 rows x 10 cols ===
+87 | 扭矩输出异常故障保护Torque Output Abnormal Fault Protection | 522396 | 8 | P1A 01 54 | 实际扭矩与目标扭矩偏 差过大导致的故障 Failure due to excessive devia |  | A/3 |  | 
+88 | U 相霍尔开路故障 U-phase Hall open circuit fault | 预留 |  | 预留 | 硬件触发 Hardware Trigger | 预留 reserve | A/3 |  | 
+89 | V 相霍尔开路故障 V phase open hall fault | 预留 |  | 预留 | 硬件触发 Hardware Trigger | 预留 reserve | A/3 |  | 
+90 | W 相霍尔开路故障 W phase open hall fault | 预留 |  | 预留 | 硬件触发 Hardware Trigger | 预留 reserve | A/3 |  | 
+91 | 24V 电压传感器对地短路故障 24V Voltage sensor short to ground | 522328 | 5 | P1A 01 55 | 、 、 | 检查电池连接线束； 更换主控 板 Check battery connection harness; | A/3 |  | 
+92 | 24V 电压传感器对电源短路故障 24V Voltage sensor to power suppl | 522328 | 6 | P1A 01 56 | 、 、 | 检查电池连接线束； 更换主控 板 Check battery connection harness; | A/3 |  | 
+93 | 母线二级过流故障 Bus secondary overcurrent fault | 522595 | 17 | P1A 01 57 | 、 、 、 | 母线电流传感器线束失效； 母 线电流传感器功能失效； 电池 SOC 过低 Bus current s | B/2 |  | 
+94 | 电机温升过快二级故障 Motor temperature rise secondary fault | 522601 | 20 | P1A 01 58 |  | 检查电机冷却系统 Check motor cooling system | B/2 |  | 
+95 | 电机温升过快三级故障 Motor Temperature Rise Too Fast Tertiar | 522601 | 21 | P1A 01 59 |  | 检查电机冷却系统 Check motor cooling system | A/3 |  | 
+96 | IGBT 温升过快二级故障 IGBT temperature rise too fast secon | 522601 | 22 | P1A 01 5A |  | 检查控制器冷却系统 Check controller cooling system | B/2 |  | 
+
+=== Page 34 Table 1: 7 rows x 10 cols ===
+97 | IGBT 温升过快三级故障 IGBT temperature rise too fast third | 522601 | 23 | P1A 01 5B |  | 检查控制器冷却系统 Check controller cooling system | A/3 |  | 
+98 | 母线电流传感器对电源短路一级 故障 Busbar current sensor to power s | 522595 | 21 | P1A 01 5C |  | 1、 母线电流传感器是否失 效； 2、 主控板母线电流处理模块 异常，更换主控板。 | C/1 |  | 
+99 | 母线电流传感器对地短路一级故 障 Busbar current sensor to ground s | 522595 | 22 | P1A 01 5D |  | 1、 母线电流传感器线束是否 断开； 2、 母线电流传感器是否失 效； 3、 主控板母线电流处理模块 | C/1 |  | 
+100 | 油泵过热 Oil pump overheating | 522354 | 20 | P1A 01 5E |  | 检查油泵 Check the oil pump | B/2 |  | 
+101 | 油泵电压异常 Abnormal oil pump voltage | 522354 | 21 | P1A 01 5F |  | 检查油泵 Check the oil pump | B/2 |  | 
+102 | 油泵启动失败Oil pump startup failure | 522354 | 22 | P1A 01 60 |  | 检查油泵 Check the oil pump | B/2 |  | 
+103 | 油泵停止工作 Oil pump stop working | 522354 | 23 | P1A 01 61 |  | 检查油泵 Check the oil pump | B/2 |  | 
+
+=== Page 35 Table 1: 2 rows x 3 cols ===
+使用 Using | 钥匙电 Keyline | 配置字报文使用流程 Configuration Word Message Usage Flow
+请求配置字报文 Request Configuration Word Message | On | 点击仪表上的“请求配置字”软开关，会触发配置字重新发送 Clicking the “Request 
+
+=== Page 36 Table 1: 5 rows x 7 cols ===
+ | 对象 |  |  | 特殊情况 Special |  | 处理策略 Handling Strategy
+ | Objects |  |  | Situations |  | 
+控制器 controllers |  |  | 接收配置字后什么 时候实现要求 When the request is realized after |  |  | 相关的功能不需要重新上电就能启用的，本次就实现配置字的要 求 If the related func
+ |  |  |  |  |  | 相关功能需要重新上电才能启动的，本次钥匙电循环，控制器保 存，下次循环再实现配置字的要求 If th
+ |  |  | 接收 5 次的数值 不一致 Inconsistent values received 5 times |  |  | 以最后一次接收的值为准 The last received value shall prevail
+
+=== Page 36 Table 2: 5 rows x 10 cols ===
+配置字报文信息 Configuration word message information | 字节 Byte | 位 Bit | 信号名称 Number Name | 属性 Attribute | 属性 |  | 归属控制 |  | 关联控制
+ |  |  |  |  | Attribute |  | 器 |  | 器
+ |  |  |  |  |  |  | Attributed |  | Associated
+ |  |  |  |  |  |  | Controller |  | Controller
+ID=0x0CFF3025， 周 期=50ms（Motor 格 式）ID=0x0CFF3025. C | 27-43 | 17*8 | 车辆标识号 VIN 码 （ 包 含 字 母 和 数 字 ） Vehicle Identificati |  |  | 所有控制 器 All Controllers |  | / | 
+
+=== Page 36 Table 3: 3 rows x 1 cols ===
+配置字报文信息
+Configuration word
+message information
+
+=== Page 36 Table 4: 3 rows x 1 cols ===
+位
+Bit
+
+
+=== Page 36 Table 5: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 36 Table 6: 2 rows x 1 cols ===
+信号名称 Number
+Name
+
+=== Page 37 Table 1: 4 rows x 4 cols ===
+字节 | 名称 Name | Cvt | 数值（hex）
+Byte |  |  | Value (hex)
+#1 | DiagnostMCUSessionControl Request ServMCUe Id | M | 10
+#2 | Sub-Function = [ DiagnostMCUSessionType] | M | 01/02/03
+
+=== Page 37 Table 2: 6 rows x 5 cols ===
+字节 |  | 名称 Name |  | 数值（hex） Value (hex)
+Byte |  |  |  | 
+#1 |  | PositiveResponseServMCUeIdentifier | M | 50
+#2 |  | DiagnostMCUSessionType | M | 01/02/03
+#3 #4 #5 #6 |  | P2server1_max[ ] = [ Byte#1 Byte#2] P2*server2_max | M M M M | 00 32 00 C8
+1.定时器 P2server 的数值为 50ms，以 1ms 计算。 2.定时器 P2*server |  |  |  | 
+
+=== Page 37 Table 3: 5 rows x 5 cols ===
+字节 |  | 名称 Name |  | 数值（hex） Value (hex)
+Byte |  |  |  | 
+#1 |  | NegativeResponseServMCUeIdentifier | M | 7F
+#2 |  | OriginalRequestServMCUeIdentifier | M | 10
+#3 |  | NegativeResponseCode | M | （如下·）
+
+=== Page 37 Table 4: 7 rows x 2 cols ===
+ | 
+NRC(hex) | 错误描述 Error Description
+ | 
+12 | 子功能不支持 如果请求报文中的子功能参数不支持，MCU 应发送 此否定响应码。 Subfunctio
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 Message Length E
+22 | 条件未满足当不满足请求诊断会话控制的操作条件时，MCU 应发送此否定响应码。 The MCU sha
+7E | 当前会话下不支持该子功能 This sub-function is not supported un
+
+=== Page 38 Table 1: 5 rows x 4 cols ===
+ | 选项(hex) |  | 描述 Descripción
+ | Options (hex) |  | 
+01 |  |  | 默认会话 Default Session
+02 |  |  | 编程会话 Programming Session
+03 |  |  | 扩展诊断会话 Extended Diagnostic Session
+
+=== Page 40 Table 1: 5 rows x 6 cols ===
+ | 诊断会话模式 | 条件 Condition | 条件 Condition | 系统行为 System behavior | 系统行为 System behavior
+ | Diagnostic |  |  |  | 
+ | Session Mode |  |  |  | 
+默认会话(01) Default session (01) |  |  |  | MCU 可以根据车辆功能需求执行相应任务。 The MCU can perform tasks ac | 
+编程会话(02) Programming Session (02) |  | 点火钥匙打到 ON 车速=0 km/h Ignition key turned ON Speed = |  | MCU 工作在引导模式。不能执行功能性任务，在这种 模式下只能进行程序下载。 The MCU ope | 
+
+=== Page 41 Table 1: 1 rows x 3 cols ===
+扩展会话(03) Extended Session(03) | 车速 = 0 km/h 关于取电条件，详见各服 务执行规则。 输入输出控制条件详见在 DID 列表中 | MCU 可以根据车辆功能需求执行相应任务，另外MCU 可以通过诊断设备发送的“通过标识符进行输入输出
+
+=== Page 42 Table 1: 4 rows x 4 cols ===
+字节 | 名称 Name | Cvt | 数值（hex） Value (hex)
+Byte |  |  | 
+#1 | SecurityAcces Request ServMCUe Id | M | 27
+#2 | sub-function = [ securityAccessType = requestSeed] | M | 01/03/07
+
+=== Page 42 Table 2: 5 rows x 4 cols ===
+字节 | 名称 Name | Cvt | 数 值 （hex）
+Byte |  |  | Value (hex)
+#1 | SecurityAccess Response ServMCUe Id | M | 67
+#2 | SecurityAccessType = RequestSeed | M | 01/03/07
+#3 #4 | SecuritySeed [ ] = [ seed#1 (high byte) seed#1 (hi | M M | 00-FF 00-FF
+
+=== Page 42 Table 3: 4 rows x 4 cols ===
+字节 Byte | 名称 Name | Cvt | 数值（hex）
+ |  |  | Value (hex)
+#1 | NegativeResponseServMCUeIdentifier | M | 7F
+#2 | OriginalRequestServMCUeIdentifier | M | 27
+
+=== Page 43 Table 1: 1 rows x 4 cols ===
+#3 | OriginalRequestServMCUeIdentifier | M | （如下·）
+
+=== Page 43 Table 2: 8 rows x 2 cols ===
+ | 
+NRC(hex) | 错误描述 Error Description.
+12 | 不支持子功能 如果请求报文中的子功能参数不支持，MCU 应发送此否定响应 码。 Subfunctio
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 Wrong Message Le
+22 | 条件未满足如果请求安全访问服务的条件未满足，MCU 应发送此否定响应码。 The MCU shall
+37 | 延迟时间未到如果延迟定时器处于激活时间内请求已发送，MCU 应发送此否定响 应码。 Delay Ti
+7E | 当前会话下不支持该子功能 This sub-function is not supported un
+7F | 当前会话下不支持该服务 The service is not supported under the
+
+=== Page 43 Table 3: 4 rows x 4 cols ===
+字节 Byte | 名称 Name | Cvt | 数值（hex） Value (hex)
+#1 | RequestServMCUeIdentifier | M | 27
+#2 | sub-function = [ securityAccessType = SeedKey] | M | 02/04/08
+#3 #4 | SecurityKey [ ] = [ key#1 (high byte) key#2 (low b | M U | 00-FF 00-FF
+
+=== Page 43 Table 4: 4 rows x 4 cols ===
+字节 Byte | 名称 Name | Cvt | 数值（hex）
+ |  |  | Value (hex)
+#1 | SecurityAccess Response ServMCUe Id | M | 67
+#2 | SecurityAccessType = SeedKey | M | 02/04/08
+
+=== Page 44 Table 1: 5 rows x 6 cols ===
+字节 |  | 名称 Name | Cvt | 数值（hex） | 
+Byte |  |  |  | Value (hex) | 
+#1 |  | NegativeResponseServMCUeIdentifier | M | 7F | 
+#2 |  | OriginalRequestServMCUeIdentifier | M | 27 | 
+#3 |  | NegativeResponseCode | M | （如下·） | 
+
+=== Page 45 Table 1: 9 rows x 2 cols ===
+12 | 子功能不支持 如果请求报文中的子功能参数不支持，MCU 应发送此否定响应 码。 Subfunctio
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 Wrong Message Le
+22 | 条件未满足如果请求安全访问服务的条件未满足，MCU 应发送此否定响应码。 Condition not
+24 | 请求序列错误 如果在接收到“sendKey”子功能前没有先接收到“requestSeed”请求报文，
+35 | 密钥无效如果接收到预期的“sendKey”子功能但是密钥值与 MCU 内部存储或计 算的密钥不相等，
+36 | 超出密钥访问次数限制如果延迟定时器因为超过最大允许失败尝试的次数激活， MCU 应发送此否定响应码。
+37 | 延迟时间未到如果延迟定时器处于激活时间内请求已发送，MCU 应发送此否定响 应码。 Delay Ti
+7E | 当前会话下不支持该子功能 This sub-function is not supported in
+7F | 当前会话下不支持该服务 This service is not supported under th
+
+=== Page 45 Table 2: 6 rows x 4 cols ===
+ |  |  | 
+ | 选项 |  | 描述 Description
+ | Options |  | 
+ | （hex） |  | 
+01 |  |  | 请求种子以进入安全级别：解锁（级别 1），一般安全，适用于扩展会话。 Request Seed to
+02 |  |  | 发送密钥以进入安全级别：解锁（级别 1），一般安全，适用于扩展会话。 Send key to acc
+
+=== Page 46 Table 1: 5 rows x 2 cols ===
+03 | 请求种子以进入安全级别：解锁（级别 2），适用于防盗及安全相关的相关功能， 适用于扩展会话。 Req
+04 | 发送密钥以进入安全级别：解锁（级别 2），适用于防盗及安全相关的相关功能， 适用于扩展会话。 Sen
+07 | 请求种子以进入安全级别：解锁（级别 3），编程安全，适用于编程会话。 Request Seed to
+08 | 发送密钥以进入安全级别：解锁（级别 3），编程安全，适用于编程会话。 Send key to ent
+注： Note: 级别 1 适用于 ECU 的普通写入数据（2E）服务及输入输出控制服务（2F）；  | 
+
+=== Page 48 Table 1: 17 rows x 2 cols ===
+函数原型 function prototype | 
+KeyGenResult GenerateKeyEx( const uint8* iSeedArra | 
+参数说明 Parameter description | 
+iSeedArray | Seed 值，控制器生成的随机数 Seed value, random number generat
+iSeedArraySize | Seed 长度，2 个字节 Seed Length, 2 bytes
+iSecurityLevel | 安全级别 =01 时对应的 SecurityAccessType 的 01/02； =03 时对应 
+iKeyArray | Key 值 Key Value
+iKeySize | Key 值长度，2 个字节 Key value length, 2 bytes
+返回值 Return Value | 
+KeyGenResult | KGRE_OK
+ | KGRE_NOT_OK
+功能描述 Function Description | 
+通过 seed 算出 key 值。 Calculate the key value from see | 
+调用时机 Timing | 
+安全访问解锁时。 When the security access is unlocked. | 
+注意事项 Cautions | 
+无 None | 
+
+=== Page 49 Table 1: 4 rows x 5 cols ===
+字节 |  | 名称 Name | Cvt | 数值（hex） Value (hex)
+Byte |  |  |  | 
+#1 |  | TesterPresent Request ServMCUe Id | M | 3E
+#2 |  | sub-function = [ zeroSubFunction ] | M | 00/80
+
+=== Page 49 Table 2: 4 rows x 5 cols ===
+字节 |  | 名称 Name | Cvt | 数值（hex） Value (hex)
+Byte |  |  |  | 
+#1 |  | TesterPresent Response ServMCUe Id | M | 7E
+#2 |  | ZeroSubFunction | M | 00
+
+=== Page 49 Table 3: 4 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+#1 | NegativeResponseServMCUeIdentifier | M | 7F | 
+#2 | OriginalRequestServMCUeIdentifier | M | 3E | 
+#3 | NegativeResponseCode | M | (如下) | 
+
+=== Page 49 Table 4: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 49 Table 5: 3 rows x 2 cols ===
+NRC (hex) | 错误描述 Error Description
+12 | 不支持子功能如果请求报文中的子功能参数不支持，MCU 应发送此否定响应 码。 Subfunction
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 Wrong Message Le
+
+=== Page 49 Table 6: 3 rows x 3 cols ===
+选项Option |  | 
+(hex) |  | 
+00/80 |  | zeroSubFunction
+
+=== Page 50 Table 1: 3 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+#1 | ECUReset Request ServMCUe Id | M | 11 | 
+#2 | Sub-Function = [ ResetType ] | M | 01/03 | 
+
+=== Page 50 Table 2: 3 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+#1 | ECUReset Response ServMCUe Id | M | 51 | 
+#2 | ResetType | M | 01/03 | 
+
+=== Page 50 Table 3: 4 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+#1 | NegativeResponseServMCUeIdentifier | M | 7F | 
+#2 | OriginalRequestServMCUeIdentifier | M | 11 | 
+#3 | NegativeResponseCode | M | (如下) | 
+
+=== Page 50 Table 4: 2 rows x 3 cols ===
+NRC(hex) |  | 错误描述 Error Description
+12 | 子功能不支持如果请求报文中的子功能参数不支持，MCU 应发送此否定响应 码。 Subfunction | 
+
+=== Page 51 Table 1: 4 rows x 2 cols ===
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 The MCU shall se
+22 | 条件未满足如果 MCU 不满足复位的条件时，应发送此否定响应码。 Condition Not Sat
+7E | 当前会话下不支持该子功能 This sub-function is not supported un
+7F | 当前会话下不支持该服务 This service is not supported under th
+
+=== Page 51 Table 2: 5 rows x 3 cols ===
+选项 |  | 
+Options |  | 
+(hex) |  | 
+01 |  | 硬件复位 Hardware Reset
+03 |  | 软件复位 Software Reset
+
+=== Page 51 Table 3: 5 rows x 6 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 | 
+ |  |  |  | （hex） | 
+ |  |  |  | Value | 
+ |  |  |  | (hex) | 
+#1 | CommunMCUationControl Request ServMCUe Id | M | 28 |  | 
+
+=== Page 51 Table 4: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 52 Table 1: 2 rows x 4 cols ===
+#2 | Sub-Function = [ ControlType ] | M | 00-FF
+#3 | CommunMCUationType | M | 00-FF
+
+=== Page 52 Table 2: 6 rows x 6 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 | 
+ |  |  |  | （hex） | 
+ |  |  |  | Value | 
+ |  |  |  | (hex) | 
+#1 | CommunMCUationControl Response ServMCUe Id | M | 68 |  | 
+#2 | ControlType | M | 00-7F |  | 
+
+=== Page 52 Table 3: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 52 Table 4: 4 rows x 10 cols ===
+ | 字节 |  |  | 名称 |  | Cvt |  | 数值(hex) | 
+#1 |  |  | NegativeResponseServMCUeIdentifier |  |  | M | 7F |  | 
+#2 |  |  | OriginalRequestServMCUeIdentifier |  |  | M | 28 |  | 
+#3 |  |  | NegativeResponseCode |  |  | M | (如下) |  | 
+
+=== Page 52 Table 5: 7 rows x 2 cols ===
+NRC(hex) | 错误描述 Error Description
+12 | 不支持子功能如果请求报文中的子功能参数不支持，MCU 应发送此否定响应码。 Subfunction 
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 Wrong Message Le
+22 | 条件未满足 如果 MCU 处于关键运行模式不能“使能/禁止”请求的通信类型，应发送此否定响 应码。 
+31 | 请求超出范围如果在通信类型参数检测出错误，MCU 应发送此否定响应码。 Request out of
+7E | 当前会话下不支持该子功能 This sub-function is not supported in
+7F | 当前会话下不支持该服务 This service is not supported under th
+
+=== Page 53 Table 1: 6 rows x 4 cols ===
+ | 选项Option |  | 描述 Description
+ | (hex) |  | 
+00 |  |  | 使能接收和发送此值说明对于指定的通信类型须允许接收和发送报文。 Enable Receive and
+01 |  |  | 使能接收/禁止发送此值说明对于指定的通信类型须允许接收报文但禁止发送报文。 Enable Recei
+02 |  |  | 禁止接收/使能发送此值说明对于指定的通信类型须禁止接收报文但允许发送报文。 Disable Rece
+03 |  |  | 禁止接收和发送此值说明对于指定的通信类型须禁止接收和发送报文。 Disable Receive an
+
+=== Page 53 Table 2: 5 rows x 4 cols ===
+ | 选项Option |  | 描述Description
+ | (hex) |  | 
+01 |  |  | 常规应用报文此值定义的所有的应用相关通信(内部应用信号在整车多 MCU 间交 换)。 General
+02 |  |  | 网络管理报文此值定义了所有网络管理相关通信。 Network Management MessageT
+03 |  |  | 常规应用报文和网络管理报文此值定义了所有网络管理相关和应用相关通信。 General Applica
+
+=== Page 55 Table 1: 4 rows x 6 cols ===
+字节 Byte | 字节 | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+ | Byte |  |  |  | 
+#1 |  | ControlDTCSetting Request ServMCUe Id | M | 85 | 
+#2 |  | sub-function = [ DTCSettingType ] | M | 00-7F | 
+
+=== Page 55 Table 2: 3 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+#1 | ControlDTCSetting Response ServMCUe Id | M | C5hex | 
+#2 | DTCSettingType | M | 00-FF | 
+
+=== Page 55 Table 3: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 55 Table 4: 4 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 （hex） Value (hex)
+#1 | NegativeResponseServMCUeIdentifier | M | 7Fhex | 
+#2 | OriginalRequestServMCUeIdentifier | M | 85 | 
+#3 | NegativeResponseCode | M | (如下) | 
+
+=== Page 55 Table 5: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 55 Table 6: 2 rows x 2 cols ===
+NRC（hex） | 错误描述 misdescription
+ | 
+
+=== Page 56 Table 1: 6 rows x 2 cols ===
+12 | 不支持子功能如果请求报文中的子功能参数不支持，MCU 应发送此否定响应码。 Subfunction 
+13 | 报文长度错误或者格式非法报文长度错误，MCU 应发送此否定响应码。 The MCU shall se
+22 | 条件不满足如果 MCU 处于正常模式临界状态时而不能执行被请求的故障码控制功 能，应发送此否定响应码
+31 | 请求数据超出范围 如果 MCU 监测到 DTCSettingControlOptionRecord 
+7E | 当前会话下不支持该子功能 This sub-function is not supported un
+7F | 当前会话下不支持该服务 The service is not supported under the
+
+=== Page 56 Table 2: 5 rows x 4 cols ===
+ | 选项 | 描述 Description | 描述 Description
+ | Options |  | 
+ | （hex） |  | 
+01 |  | 使能 MCU 应根据正常运行条件恢复诊断故障码设置。 Enable The MCU shall re | 
+02 |  | 禁止 MCU 要应停止诊断故障码设置。 Disable The MCU shall stop the | 
+
+=== Page 57 Table 1: 6 rows x 6 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 | 
+ |  |  |  | （hex） | 
+ |  |  |  | Value | 
+ |  |  |  | (hex) | 
+#1 | ReadDataByIdentifier Request ServMCUe Id | M | 22 |  | 
+#2 #3 | DataIdentifier[ ] #1 = [ byte#1 (MSB) byte#2 ] | M M | 00-FF 00-FF |  | 
+
+=== Page 57 Table 2: 4 rows x 7 cols ===
+ | 字节 Byte | 名称 Name | Cvt |  | 数值（hex） | 
+ |  |  |  |  | Value (hex) | 
+#1 |  | ReadDataByIdentifier Response ServMCUe Id | M | 62 |  | 
+#2 #3 |  | DataIdentifier [ ] #1 = [ | M M | 00-FF 00-FF |  | 
+
+=== Page 58 Table 1: 2 rows x 4 cols ===
+ | byte#1 (MSB) byte#2] |  | 
+#4 : #(k-1) +4 | DataRecord[ ] #1 = [ data#1 : data#k ] | M : U | 00-FF : 00-FF
+
+=== Page 58 Table 2: 7 rows x 6 cols ===
+字节 Byte | 名称 Name | Cvt |  | 数值 | 
+ |  |  |  | （hex） | 
+ |  |  |  | Value | 
+ |  |  |  | (hex) | 
+#1 | NegativeResponseServMCUeIdentifier | M | 7F |  | 
+#2 | OriginalRequestServMCUeIdentifier | M | 22 |  | 
+#3 | NegativeResponseCode | M | (如下) |  | 
+
+=== Page 58 Table 3: 2 rows x 1 cols ===
+字节
+Byte
+
+=== Page 58 Table 4: 4 rows x 6 cols ===
+ | NRC(hex) |  |  | 错误描述Error Description | 
+13 |  |  | 报文长度错误或者格式非法如果请求报文的长度非法，MCU 应发送此否定响应 码。 Wrong mess |  | 
+22 |  |  | 条件未满足如果 MCU 的操作条件不满足执行相应动作的要求，应发送此否定响应 码。 The MCU  |  | 
+31 |  |  | 请求超出范围如下情况时，MCU 应发送此否定响应码。： 1、 没有一个请求的 DID 值被设备支持； |  | 
+
+=== Page 59 Table 1: 6 rows x 5 cols ===
+字节 Byte | 名称 Name | Cvt | 数值 | 
+ |  |  | （hex） | 
+ |  |  | Value | 
+ |  |  | (hex) | 
+#1 | WriteDataByIdentifier Request ServMCUe Id | M | 2E | 
+#2 #3 | DataIdentifier [ ]= [ byte#1 (MSB) byte#2 ] | M M | 00-FF 00-FF | 

@@ -50,10 +50,8 @@
             <button class="btn btn-ghost btn-sm" id="refresh-nav-btn" type="button">
               Refresh NAVs
             </button>
+            <span class="nav-refresh-age text-secondary" id="nav-refresh-age" style="font-size: var(--text-xs)"></span>
             <button class="btn btn-ghost btn-sm" id="refresh-btn" type="button">Refresh</button>
-            <button class="btn btn-primary btn-sm" id="add-holding-btn" type="button">
-              + Add holding
-            </button>
           </div>
         </header>
 
@@ -135,6 +133,109 @@
           </section>
         </div>
       </main>
+    </div>
+
+    <button type="button" class="fab-add-holding" id="fab-add-holding" aria-label="Add holding">+</button>
+
+    <div
+      id="holding-modal-overlay"
+      class="holding-modal-overlay"
+      style="display: none"
+      role="presentation"
+    >
+      <div class="holding-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="hm-modal-title" onclick="event.stopPropagation()">
+        <div class="holding-modal-header">
+          <h3 class="holding-modal-title" id="hm-modal-title">Add holding</h3>
+          <button type="button" class="btn btn-ghost btn-sm" id="hm-close-x" aria-label="Close">✕</button>
+        </div>
+        <form class="holding-modal-body" id="hm-form" autocomplete="off">
+          <div class="form-field">
+            <label class="form-field-label" for="hm-name">Fund name</label>
+            <input id="hm-name" class="form-field-input" type="text" required />
+          </div>
+          <div class="form-field">
+            <label class="form-field-label" for="hm-isin">ISIN</label>
+            <input id="hm-isin" class="form-field-input" type="text" />
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field-label" for="hm-category">Category</label>
+              <select id="hm-category" class="form-field-select">
+                <option value="EQUITY">Equity</option>
+                <option value="BONDS">Bonds</option>
+                <option value="CASH">Cash / money market</option>
+                <option value="COMMODITY">Commodity</option>
+                <option value="MIXED">Mixed / multi-asset</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-field-label" for="hm-status">Status</label>
+              <select id="hm-status" class="form-field-select">
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="EXITED">Exited</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field-label" for="hm-units">Units</label>
+              <input id="hm-units" class="form-field-input" type="number" step="0.0001" />
+            </div>
+            <div class="form-field">
+              <label class="form-field-label" for="hm-nav">NAV (Kč)</label>
+              <input id="hm-nav" class="form-field-input" type="number" step="0.0001" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="form-field-label" for="hm-monthlySip">Monthly SIP (Kč)</label>
+              <input id="hm-monthlySip" class="form-field-input" type="number" step="1" />
+            </div>
+            <div class="form-field">
+              <label class="form-field-label" for="hm-purchaseStartDate"
+                >Purchase date <span class="required" aria-hidden="true">*</span></label
+              >
+              <input id="hm-purchaseStartDate" class="form-field-input" type="date" required />
+            </div>
+          </div>
+          <p class="form-field-help">
+            Tax-free date is computed as 3 years after the purchase date (CZ funds rule).
+          </p>
+
+          <div id="hm-cf-section">
+            <hr class="holding-modal-divider" />
+            <h4 class="holding-modal-subheading">Initial cashflow</h4>
+            <p class="form-field-help">Record your purchase for performance tracking (optional but recommended).</p>
+            <div class="form-row">
+              <div class="form-field">
+                <label class="form-field-label" for="hm-cf-amount">Amount invested (Kč)</label>
+                <input id="hm-cf-amount" class="form-field-input" type="number" min="0" step="1" placeholder="e.g. 5000" />
+              </div>
+              <div class="form-field">
+                <label class="form-field-label" for="hm-cf-date">Date <span class="required" aria-hidden="true">*</span></label>
+                <input id="hm-cf-date" class="form-field-input" type="date" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label class="form-field-label" for="hm-cf-note">Note (optional)</label>
+              <input id="hm-cf-note" class="form-field-input" type="text" placeholder="e.g. Initial SIP purchase" />
+            </div>
+          </div>
+
+          <div id="hm-cashflow-list-wrap" style="display: none">
+            <hr class="holding-modal-divider" />
+            <div id="hm-cashflow-list"></div>
+          </div>
+        </form>
+        <div class="holding-modal-footer">
+          <button type="button" class="btn btn-ghost btn-sm" id="hm-delete-btn" style="display: none">Delete…</button>
+          <div style="flex: 1"></div>
+          <button type="button" class="btn btn-ghost btn-sm" id="hm-cancel-btn">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="hm-save-btn">Create holding</button>
+        </div>
+      </div>
     </div>
 
     <script src="/scripts/sidebar.js"></script>

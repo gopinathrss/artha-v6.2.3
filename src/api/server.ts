@@ -502,8 +502,37 @@ app.post('/api/holdings', async (req, res) => {
       } as never
     })
     res.status(201).json({ success: true, data: { holding } })
+
+    setImmediate(() => {
+      void (async () => {
+        try {
+          const { refreshNavForIsins } = await import('../lib/nav/refreshAll')
+          await refreshNavForIsins([holding.isin])
+        } catch {
+          /* non-blocking NAV backfill */
+        }
+      })()
+    })
   } catch (e: any) {
     res.status(400).json({ success: false, error: e.message })
+  }
+})
+
+app.post('/api/nav/refresh', async (_req, res) => {
+  const { demo } = await isDemoMode()
+  try {
+    const prisma = await getPrisma()
+    const holdings = await prisma.holding.findMany({
+      where: { units: { gt: 0 } },
+      select: { isin: true }
+    })
+    const isins = [...new Set(holdings.map((h) => h.isin))]
+    const { refreshNavForIsins } = await import('../lib/nav/refreshAll')
+    const result = await refreshNavForIsins(isins)
+    res.json({ success: true, data: result, demo })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    res.status(500).json({ success: false, error: msg, demo })
   }
 })
 

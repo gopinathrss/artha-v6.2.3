@@ -1,31 +1,55 @@
 /* PIE V6 — accent color themes. Applied via [data-pie-accent="..."] on <html>. */
 
-[data-pie-accent='BLUE'] {
+/* Note: tokens.css defines a dark-mode accent on :root[data-theme='dark'] with
+ * higher specificity than a plain [data-pie-accent]. We therefore include
+ * a dark-specific selector for each accent to ensure user preference wins. */
+
+:root[data-pie-accent='BLUE'],
+:root[data-theme='dark'][data-pie-accent='BLUE'] {
   --color-accent-base: #2563eb;
   --color-accent-strong: #1d4ed8;
   --color-accent-soft: #dbeafe;
+  --color-accent-hover: var(--color-accent-strong);
+  --color-accent-subtle: color-mix(in srgb, var(--color-accent-base) 14%, transparent);
+  --color-accent-text: #ffffff;
 }
 
-[data-pie-accent='GREEN'] {
+:root[data-pie-accent='GREEN'],
+:root[data-theme='dark'][data-pie-accent='GREEN'] {
   --color-accent-base: #059669;
   --color-accent-strong: #047857;
   --color-accent-soft: #d1fae5;
+  --color-accent-hover: var(--color-accent-strong);
+  --color-accent-subtle: color-mix(in srgb, var(--color-accent-base) 14%, transparent);
+  --color-accent-text: #ffffff;
 }
 
-[data-pie-accent='PURPLE'] {
+:root[data-pie-accent='PURPLE'],
+:root[data-theme='dark'][data-pie-accent='PURPLE'] {
   --color-accent-base: #7c3aed;
   --color-accent-strong: #6d28d9;
   --color-accent-soft: #ede9fe;
+  --color-accent-hover: var(--color-accent-strong);
+  --color-accent-subtle: color-mix(in srgb, var(--color-accent-base) 14%, transparent);
+  --color-accent-text: #ffffff;
 }
 
-[data-pie-accent='AMBER'] {
+:root[data-pie-accent='AMBER'],
+:root[data-theme='dark'][data-pie-accent='AMBER'] {
   --color-accent-base: #d97706;
   --color-accent-strong: #b45309;
   --color-accent-soft: #fef3c7;
+  --color-accent-hover: var(--color-accent-strong);
+  --color-accent-subtle: color-mix(in srgb, var(--color-accent-base) 14%, transparent);
+  --color-accent-text: #ffffff;
 }
 
-[data-pie-accent='ROSE'] {
+:root[data-pie-accent='ROSE'],
+:root[data-theme='dark'][data-pie-accent='ROSE'] {
   --color-accent-base: #e11d48;
   --color-accent-strong: #be123c;
   --color-accent-soft: #ffe4e6;
+  --color-accent-hover: var(--color-accent-strong);
+  --color-accent-subtle: color-mix(in srgb, var(--color-accent-base) 14%, transparent);
+  --color-accent-text: #ffffff;
 }

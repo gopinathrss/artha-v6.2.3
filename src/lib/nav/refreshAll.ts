@@ -1,3 +1,4 @@
+import type { Holding } from '@prisma/client'
 import { getPrisma } from '../prisma'
 import { d } from '../money'
 import { fetchErsteNav } from './erste'
@@ -11,15 +12,8 @@ export interface NavRefreshResult {
   errors: { holdingId: string; error: string }[]
 }
 
-export async function refreshAllCzechNavs(holdingId?: string): Promise<NavRefreshResult> {
+async function refreshHoldingsList(holdings: Holding[]): Promise<NavRefreshResult> {
   const prisma = await getPrisma()
-  const holdings = await prisma.holding.findMany({
-    where: {
-      status: 'ACTIVE',
-      ...(holdingId ? { id: holdingId } : {})
-    }
-  })
-
   let refreshed = 0
   let failed = 0
   let skipped = 0
@@ -90,4 +84,32 @@ export async function refreshAllCzechNavs(holdingId?: string): Promise<NavRefres
     skipped,
     errors
   }
+}
+
+/** All holdings with units &gt; 0 (any status), optionally a single holding by id. */
+export async function refreshAllCzechNavs(holdingId?: string): Promise<NavRefreshResult> {
+  const prisma = await getPrisma()
+  const holdings = await prisma.holding.findMany({
+    where: {
+      units: { gt: 0 },
+      ...(holdingId ? { id: holdingId } : {})
+    }
+  })
+  return refreshHoldingsList(holdings)
+}
+
+/** Refresh NAV for every holding whose ISIN is in the list and units &gt; 0. */
+export async function refreshNavForIsins(isins: string[]): Promise<NavRefreshResult> {
+  const uniq = [...new Set(isins.map((i) => String(i || '').trim()).filter(Boolean))]
+  if (uniq.length === 0) {
+    return { totalHoldings: 0, refreshed: 0, failed: 0, skipped: 0, errors: [] }
+  }
+  const prisma = await getPrisma()
+  const holdings = await prisma.holding.findMany({
+    where: {
+      isin: { in: uniq },
+      units: { gt: 0 }
+    }
+  })
+  return refreshHoldingsList(holdings)
 }

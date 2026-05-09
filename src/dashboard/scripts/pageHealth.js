@@ -3,7 +3,8 @@
 
   const PAGE_HEALTH_THRESHOLDS = {
     overview: { warnMinutes: 60, failMinutes: 480 }, // 1h warn, 8h fail
-    portfolio: { warnMinutes: 60, failMinutes: 480 },
+    /** Portfolio health dot follows worst-case NAV fetch age among funded positions. */
+    portfolio: { warnMinutes: 24 * 60, failMinutes: 48 * 60 },
     thisMonth: { warnMinutes: 1440, failMinutes: 4320 }, // 1d warn, 3d fail
     accounts: { warnMinutes: 120, failMinutes: 720 },
     india: { warnMinutes: 1440, failMinutes: 4320 },

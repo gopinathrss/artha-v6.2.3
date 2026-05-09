@@ -27,7 +27,7 @@ vi.mock('../../src/lib/prisma', () => ({
   invalidateDemoStateCache: vi.fn()
 }))
 
-import { refreshAllCzechNavs } from '../../src/lib/nav/refreshAll'
+import { refreshAllCzechNavs, refreshNavForIsins } from '../../src/lib/nav/refreshAll'
 
 describe('refreshAllCzechNavs', () => {
   beforeEach(() => {
@@ -67,5 +67,18 @@ describe('refreshAllCzechNavs', () => {
     expect(mocks.fetchErsteNav).toHaveBeenCalledWith('N1')
     expect(mocks.update).toHaveBeenCalled()
     expect(mocks.upsert).toHaveBeenCalled()
+  })
+
+  it('refreshNavForIsins queries by isin list', async () => {
+    mocks.findMany.mockResolvedValue([])
+    await refreshNavForIsins(['CZ0001', 'CZ0001'])
+    expect(mocks.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          isin: { in: ['CZ0001'] },
+          units: { gt: 0 }
+        })
+      })
+    )
   })
 })

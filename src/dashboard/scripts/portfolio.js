@@ -4,9 +4,9 @@
  * - Hero stats (active/inactive/invested/gain) from /api/holdings + /api/overview.
  * - Full CRUD: add, edit, soft-delete (status=EXITED), hard-delete (?hard=1).
  * - Inline cashflow editor on each holding (SIP / lump / sell / dividend).
- * - Refresh NAVs (Czech AMFI-style refresh) and pull NAV from row drawer.
+ * - Refresh NAVs via POST /api/nav/refresh; optional cashflow drawer for edits.
  *
- * Uses window.PieFetch for HTTP and window.PieUi for drawer/toast/confirm.
+ * Uses window.PieFetch for HTTP and window.PieUi for modal chrome, drawer, toast, confirm.
  */
 ;(function () {
   'use strict'
@@ -65,6 +65,23 @@
     return `${y}-${m}-${day}`
   }
 
+  function wrapStrategySection(holdingId, badgeHtml, innerCardHtml) {
+    return (
+      '<tr class="holding-strategy-row"><td colspan="9">' +
+      '<div class="holding-row__strategy-toggle">' +
+      '<button type="button" class="btn btn-ghost btn-sm strategy-toggle-btn" onclick="toggleStrategy(this)" data-holding-id="' +
+      escapeHtml(holdingId) +
+      '">Strategy ▼</button>' +
+      badgeHtml +
+      '</div>' +
+      '<div class="strategy-panel" id="strategy-' +
+      escapeHtml(holdingId) +
+      '" style="display:none">' +
+      innerCardHtml +
+      '</div></td></tr>'
+    )
+  }
+
   let cachedHoldings = []
   /** @type {Record<string, object>} */
   let cachedStrategyByHoldingId = {}
@@ -81,13 +98,14 @@
     if (String(h.status || '').toUpperCase() === 'EXITED') return ''
 
     if (!strategy) {
-      return `
-        <div class="strategy-card strategy-card--empty">
-          <span class="strategy-card__label">No strategy</span>
-          <button type="button" class="btn btn-ghost btn-sm" data-strategy-action="propose" data-holding-id="${escapeHtml(h.id)}">
-            Propose strategy
-          </button>
-        </div>`
+      const innerEmpty =
+        '<div class="strategy-card strategy-card--empty">' +
+        '<span class="strategy-card__label">No strategy</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-strategy-action="propose" data-holding-id="' +
+        escapeHtml(h.id) +
+        '">Propose strategy</button></div>'
+      const badgeEmpty = '<span class="badge badge-neutral">No strategy</span>'
+      return wrapStrategySection(h.id, badgeEmpty, innerEmpty)
     }
 
     const statusClass =
@@ -155,11 +173,10 @@
 
     const reasoningHtml = renderReasoningCollapsed(String(strategy.proposalReasoning || ''))
 
-    return `
+    const innerCard = `
       <div class="strategy-card" data-holding-id="${escapeHtml(h.id)}" data-strategy-id="${escapeHtml(strategy.id)}">
         <div class="strategy-card__header">
           <span class="strategy-card__title">Strategy</span>
-          <span class="badge ${statusClass}">${escapeHtml(strategy.status || '')}</span>
           <span class="badge badge-neutral">${escapeHtml(strategy.confidence || '')}</span>
         </div>
         <div class="strategy-card__metrics">
@@ -202,6 +219,8 @@
         <div class="strategy-card__actions">${proposedActions}${approvedActions}${rejectedActions}</div>
         ${signalsHtml}
       </div>`
+    const badgeStrat = `<span class="badge ${statusClass}">${escapeHtml(strategy.status || '')}</span>`
+    return wrapStrategySection(h.id, badgeStrat, innerCard)
   }
 
   function renderReasoningCollapsed(text, maxLen = 120) {
@@ -244,6 +263,19 @@
         full.style.display = 'block'
         btn.textContent = 'Show less ▲'
       }
+    } catch {
+      /* */
+    }
+  }
+
+  window.toggleStrategy = function toggleStrategy(btn) {
+    try {
+      const holdingId = btn && btn.dataset ? btn.dataset.holdingId : ''
+      const panel = holdingId ? document.getElementById('strategy-' + holdingId) : null
+      if (!panel) return
+      const isVisible = panel.style.display !== 'none' && panel.style.display !== ''
+      panel.style.display = isVisible ? 'none' : 'block'
+      btn.textContent = isVisible ? 'Strategy ▼' : 'Strategy ▲'
     } catch {
       /* */
     }
@@ -308,6 +340,58 @@
     })
   }
 
+  function portfolioNavHealthStamp(holdings) {
+    if (!holdings || holdings.length === 0) {
+      return { last: new Date().toISOString(), hasError: false, tooltip: 'Portfolio loaded' }
+    }
+    const withUnits = holdings.filter((h) => Number(h.units) > 0)
+    if (withUnits.length === 0) {
+      return { last: new Date().toISOString(), hasError: false, tooltip: 'No funded positions' }
+    }
+    let oldestMs = null
+    let anyMissing = false
+    for (const h of withUnits) {
+      if (!h.navLastFetchedAt) {
+        anyMissing = true
+        continue
+      }
+      const ms = new Date(h.navLastFetchedAt).getTime()
+      if (!Number.isFinite(ms)) {
+        anyMissing = true
+        continue
+      }
+      if (oldestMs == null || ms < oldestMs) oldestMs = ms
+    }
+    if (anyMissing || oldestMs == null) {
+      return {
+        last: null,
+        hasError: false,
+        tooltip: 'Some positions have no NAV yet — use Refresh NAVs'
+      }
+    }
+    const ageH = (Date.now() - oldestMs) / 3600000
+    let tooltip = 'NAV data is fresh'
+    if (ageH > 48) tooltip = 'NAV data is more than 2 days old — click Refresh NAVs'
+    else if (ageH > 24) tooltip = 'NAV data may be stale — consider refreshing'
+    return { last: new Date(oldestMs).toISOString(), hasError: false, tooltip }
+  }
+
+  function formatNavCell(h) {
+    const u = Number(h.units) || 0
+    const nav = h.nav != null ? Number(h.nav) : null
+    if (u <= 0 || nav == null || !Number.isFinite(nav) || nav === 0) {
+      return '<span class="text-secondary" title="NAV not yet fetched">—</span>'
+    }
+    return escapeHtml(fmt4(nav))
+  }
+
+  function holdingStatusRank(status) {
+    const s = String(status || '').toUpperCase()
+    if (s === 'ACTIVE') return 0
+    if (s === 'INACTIVE') return 1
+    return 2
+  }
+
   async function load() {
     const ph = window.PiePageHealth
     try {
@@ -326,20 +410,8 @@
       renderHero(cachedHoldings, o?.data || {})
       renderTable(cachedHoldings)
       if (ph) {
-        const nowIso = new Date().toISOString()
-        let newestMs = null
-        let anyVeryStale = false
-        for (const row of cachedHoldings || []) {
-          const t = row && (row.navLastFetchedAt || row.updatedAt || row.createdAt)
-          if (!t) continue
-          const ms = new Date(t).getTime()
-          if (!Number.isFinite(ms)) continue
-          if (newestMs == null || ms > newestMs) newestMs = ms
-          const ageDays = (Date.now() - ms) / 86400000
-          if (ageDays > 7) anyVeryStale = true
-        }
-        const last = newestMs != null ? new Date(newestMs).toISOString() : nowIso
-        ph.updatePageHealthDot('portfolio', last, false, anyVeryStale ? 'Some NAVs are older than 7 days' : 'Portfolio loaded')
+        const health = portfolioNavHealthStamp(cachedHoldings)
+        ph.updatePageHealthDot('portfolio', health.last, health.hasError, health.tooltip)
       }
     } catch (e) {
       document.getElementById('holdings-tbody').innerHTML =
@@ -431,12 +503,15 @@
           </td>
         </tr>`
       const a = document.getElementById('empty-add-btn')
-      if (a) a.addEventListener('click', () => openHoldingDrawer(null))
+      if (a) a.addEventListener('click', () => openHoldingModal(null))
       return
     }
-    const sorted = holdings
-      .slice()
-      .sort((a, b) => (Number(b.currentValueCzk) || 0) - (Number(a.currentValueCzk) || 0))
+    const sorted = holdings.slice().sort((a, b) => {
+      const ra = holdingStatusRank(a.status)
+      const rb = holdingStatusRank(b.status)
+      if (ra !== rb) return ra - rb
+      return (Number(b.currentValueCzk) || 0) - (Number(a.currentValueCzk) || 0)
+    })
 
     tbody.innerHTML = sorted
       .map((h) => {
@@ -454,7 +529,7 @@
           <td>${statusBadge(h.status)}</td>
           <td><span class="text-secondary">${escapeHtml(h.category || '—')}</span></td>
           <td class="num">${fmt2(h.units)}</td>
-          <td class="num">${fmt4(h.nav)}</td>
+          <td class="num">${formatNavCell(h)}</td>
           <td class="num"><strong>${fmt0(h.currentValueCzk)} Kč</strong></td>
           <td class="num">${Number(h.monthlySipCzk) > 0 ? fmt0(h.monthlySipCzk) + ' Kč' : '—'}</td>
           <td><span class="text-secondary">${escapeHtml(taxFreeDateStr(h))}</span></td>
@@ -469,7 +544,7 @@
       b.addEventListener('click', (e) => {
         const id = e.currentTarget.closest('tr').getAttribute('data-holding-id')
         const h = cachedHoldings.find((x) => x.id === id)
-        if (h) openHoldingDrawer(h)
+        if (h) openHoldingModal(h)
       })
     })
   }
@@ -522,108 +597,144 @@
     )
   }
 
-  function openHoldingDrawer(h) {
-    const isNew = !h
-    const formHtml = `
-      <form class="pie-form" id="holding-form" autocomplete="off">
-        ${fieldHtml('Fund name', 'name', h?.name, 'text', 'required')}
-        ${fieldHtml('ISIN', 'isin', h?.isin)}
-        <div class="pie-form-row">
-          ${selectHtml('Category', 'category', h?.category || 'EQUITY', [
-            { value: 'EQUITY', label: 'Equity' },
-            { value: 'BONDS', label: 'Bonds' },
-            { value: 'CASH', label: 'Cash / money market' },
-            { value: 'COMMODITY', label: 'Commodity' },
-            { value: 'MIXED', label: 'Mixed / multi-asset' },
-            { value: 'OTHER', label: 'Other' }
-          ])}
-          ${selectHtml('Status', 'status', h?.status || 'ACTIVE', [
-            { value: 'ACTIVE', label: 'Active' },
-            { value: 'INACTIVE', label: 'Inactive' },
-            { value: 'EXITED', label: 'Exited' }
-          ])}
-        </div>
-        <div class="pie-form-row">
-          ${fieldHtml('Units', 'units', h?.units != null ? h.units : '', 'number', 'step="0.0001"')}
-          ${fieldHtml('NAV (Kč)', 'nav', h?.nav != null ? h.nav : '', 'number', 'step="0.0001"')}
-        </div>
-        <div class="pie-form-row">
-          ${fieldHtml('Monthly SIP (Kč)', 'monthlySipCzk', h?.monthlySipCzk != null ? h.monthlySipCzk : '', 'number', 'step="1"')}
-          ${fieldHtml('Purchase start', 'purchaseStartDate', dateInputValue(h?.purchaseStartDate), 'date')}
-        </div>
-        <p class="pie-form-help">
-          Tax-free date is computed automatically as 3 years after the purchase start date (CZ funds rule).
-        </p>
-      </form>
-      ${isNew ? '' : '<hr style="margin: var(--space-4) 0; border: 0; border-top: 1px solid var(--color-border-subtle)" /><div id="cashflow-list"><div class="pie-form-help">Loading cashflows…</div></div>'}
-    `
+  let modalEditingId = null
+  let navRefreshInterval = null
+  let lastNavClientRefreshAt = null
+  let navAgeInterval = null
 
-    const dr = PieUi.drawer({
-      title: isNew ? 'Add holding' : 'Edit holding',
-      bodyHtml: formHtml
-    })
-
-    dr.setFooter([
-      isNew
-        ? null
-        : PieUi.btn(
-            'Delete…',
-            async () => {
-              const ok = await PieUi.confirm({
-                title: 'Delete holding?',
-                message:
-                  'This marks the holding as EXITED. It stays for history. Use shift+click to remove permanently.',
-                tone: 'danger',
-                confirmLabel: 'Mark exited'
-              })
-              if (!ok) return
-              try {
-                await PieFetch.delete('/api/holdings/' + encodeURIComponent(h.id))
-                PieUi.toast('Holding marked exited', 'success')
-                dr.close()
-                await load()
-              } catch (e) {
-                PieUi.toast('Delete failed: ' + (e.message || e), 'error')
-              }
-            },
-            'ghost'
-          ),
-      PieUi.btn('Cancel', () => dr.close(), 'ghost'),
-      PieUi.btn(
-        isNew ? 'Create' : 'Save',
-        async () => {
-          const f = document.getElementById('holding-form')
-          if (!f.reportValidity()) return
-          const fd = new FormData(f)
-          const body = {}
-          fd.forEach((v, k) => {
-            if (v === '' || v == null) return
-            if (['units', 'nav', 'monthlySipCzk'].includes(k)) body[k] = Number(v)
-            else body[k] = v
-          })
-          try {
-            if (isNew) {
-              await PieFetch.post('/api/holdings', body)
-              PieUi.toast('Holding created', 'success')
-            } else {
-              await PieFetch.put('/api/holdings/' + encodeURIComponent(h.id), body)
-              PieUi.toast('Holding saved', 'success')
-            }
-            dr.close()
-            await load()
-          } catch (e) {
-            PieUi.toast('Save failed: ' + (e.message || e), 'error')
-          }
-        },
-        'primary'
-      )
-    ])
-
-    if (!isNew) renderCashflowsInto(h)
+  function markNavRefreshedClientNow() {
+    lastNavClientRefreshAt = Date.now()
+    updateNavRefreshAgeLabel()
   }
 
+  function updateNavRefreshAgeLabel() {
+    const el = document.getElementById('nav-refresh-age')
+    if (!el) return
+    if (!lastNavClientRefreshAt) {
+      el.textContent = ''
+      return
+    }
+    const mins = Math.floor((Date.now() - lastNavClientRefreshAt) / 60000)
+    if (mins < 1) el.textContent = 'Last refreshed: just now'
+    else el.textContent = 'Last refreshed: ' + mins + ' min ago'
+  }
+
+  function closeHoldingModal() {
+    const overlay = document.getElementById('holding-modal-overlay')
+    if (overlay) overlay.style.display = 'none'
+    modalEditingId = null
+  }
+  window.closeHoldingModal = closeHoldingModal
+
+  function openHoldingModal(h) {
+    const overlay = document.getElementById('holding-modal-overlay')
+    const form = document.getElementById('hm-form')
+    if (!overlay || !form) return
+    modalEditingId = h ? h.id : null
+    const title = document.getElementById('hm-modal-title')
+    const saveBtn = document.getElementById('hm-save-btn')
+    const delBtn = document.getElementById('hm-delete-btn')
+    const cfSection = document.getElementById('hm-cf-section')
+    const cfWrap = document.getElementById('hm-cashflow-list-wrap')
+    const today = new Date().toISOString().slice(0, 10)
+
+    if (h) {
+      if (title) title.textContent = 'Edit holding'
+      if (saveBtn) saveBtn.textContent = 'Save changes'
+      if (delBtn) delBtn.style.display = ''
+      if (cfSection) cfSection.style.display = 'none'
+      if (cfWrap) cfWrap.style.display = 'block'
+      document.getElementById('hm-name').value = h.name || ''
+      document.getElementById('hm-isin').value = h.isin || ''
+      document.getElementById('hm-category').value = h.category || 'EQUITY'
+      document.getElementById('hm-status').value = h.status || 'ACTIVE'
+      document.getElementById('hm-units').value = h.units != null ? String(h.units) : ''
+      document.getElementById('hm-nav').value = h.nav != null ? String(h.nav) : ''
+      document.getElementById('hm-monthlySip').value = h.monthlySipCzk != null ? String(h.monthlySipCzk) : ''
+      document.getElementById('hm-purchaseStartDate').value = dateInputValue(h.purchaseStartDate)
+      void renderCashflowsInto(h)
+    } else {
+      if (title) title.textContent = 'Add holding'
+      if (saveBtn) saveBtn.textContent = 'Create holding'
+      if (delBtn) delBtn.style.display = 'none'
+      if (cfSection) cfSection.style.display = 'block'
+      if (cfWrap) cfWrap.style.display = 'none'
+      form.reset()
+      document.getElementById('hm-category').value = 'EQUITY'
+      document.getElementById('hm-status').value = 'ACTIVE'
+      document.getElementById('hm-purchaseStartDate').value = today
+      document.getElementById('hm-cf-date').value = today
+      document.getElementById('hm-cf-amount').value = ''
+      document.getElementById('hm-cf-note').value = ''
+    }
+    overlay.style.display = 'flex'
+    document.getElementById('hm-name')?.focus()
+  }
+
+  async function saveHolding() {
+    const form = document.getElementById('hm-form')
+    if (!form || !form.reportValidity()) return
+    const dateEl = document.getElementById('hm-purchaseStartDate')
+    if (!dateEl.value) {
+      PieUi.toast('Purchase date is required', 'error')
+      dateEl.focus()
+      return
+    }
+    const body = {}
+    body.name = document.getElementById('hm-name').value.trim()
+    body.isin = document.getElementById('hm-isin').value.trim()
+    body.category = document.getElementById('hm-category').value
+    body.status = document.getElementById('hm-status').value
+    const u = document.getElementById('hm-units').value
+    const n = document.getElementById('hm-nav').value
+    const ms = document.getElementById('hm-monthlySip').value
+    if (u !== '') body.units = Number(u)
+    if (n !== '') body.nav = Number(n)
+    if (ms !== '') body.monthlySipCzk = Number(ms)
+    body.purchaseStartDate = dateEl.value
+
+    const isNew = !modalEditingId
+    if (isNew) {
+      const cfAmtRaw = document.getElementById('hm-cf-amount').value.trim()
+      const cfDate = document.getElementById('hm-cf-date').value
+      if (cfAmtRaw !== '' && Number(cfAmtRaw) > 0 && !cfDate) {
+        PieUi.toast('Initial cashflow: date is required when amount is set', 'error')
+        document.getElementById('hm-cf-date').focus()
+        return
+      }
+    }
+
+    try {
+      if (isNew) {
+        const res = await PieFetch.post('/api/holdings', body)
+        const hid = res?.data?.holding?.id
+        const cfAmtRaw = document.getElementById('hm-cf-amount').value.trim()
+        const cfDate = document.getElementById('hm-cf-date').value
+        const cfNote = document.getElementById('hm-cf-note').value.trim()
+        if (hid && cfAmtRaw !== '' && Number(cfAmtRaw) > 0 && cfDate) {
+          await PieFetch.post('/api/cashflows', {
+            holdingId: hid,
+            date: cfDate,
+            amountCzk: Number(cfAmtRaw),
+            type: 'LUMP_SUM',
+            notes: cfNote || 'Initial purchase'
+          })
+        }
+        PieUi.toast('Holding created successfully', 'success')
+      } else {
+        await PieFetch.put('/api/holdings/' + encodeURIComponent(modalEditingId), body)
+        PieUi.toast('Holding saved', 'success')
+      }
+      closeHoldingModal()
+      await load()
+    } catch (e) {
+      PieUi.toast('Error: ' + (e.message || String(e)), 'error')
+    }
+  }
+  window.saveHolding = saveHolding
+
   async function renderCashflowsInto(h) {
-    const root = document.getElementById('cashflow-list')
+    const root = document.getElementById('hm-cashflow-list')
     if (!root) return
     try {
       const r = await PieFetch.get('/api/cashflows?holdingId=' + encodeURIComponent(h.id))
@@ -728,8 +839,69 @@
     ])
   }
 
+  document.getElementById('hm-save-btn')?.addEventListener('click', () => void saveHolding())
+  document.getElementById('hm-cancel-btn')?.addEventListener('click', () => closeHoldingModal())
+  document.getElementById('hm-close-x')?.addEventListener('click', () => closeHoldingModal())
+  document.getElementById('holding-modal-overlay')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeHoldingModal()
+  })
+  document.getElementById('hm-delete-btn')?.addEventListener('click', async () => {
+    const id = modalEditingId
+    if (!id) return
+    const ok = await PieUi.confirm({
+      title: 'Delete holding?',
+      message: 'Marks the holding EXITED (history kept). Optionally remove the row entirely in the next prompt.',
+      tone: 'danger',
+      confirmLabel: 'Mark exited'
+    })
+    if (!ok) return
+    try {
+      await PieFetch.delete('/api/holdings/' + encodeURIComponent(id))
+      PieUi.toast('Holding deleted', 'success')
+      const hard = window.confirm('Permanently remove this holding row from the database? Cannot be undone.')
+      if (hard) {
+        await PieFetch.delete('/api/holdings/' + encodeURIComponent(id) + '?hard=1')
+        PieUi.toast('Holding removed permanently', 'success')
+      }
+      closeHoldingModal()
+      await load()
+    } catch (e) {
+      PieUi.toast('Error: ' + (e.message || String(e)), 'error')
+    }
+  })
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return
+    const ov = document.getElementById('holding-modal-overlay')
+    if (ov && ov.style.display === 'flex') closeHoldingModal()
+  })
+
+  function startNavAutoRefresh() {
+    if (navRefreshInterval) return
+    navRefreshInterval = window.setInterval(async () => {
+      try {
+        await PieFetch.post('/api/nav/refresh', {})
+        markNavRefreshedClientNow()
+        await load()
+      } catch {
+        /* */
+      }
+    }, 30 * 60 * 1000)
+  }
+
+  function stopNavAutoRefresh() {
+    if (navRefreshInterval) {
+      clearInterval(navRefreshInterval)
+      navRefreshInterval = null
+    }
+    if (navAgeInterval) {
+      clearInterval(navAgeInterval)
+      navAgeInterval = null
+    }
+  }
+
   // ===== top bar wiring =====
-  document.getElementById('add-holding-btn')?.addEventListener('click', () => openHoldingDrawer(null))
+  document.getElementById('fab-add-holding')?.addEventListener('click', () => openHoldingModal(null))
   document.getElementById('refresh-btn')?.addEventListener('click', () => load())
   document.getElementById('strategy-eval-btn')?.addEventListener('click', async () => {
     const btn = document.getElementById('strategy-eval-btn')
@@ -766,7 +938,8 @@
     btn.disabled = true
     btn.textContent = 'Refreshing…'
     try {
-      await PieFetch.post('/api/holdings/refresh-nav', {})
+      await PieFetch.post('/api/nav/refresh', {})
+      markNavRefreshedClientNow()
       PieUi.toast('NAVs refreshed', 'success')
       await load()
     } catch (e) {
@@ -778,5 +951,8 @@
   })
 
   wirePortfolioStrategyTable()
+  startNavAutoRefresh()
+  navAgeInterval = window.setInterval(updateNavRefreshAgeLabel, 60 * 1000)
+  window.addEventListener('beforeunload', stopNavAutoRefresh)
   load()
 })()
