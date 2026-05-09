@@ -14,3 +14,6 @@ playwright-report/
 secret.key
 *.secret.key
 
+tools/customer_*.* 
+tools/*.txt 
+tools/*.json 
