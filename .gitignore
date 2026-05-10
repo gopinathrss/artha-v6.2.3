@@ -17,3 +17,6 @@ secret.key
 tools/customer_*.* 
 tools/*.txt 
 tools/*.json 
+tools/*.py
+tools/*.txt
+tools/*.json
