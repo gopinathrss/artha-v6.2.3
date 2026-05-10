@@ -493,9 +493,42 @@ app.post('/api/holdings', async (req, res) => {
     const taxFreeDate = new Date(purchaseDate)
     taxFreeDate.setFullYear(taxFreeDate.getFullYear() + 3)
 
+    const isin = String(body.isin || '').trim()
+    const navTypeIn = body.navSourceType != null ? String(body.navSourceType).trim().toUpperCase() : ''
+    const navIdIn = body.navSourceId != null ? String(body.navSourceId).trim() : ''
+    const { navSourceType: _ntDrop, navSourceId: _niDrop, ...restBody } = body
+
+    let resolvedNavType: string | null = null
+    let resolvedNavId: string | null = null
+
+    if (navTypeIn === 'MANUAL') {
+      resolvedNavType = 'MANUAL'
+      resolvedNavId = navIdIn || null
+    } else if ((navTypeIn === 'ERSTE' || navTypeIn === 'YAHOO') && navIdIn) {
+      resolvedNavType = navTypeIn
+      resolvedNavId = navIdIn
+    } else if (isin) {
+      const donor = await prisma.holding.findFirst({
+        where: {
+          isin,
+          navSourceType: { in: ['ERSTE', 'YAHOO'] },
+          navSourceId: { not: null }
+        },
+        orderBy: { updatedAt: 'desc' },
+        select: { navSourceType: true, navSourceId: true }
+      })
+      if (donor?.navSourceType && donor.navSourceId) {
+        resolvedNavType = donor.navSourceType
+        resolvedNavId = donor.navSourceId
+      }
+    }
+
     const holding = await prisma.holding.create({
       data: {
-        ...body,
+        ...restBody,
+        ...(resolvedNavType != null
+          ? { navSourceType: resolvedNavType, navSourceId: resolvedNavId }
+          : {}),
         purchaseStartDate: purchaseDate,
         taxFreeDate,
         currentValueCzk: (Number(body.units) || 0) * (Number(body.nav) || 0)

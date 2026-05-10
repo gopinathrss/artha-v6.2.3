@@ -159,6 +159,30 @@
           </div>
           <div class="form-row">
             <div class="form-field">
+              <label class="form-field-label" for="hm-nav-source-type">NAV feed</label>
+              <select id="hm-nav-source-type" class="form-field-select">
+                <option value="">— (auto if same ISIN exists)</option>
+                <option value="ERSTE">Erste (IC / banking export)</option>
+                <option value="YAHOO">Yahoo Finance</option>
+                <option value="MANUAL">Manual NAV only</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-field-label" for="hm-nav-source-id">Notation ID / ticker</label>
+              <input
+                id="hm-nav-source-id"
+                class="form-field-input"
+                type="text"
+                placeholder="Erste Fund ID, e.g. CZ…-216288"
+                autocomplete="off"
+              />
+            </div>
+          </div>
+          <p class="form-field-help">
+            Automatic NAV uses Erste <strong>notation ID</strong> (spreadsheet “Fund ID”), not the ISIN alone. If you already have this fund, leave blank — PIE copies the feed from another row with the same ISIN.
+          </p>
+          <div class="form-row">
+            <div class="form-field">
               <label class="form-field-label" for="hm-category">Category</label>
               <select id="hm-category" class="form-field-select">
                 <option value="EQUITY">Equity</option>

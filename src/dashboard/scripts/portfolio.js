@@ -652,6 +652,10 @@
       document.getElementById('hm-nav').value = h.nav != null ? String(h.nav) : ''
       document.getElementById('hm-monthlySip').value = h.monthlySipCzk != null ? String(h.monthlySipCzk) : ''
       document.getElementById('hm-purchaseStartDate').value = dateInputValue(h.purchaseStartDate)
+      const nst = document.getElementById('hm-nav-source-type')
+      const nsid = document.getElementById('hm-nav-source-id')
+      if (nst) nst.value = h.navSourceType ? String(h.navSourceType).toUpperCase() : ''
+      if (nsid) nsid.value = h.navSourceId ? String(h.navSourceId) : ''
       void renderCashflowsInto(h)
     } else {
       if (title) title.textContent = 'Add holding'
@@ -666,6 +670,10 @@
       document.getElementById('hm-cf-date').value = today
       document.getElementById('hm-cf-amount').value = ''
       document.getElementById('hm-cf-note').value = ''
+      const nstN = document.getElementById('hm-nav-source-type')
+      const nsidN = document.getElementById('hm-nav-source-id')
+      if (nstN) nstN.value = ''
+      if (nsidN) nsidN.value = ''
     }
     overlay.style.display = 'flex'
     document.getElementById('hm-name')?.focus()
@@ -692,6 +700,18 @@
     if (n !== '') body.nav = Number(n)
     if (ms !== '') body.monthlySipCzk = Number(ms)
     body.purchaseStartDate = dateEl.value
+
+    const nstRaw = document.getElementById('hm-nav-source-type')?.value?.trim() || ''
+    const nsidRaw = document.getElementById('hm-nav-source-id')?.value?.trim() || ''
+    if (nstRaw) {
+      body.navSourceType = nstRaw.toUpperCase()
+      if (nsidRaw) body.navSourceId = nsidRaw
+      else if (body.navSourceType !== 'MANUAL') {
+        PieUi.toast('Enter notation ID (Erste) or ticker (Yahoo), or choose Manual / leave NAV feed empty.', 'error')
+        document.getElementById('hm-nav-source-id')?.focus()
+        return
+      }
+    }
 
     const isNew = !modalEditingId
     if (isNew) {
